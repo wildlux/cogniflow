@@ -8,6 +8,7 @@ I am dyslessic and i want to create this software for help other person for :
 5) customize setup for each user
 6) save and load documents
 7) Creating a menù for help other sections like snipped code or help things with math and more [ To do ]
+8) OCR Optical character recognition from documents [ to do ]  
 
 
 number 7 it's for improve outside dyslessic person but for improve and automatize some workflow.
