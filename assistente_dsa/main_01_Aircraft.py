@@ -37,9 +37,13 @@ except ImportError:
 
 # Import del riconoscimento vocale
 try:
-    from Artificial_Intelligence.Riconoscimento_Vocale.managers.speech_recognition_manager import SpeechRecognitionThread
+    from Artificial_Intelligence.Riconoscimento_Vocale.managers.speech_recognition_manager import (
+        SpeechRecognitionThread,
+        ensure_vosk_model_available
+    )
 except ImportError:
     SpeechRecognitionThread = None
+    ensure_vosk_model_available = None
 
 # Classe MainWindow integrata da aircraft.py
 class MainWindow(QMainWindow):
@@ -699,23 +703,49 @@ class MainWindow(QMainWindow):
         if not vosk_model or vosk_model == 'auto':
             vosk_model = 'vosk-model-it-0.22'
 
-        # Verifica che il modello esista
+        # Verifica che il modello esista e scaricalo se necessario
         import os
         model_path = os.path.join("Artificial_Intelligence", "Riconoscimento_Vocale", "models", "vosk_models", vosk_model)
         if not os.path.exists(model_path):
-            QMessageBox.warning(self, "Modello Mancante",
-                              f"Il modello Vosk '{vosk_model}' non è stato trovato.\n\n"
-                              f"Percorso: {model_path}\n\n"
-                              "Il modello italiano dovrebbe essere già incluso nel progetto.")
-            self.voice_button.setEnabled(True)
-            self.voice_button.setText("🎤 Trascrivi la mia voce")
-            return
+            if ensure_vosk_model_available:
+                # Mostra dialog di progresso per il download
+                progress_msg = QMessageBox(self)
+                progress_msg.setWindowTitle("Download Modello")
+                progress_msg.setText("🔄 Preparazione download modello...")
+                progress_msg.setStandardButtons(QMessageBox.StandardButton.Cancel)
+                progress_msg.show()
+
+                def progress_callback(message):
+                    progress_msg.setText(message)
+                    QApplication.processEvents()  # Aggiorna l'interfaccia
+
+                # Tenta di scaricare il modello
+                if not ensure_vosk_model_available(vosk_model, progress_callback):
+                    progress_msg.close()
+                    QMessageBox.critical(self, "Download Fallito",
+                                       f"Impossibile scaricare il modello '{vosk_model}'.\n\n"
+                                       "Verifica la connessione internet e riprova.")
+                    self.voice_button.setEnabled(True)
+                    self.voice_button.setText("🎤 Trascrivi la mia voce")
+                    return
+
+                progress_msg.close()
+                QMessageBox.information(self, "Download Completato",
+                                      f"✅ Modello '{vosk_model}' scaricato con successo!")
+            else:
+                QMessageBox.warning(self, "Funzione Download Non Disponibile",
+                                  f"Il modello Vosk '{vosk_model}' non è stato trovato.\n\n"
+                                  f"Percorso: {model_path}\n\n"
+                                  "La funzione di download automatico non è disponibile.")
+                self.voice_button.setEnabled(True)
+                self.voice_button.setText("🎤 Trascrivi la mia voce")
+                return
 
         try:
-            # Crea il thread di riconoscimento vocale
-            self.speech_thread = SpeechRecognitionThread(vosk_model)
+            # Crea il thread di riconoscimento vocale con callback
+            self.speech_thread = SpeechRecognitionThread(vosk_model, text_callback=self._on_voice_recognized)
 
-            # Connetti i segnali
+            # Connetti i segnali come fallback
             self.speech_thread.recognized_text.connect(self._on_voice_recognized)
             self.speech_thread.recognition_error.connect(self._on_voice_error)
             self.speech_thread.stopped_by_silence.connect(self._on_voice_stopped_by_silence)
@@ -727,6 +757,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Riconoscimento Vocale",
                                   "🎤 Riconoscimento vocale avviato!\n\n"
                                   "Parla chiaramente nel microfono.\n"
+                                  "Il testo riconosciuto verrà aggiunto direttamente ai pensierini.\n"
                                   "Il riconoscimento si fermerà automaticamente dopo 3 secondi di silenzio.")
 
         except Exception as e:
@@ -736,26 +767,47 @@ class MainWindow(QMainWindow):
 
     def _on_voice_recognized(self, text):
         """Callback quando viene riconosciuto del testo vocale."""
+        logging.info(f"🎤 _on_voice_recognized chiamata con testo: '{text}'")
+
         if text and text.strip():
-            # Inserisci il testo nell'area di lavoro
-            if hasattr(self, 'work_area_layout') and self.work_area_layout:
+            logging.info(f"📝 Testo valido ricevuto: '{text.strip()}'")
+
+            # Inserisci il testo direttamente nella colonna dei pensierini
+            if hasattr(self, 'pensierini_layout') and self.pensierini_layout:
+                logging.info("✅ pensierini_layout disponibile")
+
                 # Crea un nuovo pensierino con il testo riconosciuto
                 if DraggableTextWidget:
-                    widget = DraggableTextWidget(f"🎤 {text.strip()}", self.settings)
-                    self.work_area_layout.addWidget(widget)
-                    logging.info(f"Testo vocale riconosciuto e aggiunto: {text[:50]}...")
+                    try:
+                        widget = DraggableTextWidget(f"🎤 {text.strip()}", self.settings)
+                        self.pensierini_layout.addWidget(widget)
+                        logging.info(f"✅ Widget creato e aggiunto ai pensierini: {text[:50]}...")
+                    except Exception as e:
+                        logging.error(f"❌ Errore creazione widget: {e}")
+                        # Fallback: inserisci nell'area di testo
+                        current_text = self.input_text_area.toPlainText()
+                        if current_text:
+                            self.input_text_area.setPlainText(f"{current_text}\n{text.strip()}")
+                        else:
+                            self.input_text_area.setPlainText(text.strip())
                 else:
+                    logging.warning("⚠️ DraggableTextWidget non disponibile, uso fallback")
                     # Fallback: inserisci nell'area di testo
                     current_text = self.input_text_area.toPlainText()
                     if current_text:
                         self.input_text_area.setPlainText(f"{current_text}\n{text.strip()}")
                     else:
                         self.input_text_area.setPlainText(text.strip())
+            else:
+                logging.error("❌ pensierini_layout non disponibile")
 
             # Mostra notifica di successo
             QMessageBox.information(self, "Testo Riconosciuto",
                                   f"✅ Testo riconosciuto con successo!\n\n"
-                                  f"📝 \"{text.strip()[:100]}{'...' if len(text.strip()) > 100 else ''}\"")
+                                  f"📝 \"{text.strip()[:100]}{'...' if len(text.strip()) > 100 else ''}\"\n\n"
+                                  f"💭 Aggiunto ai pensierini!")
+        else:
+            logging.warning(f"⚠️ Testo vuoto o None ricevuto: '{text}'")
 
     def _on_voice_error(self, error_msg):
         """Callback per gestire errori del riconoscimento vocale."""
