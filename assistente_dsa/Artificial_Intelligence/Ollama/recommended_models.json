@@ -1,0 +1,73 @@
+{
+  "models": {
+    "llava:7b": {
+      "description": "Modello vision-language per riconoscimento immagini e descrizione di contenuti visivi",
+      "use_cases": ["Riconoscimento immagini", "Descrizione scene", "Analisi documenti"],
+      "size_gb": 4.7,
+      "recommended": true,
+      "parameters": 7
+    },
+    "llama2:7b": {
+      "description": "Modello di linguaggio generale di Meta, eccellente per conversazioni e ragionamento",
+      "use_cases": ["Conversazione generale", "Ragionamento", "Analisi testi"],
+      "size_gb": 3.8,
+      "recommended": true,
+      "parameters": 7
+    },
+    "codellama:7b": {
+      "description": "Modello specializzato in generazione e comprensione di codice",
+      "use_cases": ["Generazione codice", "Debug", "Spiegazione algoritmi"],
+      "size_gb": 3.8,
+      "recommended": true,
+      "parameters": 7
+    },
+    "mistral:7b": {
+      "description": "Modello efficiente e performante, ottimo per compiti generali",
+      "use_cases": ["Conversazione", "Analisi", "Sintesi"],
+      "size_gb": 4.1,
+      "recommended": true,
+      "parameters": 7
+    },
+    "phi:3b": {
+      "description": "Modello leggero e veloce, ideale per dispositivi con risorse limitate",
+      "use_cases": ["Conversazione veloce", "Compiti leggeri", "Test"],
+      "size_gb": 2.8,
+      "recommended": true,
+      "parameters": 3
+    },
+    "llama2:13b": {
+      "description": "Versione più grande e potente di Llama2 per compiti complessi",
+      "use_cases": ["Analisi approfondita", "Ragionamento complesso", "Creatività"],
+      "size_gb": 7.3,
+      "recommended": false,
+      "parameters": 13
+    },
+    "codellama:13b": {
+      "description": "Versione avanzata per generazione di codice complesso",
+      "use_cases": ["Progetti software", "Architettura sistemi", "Code review"],
+      "size_gb": 7.3,
+      "recommended": false,
+      "parameters": 13
+    },
+    "llava:13b": {
+      "description": "Modello vision-language più potente per analisi immagini dettagliate",
+      "use_cases": ["Analisi medica", "Ricerca scientifica", "Descrizione dettagliata"],
+      "size_gb": 8.2,
+      "recommended": false,
+      "parameters": 13
+    }
+  },
+  "categories": {
+    "vision": ["llava:7b", "llava:13b"],
+    "coding": ["codellama:7b", "codellama:13b"],
+    "general": ["llama2:7b", "llama2:13b", "mistral:7b"],
+    "lightweight": ["phi:3b"]
+  },
+  "installation_order": [
+    "phi:3b",
+    "llama2:7b",
+    "mistral:7b",
+    "llava:7b",
+    "codellama:7b"
+  ]
+}
