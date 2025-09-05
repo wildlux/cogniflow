@@ -56,6 +56,16 @@ except ImportError:
     QVideoWidget = None
     MULTIMEDIA_AVAILABLE = False
 
+# Import per OCR
+try:
+    import pytesseract
+    from PIL import Image
+    OCR_AVAILABLE = True
+except ImportError:
+    pytesseract = None
+    Image = None
+    OCR_AVAILABLE = False
+
 # Classe per gestire l'area di lavoro con supporto al drop
 class WorkAreaWidget(QWidget):
     def __init__(self, settings):
@@ -372,6 +382,16 @@ class MainWindow(QMainWindow):
                 background-color: #138496;
             }
 
+            /* Pulsante OCR */
+            QPushButton#ocr_button {
+                background-color: #28a745;
+                min-width: 200px;
+            }
+
+            QPushButton#ocr_button:hover {
+                background-color: #218838;
+            }
+
             /* Pulsante Pulisci */
             QPushButton#clean_button {
                 background-color: #dc3545;
@@ -580,6 +600,11 @@ class MainWindow(QMainWindow):
         self.media_button.setObjectName("media_button")  # ID per CSS
         self.media_button.clicked.connect(self.handle_media_button)
         buttons_layout.addWidget(self.media_button)
+
+        self.ocr_button = QPushButton("📄 Trascrizione di Documenti-OCR")
+        self.ocr_button.setObjectName("ocr_button")  # ID per CSS
+        self.ocr_button.clicked.connect(self.handle_ocr_button)
+        buttons_layout.addWidget(self.ocr_button)
 
         self.clean_button = QPushButton("🧹 Pulisci")
         self.clean_button.setObjectName("clean_button")  # ID per CSS
@@ -1358,6 +1383,113 @@ Riformulazione intensa:"""
         except Exception as e:
             logging.error(f"Errore creazione widget generico: {e}")
             QMessageBox.critical(self, "Errore", f"Errore durante la creazione del widget:\n{str(e)}")
+
+    def handle_ocr_button(self):
+        """Gestisce la trascrizione OCR da documenti."""
+        try:
+            if not OCR_AVAILABLE:
+                QMessageBox.warning(self, "OCR Non Disponibile",
+                                  "La funzionalità OCR richiede pytesseract e PIL.\n\n"
+                                  "Installa con: pip install pytesseract pillow\n\n"
+                                  "Inoltre assicurati che Tesseract-OCR sia installato sul sistema.")
+                return
+
+            # Apri dialog per selezionare immagine/documento
+            file_dialog = QFileDialog(self)
+            file_dialog.setWindowTitle("Seleziona documento per OCR")
+            file_dialog.setNameFilter("Immagini e documenti (*.png *.jpg *.jpeg *.bmp *.tiff *.pdf);;Immagini (*.png *.jpg *.jpeg *.bmp *.tiff);;PDF (*.pdf);;Tutti i file (*)")
+
+            if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
+                selected_files = file_dialog.selectedFiles()
+                if selected_files:
+                    file_path = selected_files[0]
+                    self.process_ocr_file(file_path)
+
+        except Exception as e:
+            logging.error(f"Errore caricamento file OCR: {e}")
+            QMessageBox.critical(self, "Errore", f"Errore durante il caricamento del file:\n{str(e)}")
+
+    def process_ocr_file(self, file_path):
+        """Elabora il file per l'OCR."""
+        import os
+        from pathlib import Path
+
+        file_name = os.path.basename(file_path)
+        file_ext = Path(file_path).suffix.lower()
+
+        try:
+            # Mostra progresso
+            progress_msg = QMessageBox(self)
+            progress_msg.setWindowTitle("OCR in corso")
+            progress_msg.setText("🔍 Elaborazione OCR in corso...")
+            progress_msg.setStandardButtons(QMessageBox.StandardButton.Cancel)
+            progress_msg.show()
+
+            # Esegui OCR
+            if file_ext.lower() == '.pdf':
+                # Per PDF, dovremmo estrarre le immagini prima
+                text = self.extract_text_from_pdf(file_path)
+            else:
+                # Per immagini
+                text = self.extract_text_from_image(file_path)
+
+            progress_msg.close()
+
+            if text and text.strip():
+                # Mostra il testo estratto nei dettagli
+                ocr_content = f"📄 OCR - Trascrizione da: {file_name}\n\n{'='*50}\n\n{text}\n\n{'='*50}\n\n📊 Statistiche OCR:\n• Caratteri estratti: {len(text)}\n• Parole: {len(text.split())}\n• Righe: {len(text.split(chr(10)))}"
+                self.show_text_in_details(ocr_content)
+
+                # Crea anche un pensierino con il testo estratto
+                if DraggableTextWidget:
+                    ocr_pensierino_text = f"📄 OCR: {file_name[:30]}... ({len(text)} caratteri)"
+                    pensierino_widget = DraggableTextWidget(ocr_pensierino_text, self.settings)
+                    self.pensierini_layout.addWidget(pensierino_widget)
+
+                QMessageBox.information(self, "OCR Completato",
+                                      f"✅ Testo estratto con successo!\n\n"
+                                      f"📄 File: {file_name}\n"
+                                      f"📝 Caratteri: {len(text)}\n"
+                                      f"📊 Parole: {len(text.split())}")
+            else:
+                QMessageBox.warning(self, "OCR Fallito",
+                                  "Nessun testo rilevato nel documento.\n\n"
+                                  "Possibili cause:\n"
+                                  "• Immagine di bassa qualità\n"
+                                  "• Testo non chiaramente leggibile\n"
+                                  "• Orientamento del documento\n"
+                                  "• Carattere non supportato")
+
+        except Exception as e:
+            if 'progress_msg' in locals():
+                progress_msg.close()
+            logging.error(f"Errore OCR: {e}")
+            QMessageBox.critical(self, "Errore OCR", f"Errore durante l'elaborazione OCR:\n{str(e)}")
+
+    def extract_text_from_image(self, image_path):
+        """Estrae testo da un'immagine usando pytesseract."""
+        try:
+            # Apri l'immagine
+            image = Image.open(image_path)
+
+            # Configurazione OCR ottimale
+            custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzàèéìòùÀÈÉÌÒÙ .,!?-()[]{}:;"\'\n'
+
+            # Esegui OCR
+            text = pytesseract.image_to_string(image, lang='ita+eng', config=custom_config)
+
+            return text.strip()
+
+        except Exception as e:
+            logging.error(f"Errore estrazione testo da immagine: {e}")
+            raise
+
+    def extract_text_from_pdf(self, pdf_path):
+        """Estrae testo da un PDF (placeholder per implementazione futura)."""
+        # Per ora restituiamo un messaggio che OCR su PDF non è ancora implementato
+        return "📄 OCR per PDF non ancora implementato.\n\n" \
+               "Converti prima il PDF in immagini per utilizzare l'OCR.\n\n" \
+               "Funzionalità futura: estrazione automatica immagini da PDF."
 
     def toggle_audio_playback(self, file_path):
         """Alterna play/pausa per l'audio."""
