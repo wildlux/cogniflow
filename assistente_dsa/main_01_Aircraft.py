@@ -45,6 +45,97 @@ except ImportError:
     SpeechRecognitionThread = None
     ensure_vosk_model_available = None
 
+# Classe per gestire l'area di lavoro con supporto al drop
+class WorkAreaWidget(QWidget):
+    def __init__(self, settings):
+        super().__init__()
+        self.settings = settings
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, event):
+        """Accetta il drag se contiene testo o dati del widget."""
+        if event.mimeData().hasText() or event.mimeData().hasFormat("application/x-draggable-widget"):
+            event.acceptProposedAction()
+            # Accetta sia MoveAction che CopyAction
+            event.setDropAction(Qt.DropAction.CopyAction)
+
+    def dropEvent(self, event):
+        """Gestisce il drop creando un nuovo widget trascinabile."""
+        try:
+            from UI.draggable_text_widget import DraggableTextWidget
+
+            # Ottieni il testo dal drop
+            if event.mimeData().hasText():
+                text = event.mimeData().text()
+            else:
+                return
+
+            if text and text.strip():
+                # Crea un nuovo widget trascinabile con tutte le funzionalità
+                widget = DraggableTextWidget(text, self.settings)
+                # Aggiungi il widget al layout dell'area di lavoro
+                self.layout().addWidget(widget)
+                event.acceptProposedAction()
+
+        except Exception as e:
+            logging.error(f"Errore durante il drop nell'area di lavoro: {e}")
+
+
+# Classe per gestire l'area pensierini con controllo duplicati
+class PensieriniWidget(QWidget):
+    def __init__(self, settings, pensierini_layout):
+        super().__init__()
+        self.settings = settings
+        self.pensierini_layout = pensierini_layout
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, event):
+        """Accetta il drag se contiene testo o dati del widget."""
+        if event.mimeData().hasText() or event.mimeData().hasFormat("application/x-draggable-widget"):
+            event.acceptProposedAction()
+            # Accetta sia MoveAction che CopyAction
+            event.setDropAction(Qt.DropAction.CopyAction)
+
+    def dropEvent(self, event):
+        """Gestisce il drop controllando se esiste già un widget con lo stesso testo."""
+        try:
+            from UI.draggable_text_widget import DraggableTextWidget
+
+            # Ottieni il testo dal drop
+            if event.mimeData().hasText():
+                text = event.mimeData().text()
+            else:
+                return
+
+            if text and text.strip():
+                # Controlla se esiste già un pensierino con lo stesso testo
+                existing_widget = self._find_existing_widget(text.strip())
+                if existing_widget is not None:
+                    # Esiste già un pensierino con lo stesso testo - non creare duplicato
+                    event.ignore()
+                    return
+
+                # Crea un nuovo widget trascinabile con tutte le funzionalità
+                widget = DraggableTextWidget(text, self.settings)
+                # Aggiungi il widget al layout dei pensierini
+                self.pensierini_layout.addWidget(widget)
+                event.acceptProposedAction()
+
+        except Exception as e:
+            logging.error(f"Errore durante il drop nell'area pensierini: {e}")
+
+    def _find_existing_widget(self, text):
+        """Cerca se esiste già un widget con lo stesso testo nei pensierini."""
+        for i in range(self.pensierini_layout.count()):
+            item = self.pensierini_layout.itemAt(i)
+            if item:
+                widget = item.widget()
+                if widget and hasattr(widget, 'text_label'):
+                    existing_text = widget.text_label.text().strip()
+                    if existing_text == text:
+                        return widget
+        return None
+
 # Classe MainWindow integrata da aircraft.py
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -69,22 +160,46 @@ class MainWindow(QMainWindow):
     def _on_ai_response_received(self, prompt, response):
         """Gestisce la risposta ricevuta da Ollama."""
         try:
-            # Mostra richiesta e risposta nei dettagli con paginazione
-            full_content = f"📤 Richiesta:\n{prompt}\n\n{'='*50}\n\n🤖 Risposta AI (llama2:7b):\n\n{response}"
-            self.show_text_in_details(full_content)
+            # Riabilita il pulsante di riformulazione se era disabilitato
+            if hasattr(self, 'rephrase_button'):
+                self.rephrase_button.setEnabled(True)
+                self.rephrase_button.setText("🧠 Riformula intensamente")
 
-            # Log della risposta ricevuta
-            logging.info(f"Risposta AI ricevuta per prompt: {prompt[:50]}... (lunghezza: {len(response)} caratteri)")
+            # Controlla se è una risposta di riformulazione
+            if "Riformula intensamente" in prompt or "Riformulazione intensa" in prompt:
+                # Mostra solo la riformulazione nei dettagli
+                full_content = f"🧠 RIFORMULAZIONE COMPLETATA\n\n✨ Testo riformulato con intelligenza artificiale:\n\n{response}\n\n{'='*50}\n\n📊 Statistiche:\n• Testo originale: {len(self.full_text) if hasattr(self, 'full_text') else 0} caratteri\n• Testo riformulato: {len(response)} caratteri"
+                self.show_text_in_details(full_content)
 
-            # Mostra notifica di successo
-            QMessageBox.information(self, "AI Risposta Ricevuta",
-                                  f"Risposta AI ricevuta con successo!\n\n"
-                                  f"Richiesta: {len(prompt)} caratteri\n"
-                                  f"Risposta: {len(response)} caratteri")
+                # Log della riformulazione
+                logging.info(f"Riformulazione AI completata: {len(response)} caratteri")
+
+                # Mostra notifica di successo per riformulazione
+                QMessageBox.information(self, "Riformulazione Completata",
+                                      f"✅ Testo riformulato con successo!\n\n"
+                                      f"🧠 Elaborazione AI completata\n"
+                                      f"📝 Nuovo testo: {len(response)} caratteri")
+            else:
+                # Risposta AI normale (non riformulazione)
+                full_content = f"📤 Richiesta:\n{prompt}\n\n{'='*50}\n\n🤖 Risposta AI (llama2:7b):\n\n{response}"
+                self.show_text_in_details(full_content)
+
+                # Log della risposta ricevuta
+                logging.info(f"Risposta AI ricevuta per prompt: {prompt[:50]}... (lunghezza: {len(response)} caratteri)")
+
+                # Mostra notifica di successo
+                QMessageBox.information(self, "AI Risposta Ricevuta",
+                                      f"Risposta AI ricevuta con successo!\n\n"
+                                      f"Richiesta: {len(prompt)} caratteri\n"
+                                      f"Risposta: {len(response)} caratteri")
 
         except Exception as e:
             logging.error(f"Errore nella gestione della risposta AI: {e}")
             QMessageBox.critical(self, "Errore AI", f"Errore nella risposta AI: {e}")
+            # Riabilita il pulsante in caso di errore
+            if hasattr(self, 'rephrase_button'):
+                self.rephrase_button.setEnabled(True)
+                self.rephrase_button.setText("🧠 Riformula intensamente")
 
     def _on_ai_error_occurred(self, error_msg):
         """Gestisce gli errori da Ollama."""
@@ -139,11 +254,11 @@ class MainWindow(QMainWindow):
                     stop:0 rgba(255, 193, 7, 0.1), stop:1 rgba(255, 193, 7, 0.05));
             }
 
-            /* Colonna C - Dettagli (Rosso) */
+            /* Colonna C - Dettagli (Viola) */
             QGroupBox#details {
-                border-color: #dc3545;
+                border-color: #6f42c1;
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(220, 53, 69, 0.1), stop:1 rgba(220, 53, 69, 0.05));
+                    stop:0 rgba(111, 66, 193, 0.1), stop:1 rgba(111, 66, 193, 0.05));
             }
 
             /* Barra strumenti */
@@ -246,6 +361,16 @@ class MainWindow(QMainWindow):
                 background-color: #c82333;
             }
 
+            /* Pulsante Copia */
+            QPushButton#copy_button {
+                background-color: #007bff;
+                min-width: 100px;
+            }
+
+            QPushButton#copy_button:hover {
+                background-color: #0056b3;
+            }
+
             QLineEdit {
                 border: 2px solid #4a90e2;
                 border-radius: 10px;
@@ -337,43 +462,70 @@ class MainWindow(QMainWindow):
 
         main_layout.addLayout(top_layout)
 
-        # Main content
-        content_layout = QHBoxLayout()
+        # Main content with SPLITTER for resizable columns
+        from PyQt6.QtWidgets import QSplitter
+
+        # Create splitter for resizable columns
+        self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.main_splitter.setHandleWidth(8)  # Thicker handles for easier dragging
+        self.main_splitter.setStyleSheet("""
+            QSplitter::handle {
+                background: #4a90e2;
+                border: 1px solid #357abd;
+                border-radius: 4px;
+            }
+            QSplitter::handle:hover {
+                background: #357abd;
+            }
+            QSplitter::handle:pressed {
+                background: #2e5f8f;
+            }
+        """)
 
         # Column A: Pensierini
         self.column_a_group = QGroupBox("📝 Pensierini")
         self.column_a_group.setObjectName("pensierini")  # ID per CSS
+        self.column_a_group.setMinimumWidth(200)  # Minimum width to prevent collapse
         column_a_layout = QVBoxLayout(self.column_a_group)
         self.pensierini_scroll = QScrollArea()
         self.pensierini_scroll.setWidgetResizable(True)
-        self.pensierini_widget = QWidget()
+        self.pensierini_widget = PensieriniWidget(self.settings, None)  # Layout sarà impostato dopo
         self.pensierini_layout = QVBoxLayout(self.pensierini_widget)
         self.pensierini_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        # Aggiorna il riferimento al layout nel widget pensierini
+        self.pensierini_widget.pensierini_layout = self.pensierini_layout
         self.pensierini_scroll.setWidget(self.pensierini_widget)
         column_a_layout.addWidget(self.pensierini_scroll)
-        content_layout.addWidget(self.column_a_group, 3)
+        self.main_splitter.addWidget(self.column_a_group)
 
         # Column B: Work Area
         self.column_b_group = QGroupBox("📋 Area di Lavoro")
         self.column_b_group.setObjectName("work_area")  # ID per CSS
+        self.column_b_group.setMinimumWidth(200)  # Minimum width to prevent collapse
         column_b_layout = QVBoxLayout(self.column_b_group)
         self.setup_work_area(column_b_layout)
-        content_layout.addWidget(self.column_b_group, 4)
+        self.main_splitter.addWidget(self.column_b_group)
 
         # Column C: Details
         self.column_c_group = QGroupBox("🔍 Dettagli")
         self.column_c_group.setObjectName("details")  # ID per CSS
+        self.column_c_group.setMinimumWidth(300)  # Minimum width for details
+        self.column_c_group.setMinimumHeight(600)  # Altezza minima aumentata significativamente
         column_c_layout = QVBoxLayout(self.column_c_group)
         self.details_scroll = QScrollArea()
         self.details_scroll.setWidgetResizable(True)
+        self.details_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.details_widget = QWidget()
         self.details_layout = QVBoxLayout(self.details_widget)
         self.details_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.details_scroll.setWidget(self.details_widget)
         column_c_layout.addWidget(self.details_scroll)
-        content_layout.addWidget(self.column_c_group, 3)
+        self.main_splitter.addWidget(self.column_c_group)
 
-        main_layout.addLayout(content_layout, 1)
+        # Set initial proportions (balanced 3-equal parts)
+        self.main_splitter.setSizes([333, 333, 334])  # Roughly equal thirds
+
+        main_layout.addWidget(self.main_splitter, 1)
 
         # Bottom tools
         tools_group = QGroupBox("🔧 Strumenti")
@@ -381,7 +533,7 @@ class MainWindow(QMainWindow):
         tools_layout = QVBoxLayout(tools_group)
 
         self.input_text_area = QTextEdit()
-        self.input_text_area.setPlaceholderText("Scrivi qui...")
+        self.input_text_area.setPlaceholderText("Scrivi qui, ( premi INVIO per creare un pensierino - Premi INVIO di destra per tornare a capo )")
         self.input_text_area.setMaximumHeight(100)
         # Installa event filter per intercettare Invio
         self.input_text_area.installEventFilter(self)
@@ -415,7 +567,7 @@ class MainWindow(QMainWindow):
     def setup_work_area(self, layout):
         self.work_area_scroll = QScrollArea()
         self.work_area_scroll.setWidgetResizable(True)
-        self.work_area_widget = QWidget()
+        self.work_area_widget = WorkAreaWidget(self.settings)
         self.work_area_layout = QVBoxLayout(self.work_area_widget)
         self.work_area_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.work_area_scroll.setWidget(self.work_area_widget)
@@ -517,93 +669,188 @@ class MainWindow(QMainWindow):
         # TextEdit per il testo (permette navigazione con cursore)
         self.details_text_label = QTextEdit()
         self.details_text_label.setReadOnly(True)
+        # Imposta altezza minima per mostrare circa 10 righe
+        self.details_text_label.setMinimumHeight(300)  # Circa 10 righe con font 16px
+        # Imposta size policy per espansione massima
+        from PyQt6.QtWidgets import QSizePolicy
+        self.details_text_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        # Rimuovi entrambe le scrollbar per massimizzare lo spazio
+        self.details_text_label.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.details_text_label.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.details_text_label.setStyleSheet("""
             QTextEdit {
-                background: rgba(255, 255, 255, 0.9);
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                padding: 10px;
-                font-size: 14px;
+                background: rgba(221, 160, 221, 0.9); /* Viola chiaro per il testo */
+                border: 2px solid #6f42c1;
+                border-radius: 8px;
+                padding-top: 20px;
+                padding-bottom: 20px;
+                padding-left: 15px;
+                padding-right: 15px;
+                font-size: 16px;
                 line-height: 1.4;
                 color: #333;
             }
+
+            /* Pulsante Riformula - Verde */
+            QPushButton#rephrase_button {
+                background-color: #28a745;
+                color: white;
+                border: 2px solid #1e7e34;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-weight: bold;
+                min-height: 35px;
+                min-width: 160px;
+            }
+
+            QPushButton#rephrase_button:hover {
+                background-color: #218838;
+                border-color: #1c7430;
+            }
+
+            /* Pulsanti navigazione - Blu */
+            QPushButton#back_button, QPushButton#forward_button {
+                background-color: #007bff;
+                color: white;
+                border: 2px solid #0056b3;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-weight: bold;
+                min-height: 35px;
+            }
+
+            QPushButton#back_button:hover, QPushButton#forward_button:hover {
+                background-color: #0056b3;
+                border-color: #004085;
+            }
+
+            /* Etichetta pagina - Arancione */
+            QPushButton#page_info_label {
+                background-color: #fd7e14;
+                color: white;
+                border: 2px solid #e8590c;
+                border-radius: 4px;
+                padding: 2px 8px;
+                font-weight: bold;
+                font-size: 12px;
+                min-width: 50px;
+                max-width: 60px;
+            }
+
+            QPushButton#page_info_label:hover {
+                background-color: #e8590c;
+                border-color: #d0390c;
+            }
+
+
         """)
 
         # Pulsante per tornare indietro
         self.back_button = QPushButton("⬅️ Pagina precedente")
-        self.back_button.setStyleSheet("""
-            QPushButton {
-                background-color: #6c757d;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                padding: 8px 16px;
-                font-weight: bold;
-                min-height: 35px;
-            }
-            QPushButton:hover {
-                background-color: #5a6268;
-            }
-            QPushButton:disabled {
-                background-color: #adb5bd;
-                color: #6c757d;
-            }
-        """)
+        self.back_button.setObjectName("back_button")
         self.back_button.clicked.connect(self.show_prev_page)
 
         # Pulsante per andare avanti
         self.forward_button = QPushButton("➡️ Prossima pagina")
-        self.forward_button.setStyleSheet("""
+        self.forward_button.setObjectName("forward_button")
+        self.forward_button.clicked.connect(self.show_next_page)
+
+        # Pulsante per riformulare intensamente
+        self.rephrase_button = QPushButton("🧠 Riformula intensamente")
+        self.rephrase_button.setObjectName("rephrase_button")
+        self.rephrase_button.setStyleSheet("""
             QPushButton {
-                background-color: #28a745;
+                background-color: #17a2b8;
                 color: white;
                 border: none;
                 border-radius: 8px;
                 padding: 8px 16px;
                 font-weight: bold;
                 min-height: 35px;
+                min-width: 160px;
             }
             QPushButton:hover {
-                background-color: #218838;
+                background-color: #138496;
             }
             QPushButton:disabled {
                 background-color: #adb5bd;
                 color: #6c757d;
             }
         """)
-        self.forward_button.clicked.connect(self.show_next_page)
+        self.rephrase_button.clicked.connect(self.handle_rephrase_button)
 
-        # Layout per controlli
-        controls_layout = QHBoxLayout()
+        # Layout principale per controlli (verticale)
+        main_controls_layout = QVBoxLayout()
+        # Imposta size policy per mantenere i controlli compatti
+        from PyQt6.QtWidgets import QSizePolicy
+        main_controls_layout.setSizeConstraint(QVBoxLayout.SizeConstraint.SetFixedSize)
 
-        # Pulsante indietro
-        controls_layout.addWidget(self.back_button)
+        # Prima riga: pulsante copia, riformula con numero pagina accanto
+        rephrase_layout = QHBoxLayout()
+        rephrase_layout.addStretch()
 
-        controls_layout.addStretch()
-
-        # Centro: etichetta pagina corrente
-        self.page_info_label = QLabel("Pagina 1")
-        self.page_info_label.setStyleSheet("""
-            QLabel {
-                color: #495057;
-                font-weight: bold;
-                font-size: 14px;
-                padding: 0 15px;
-                background: rgba(255, 255, 255, 0.8);
+        # Pulsante copia
+        self.copy_button = QPushButton("📋 Copia")
+        self.copy_button.setObjectName("copy_button")
+        self.copy_button.clicked.connect(self.handle_copy_button)
+        self.copy_button.setStyleSheet("""
+            QPushButton {
+                background-color: #007bff;
+                color: white;
+                border: 2px solid #0056b3;
                 border-radius: 6px;
-                min-width: 80px;
-                text-align: center;
+                padding: 8px 16px;
+                font-weight: bold;
+                min-height: 35px;
+                min-width: 100px;
+            }
+            QPushButton:hover {
+                background-color: #0056b3;
+                border-color: #004085;
             }
         """)
-        controls_layout.addWidget(self.page_info_label)
+        rephrase_layout.addWidget(self.copy_button)
 
-        controls_layout.addStretch()
+        rephrase_layout.addWidget(self.rephrase_button)
 
-        # Pulsante avanti
-        controls_layout.addWidget(self.forward_button)
+        # Pulsante pagina non cliccabile (più compatto)
+        self.page_info_label = QPushButton("Pag. 1")
+        self.page_info_label.setObjectName("page_info_label")
+        self.page_info_label.setEnabled(False)  # Non cliccabile
+        self.page_info_label.setStyleSheet("""
+            QPushButton {
+                color: #495057;
+                font-weight: bold;
+                font-size: 12px;
+                padding: 2px 8px;
+                background: rgba(255, 255, 255, 0.8);
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                min-width: 50px;
+                max-width: 60px;
+                text-align: center;
+                margin-left: 5px;
+            }
+        """)
+        rephrase_layout.addWidget(self.page_info_label)
+        rephrase_layout.addStretch()
+        main_controls_layout.addLayout(rephrase_layout)
+
+        # Seconda riga: controlli di navigazione (pulsanti indietro e avanti affiancati)
+        navigation_layout = QHBoxLayout()
+
+        # Pulsante indietro
+        navigation_layout.addWidget(self.back_button)
+
+        navigation_layout.addStretch()
+
+        # Pulsante avanti accanto a quello indietro
+        navigation_layout.addWidget(self.forward_button)
+
+        main_controls_layout.addLayout(navigation_layout)
 
         layout.addWidget(self.details_text_label)
-        layout.addLayout(controls_layout)
+        layout.addLayout(main_controls_layout)  # Pulsanti direttamente sotto il testo
 
         # Aggiungi al layout dei dettagli
         self.details_layout.addWidget(container)
@@ -644,9 +891,9 @@ class MainWindow(QMainWindow):
         display_text = current_text
         self.details_text_label.setPlainText(display_text)
 
-        # Aggiorna etichetta pagina corrente
+        # Aggiorna etichetta pagina corrente (massimo 11 caratteri)
         current_page_num = self.current_page + 1
-        self.page_info_label.setText(f"Pagina {current_page_num}")
+        self.page_info_label.setText(f"Pag. {current_page_num}")
 
         # Aggiorna testi dei pulsanti
         if self.current_page < self.total_pages - 1:
@@ -670,20 +917,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logging.error(f"Errore pulizia dettagli: {e}")
 
-    def show_prev_page(self):
-        """Mostra la pagina precedente del testo."""
-        if self.current_page > 0:
-            self.current_page -= 1
-            self.update_page_display()
 
-    def show_next_page(self):
-        """Mostra la pagina successiva del testo o torna all'inizio."""
-        if self.current_page < self.total_pages - 1:
-            self.current_page += 1
-        else:
-            # Ritorna all'inizio
-            self.current_page = 0
-        self.update_page_display()
 
     def handle_voice_button(self):
         """Avvia il riconoscimento vocale utilizzando il modulo Riconoscimento_Vocale."""
@@ -830,6 +1064,86 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'voice_button'):
             self.voice_button.setEnabled(True)
             self.voice_button.setText("🎤 Trascrivi la mia voce")
+
+    def handle_copy_button(self):
+        """Copia tutto il testo dei dettagli negli appunti."""
+        if not hasattr(self, 'full_text') or not self.full_text:
+            QMessageBox.warning(self, "Nessun Contenuto", "Non c'è contenuto da copiare nei dettagli.")
+            return
+
+        try:
+            # Ottieni gli appunti dell'applicazione
+            clipboard = QApplication.clipboard()
+            if clipboard:
+                clipboard.setText(self.full_text)
+            else:
+                QMessageBox.critical(self, "Errore Appunti", "Impossibile accedere agli appunti del sistema.")
+                return
+
+            # Mostra notifica di successo
+            QMessageBox.information(self, "Copia Completata",
+                                  f"✅ Testo copiato negli appunti!\n\n"
+                                  f"📝 {len(self.full_text)} caratteri copiati")
+
+            logging.info(f"Testo copiato negli appunti: {len(self.full_text)} caratteri")
+
+        except Exception as e:
+            logging.error(f"Errore durante la copia: {e}")
+            QMessageBox.critical(self, "Errore Copia", f"Errore durante la copia del testo:\n{str(e)}")
+
+    def handle_rephrase_button(self):
+        """Gestisce la riformulazione intensa del contenuto nei dettagli usando LLM."""
+        if not hasattr(self, 'full_text') or not self.full_text:
+            QMessageBox.warning(self, "Nessun Contenuto", "Non c'è contenuto da riformulare nei dettagli.")
+            return
+
+        # Controlla se il bridge Ollama è disponibile
+        if not self.ollama_bridge:
+            QMessageBox.critical(self, "AI Non Disponibile",
+                               "Il servizio AI non è disponibile. Verifica che Ollama sia installato e funzionante.")
+            return
+
+        # Verifica connessione con Ollama
+        if not self.ollama_bridge.checkConnection():
+            QMessageBox.critical(self, "Connessione AI Fallita",
+                               "Impossibile connettersi al servizio AI Ollama.\n"
+                               "Assicurati che Ollama sia in esecuzione con: ollama serve")
+            return
+
+        # Disabilita il pulsante durante l'elaborazione
+        if hasattr(self, 'rephrase_button'):
+            self.rephrase_button.setEnabled(False)
+            self.rephrase_button.setText("⏳ Riformulazione...")
+
+        try:
+            # Crea prompt per riformulazione intensa
+            prompt = f"""Riformula intensamente il seguente testo in modo più elegante, chiaro e professionale.
+Mantieni il significato originale ma usa un linguaggio più sofisticato e fluido.
+Se è un'analisi o una descrizione, rendila più dettagliata e approfondita.
+Se è una domanda, riformulala in modo più preciso e formale.
+
+Testo originale:
+{self.full_text}
+
+Riformulazione intensa:"""
+
+            # Mostra stato di elaborazione nei dettagli
+            processing_text = f"🧠 RIFORMULAZIONE IN CORSO\n\n⏳ Elaborazione del testo con intelligenza artificiale...\n\nTesto originale ({len(self.full_text)} caratteri):\n{self.full_text[:200]}{'...' if len(self.full_text) > 200 else ''}"
+            self.show_text_in_details(processing_text)
+
+            # Invia richiesta a Ollama con modello di default
+            default_model = "llama2:7b"  # Modello raccomandato
+            self.ollama_bridge.sendPrompt(prompt, default_model)
+
+            logging.info(f"Richiesta riformulazione inviata: {len(self.full_text)} caratteri (modello: {default_model})")
+
+        except Exception as e:
+            logging.error(f"Errore nell'invio richiesta riformulazione: {e}")
+            QMessageBox.critical(self, "Errore AI", f"Errore nell'invio della richiesta AI:\n{str(e)}")
+            # Riabilita il pulsante in caso di errore
+            if hasattr(self, 'rephrase_button'):
+                self.rephrase_button.setEnabled(True)
+                self.rephrase_button.setText("🧠 Riformula intensamente")
 
     def handle_clean_button(self):
         """Gestisce la pulizia di tutti i widget con conferma utente."""
