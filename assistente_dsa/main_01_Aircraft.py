@@ -392,6 +392,62 @@ class MainWindow(QMainWindow):
                 background-color: #218838;
             }
 
+            /* Pulsante Riconoscimento Faciale */
+            QPushButton#face_button {
+                background-color: #f8f9fa;
+                color: #6c757d;
+                border: 2px solid #dee2e6;
+                border-radius: 6px;
+                padding: 8px 12px;
+                font-weight: bold;
+                min-width: 180px;
+                min-height: 35px;
+            }
+
+            QPushButton#face_button:hover {
+                background-color: #e9ecef;
+                border-color: #adb5bd;
+            }
+
+            QPushButton#face_button:checked {
+                background-color: #d4edda;
+                color: #155724;
+                border: 2px solid #c3e6cb;
+            }
+
+            QPushButton#face_button:checked:hover {
+                background-color: #c3e6cb;
+                border-color: #8fd19e;
+            }
+
+            /* Pulsante Riconoscimento Gesti Mani */
+            QPushButton#hand_button {
+                background-color: #f8f9fa;
+                color: #6c757d;
+                border: 2px solid #dee2e6;
+                border-radius: 6px;
+                padding: 8px 12px;
+                font-weight: bold;
+                min-width: 150px;
+                min-height: 35px;
+            }
+
+            QPushButton#hand_button:hover {
+                background-color: #e9ecef;
+                border-color: #adb5bd;
+            }
+
+            QPushButton#hand_button:checked {
+                background-color: #d4edda;
+                color: #155724;
+                border: 2px solid #c3e6cb;
+            }
+
+            QPushButton#hand_button:checked:hover {
+                background-color: #c3e6cb;
+                border-color: #8fd19e;
+            }
+
             /* Pulsante Log Footer */
             QPushButton#footer_log_button {
                 background-color: #6f42c1;
@@ -625,6 +681,20 @@ class MainWindow(QMainWindow):
         self.ocr_button.setObjectName("ocr_button")  # ID per CSS
         self.ocr_button.clicked.connect(self.handle_ocr_button)
         buttons_layout.addWidget(self.ocr_button)
+
+        # Pulsante Riconoscimento Faciale
+        self.face_button = QPushButton("❌ Abilita Riconoscimento Faciale")
+        self.face_button.setObjectName("face_button")  # ID per CSS
+        self.face_button.setCheckable(True)
+        self.face_button.clicked.connect(self.handle_face_recognition)
+        buttons_layout.addWidget(self.face_button)
+
+        # Pulsante Riconoscimento Gesti Mani
+        self.hand_button = QPushButton("❌ Abilita Gesti Mani")
+        self.hand_button.setObjectName("hand_button")  # ID per CSS
+        self.hand_button.setCheckable(True)
+        self.hand_button.clicked.connect(self.handle_hand_gestures)
+        buttons_layout.addWidget(self.hand_button)
 
         self.clean_button = QPushButton("🧹 Pulisci")
         self.clean_button.setObjectName("clean_button")  # ID per CSS
@@ -1526,6 +1596,52 @@ Riformulazione intensa:"""
         return "📄 OCR per PDF non ancora implementato.\n\n" \
                "Converti prima il PDF in immagini per utilizzare l'OCR.\n\n" \
                "Funzionalità futura: estrazione automatica immagini da PDF."
+
+    def handle_face_recognition(self):
+        """Gestisce il toggle per il riconoscimento facciale."""
+        try:
+            if self.face_button.isChecked():
+                # Abilita riconoscimento facciale
+                self.face_button.setText("✅ Abilita Riconoscimento Faciale")
+                QMessageBox.information(self, "Funzione in Sviluppo",
+                                      "🔧 Riconoscimento Faciale\n\n"
+                                      "📋 Stato: ABILITATO\n\n"
+                                      "⚠️ In Manutenzione - WIP Work in progress\n\n"
+                                      "Questa funzione sarà disponibile nelle prossime versioni.")
+            else:
+                # Disabilita riconoscimento facciale
+                self.face_button.setText("❌ Abilita Riconoscimento Faciale")
+                QMessageBox.information(self, "Funzione Disabilitata",
+                                      "🔧 Riconoscimento Faciale\n\n"
+                                      "📋 Stato: DISABILITATO\n\n"
+                                      "La funzione è stata disabilitata.")
+
+        except Exception as e:
+            logging.error(f"Errore toggle riconoscimento facciale: {e}")
+            QMessageBox.critical(self, "Errore", f"Errore durante la gestione del riconoscimento facciale:\n{str(e)}")
+
+    def handle_hand_gestures(self):
+        """Gestisce il toggle per il riconoscimento gesti mani."""
+        try:
+            if self.hand_button.isChecked():
+                # Abilita riconoscimento gesti mani
+                self.hand_button.setText("✅ Abilita Gesti Mani")
+                QMessageBox.information(self, "Funzione in Sviluppo",
+                                      "🔧 Riconoscimento Gesti Mani\n\n"
+                                      "📋 Stato: ABILITATO\n\n"
+                                      "⚠️ In Manutenzione - WIP Work in progress\n\n"
+                                      "Questa funzione sarà disponibile nelle prossime versioni.")
+            else:
+                # Disabilita riconoscimento gesti mani
+                self.hand_button.setText("❌ Abilita Gesti Mani")
+                QMessageBox.information(self, "Funzione Disabilitata",
+                                      "🔧 Riconoscimento Gesti Mani\n\n"
+                                      "📋 Stato: DISABILITATO\n\n"
+                                      "La funzione è stata disabilitata.")
+
+        except Exception as e:
+            logging.error(f"Errore toggle riconoscimento gesti mani: {e}")
+            QMessageBox.critical(self, "Errore", f"Errore durante la gestione del riconoscimento gesti mani:\n{str(e)}")
 
     def handle_log_toggle(self):
         """Gestisce il toggle per visualizzare errori e warning dal log."""
