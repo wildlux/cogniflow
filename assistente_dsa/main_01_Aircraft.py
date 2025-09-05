@@ -13,7 +13,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel,
     QPushButton, QHBoxLayout, QLineEdit, QTextEdit, QGroupBox,
-    QScrollArea, QMessageBox, QFileDialog
+    QScrollArea, QMessageBox, QFileDialog, QSlider
 )
 
 # Import del sistema di configurazione
@@ -44,6 +44,17 @@ try:
 except ImportError:
     SpeechRecognitionThread = None
     ensure_vosk_model_available = None
+
+# Import per funzionalità multimediali
+try:
+    from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
+    from PyQt6.QtMultimediaWidgets import QVideoWidget
+    MULTIMEDIA_AVAILABLE = True
+except ImportError:
+    QMediaPlayer = None
+    QAudioOutput = None
+    QVideoWidget = None
+    MULTIMEDIA_AVAILABLE = False
 
 # Classe per gestire l'area di lavoro con supporto al drop
 class WorkAreaWidget(QWidget):
@@ -351,6 +362,16 @@ class MainWindow(QMainWindow):
                 background-color: #5a359a;
             }
 
+            /* Pulsante Media */
+            QPushButton#media_button {
+                background-color: #17a2b8;
+                min-width: 130px;
+            }
+
+            QPushButton#media_button:hover {
+                background-color: #138496;
+            }
+
             /* Pulsante Pulisci */
             QPushButton#clean_button {
                 background-color: #dc3545;
@@ -554,6 +575,11 @@ class MainWindow(QMainWindow):
         self.voice_button.setObjectName("voice_button")  # ID per CSS
         self.voice_button.clicked.connect(self.handle_voice_button)
         buttons_layout.addWidget(self.voice_button)
+
+        self.media_button = QPushButton("📁 Carica Media")
+        self.media_button.setObjectName("media_button")  # ID per CSS
+        self.media_button.clicked.connect(self.handle_media_button)
+        buttons_layout.addWidget(self.media_button)
 
         self.clean_button = QPushButton("🧹 Pulisci")
         self.clean_button.setObjectName("clean_button")  # ID per CSS
@@ -1145,6 +1171,239 @@ Riformulazione intensa:"""
                 self.rephrase_button.setEnabled(True)
                 self.rephrase_button.setText("🧠 Riformula intensamente")
 
+    def handle_media_button(self):
+        """Gestisce il caricamento di file multimediali (audio/video)."""
+        try:
+            # Apri dialog per selezionare file
+            file_dialog = QFileDialog(self)
+            file_dialog.setWindowTitle("Seleziona file multimediale")
+            file_dialog.setNameFilter("File multimediali (*.mp3 *.wav *.mp4 *.avi *.mkv *.mov);;Audio (*.mp3 *.wav);;Video (*.mp4 *.avi *.mkv *.mov);;Tutti i file (*)")
+
+            if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
+                selected_files = file_dialog.selectedFiles()
+                if selected_files:
+                    file_path = selected_files[0]
+                    self.process_media_file(file_path)
+
+        except Exception as e:
+            logging.error(f"Errore caricamento file multimediale: {e}")
+            QMessageBox.critical(self, "Errore", f"Errore durante il caricamento del file:\n{str(e)}")
+
+    def process_media_file(self, file_path):
+        """Elabora il file multimediale selezionato."""
+        import os
+        from pathlib import Path
+
+        file_name = os.path.basename(file_path)
+        file_ext = Path(file_path).suffix.lower()
+
+        # Determina il tipo di file
+        audio_extensions = ['.mp3', '.wav', '.flac', '.aac', '.ogg']
+        video_extensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv']
+
+        if file_ext in audio_extensions:
+            self.create_audio_widget(file_path, file_name)
+        elif file_ext in video_extensions:
+            self.create_video_widget(file_path, file_name)
+        else:
+            # File generico - mostra icona semplice
+            self.create_generic_media_widget(file_path, file_name)
+
+    def create_audio_widget(self, file_path, file_name):
+        """Crea un widget per file audio con controlli multimediali."""
+        try:
+            if not MULTIMEDIA_AVAILABLE:
+                raise ImportError("Funzionalità multimediali non disponibili")
+
+            from PyQt6.QtCore import QUrl
+
+            # Crea widget contenitore
+            audio_widget = QWidget()
+            audio_layout = QVBoxLayout(audio_widget)
+
+            # Header con nome file e icona
+            header_layout = QHBoxLayout()
+            header_layout.addWidget(QLabel(f"🎵 {file_name}"))
+            header_layout.addStretch()
+            audio_layout.addLayout(header_layout)
+
+            # Controlli multimediali
+            controls_layout = QHBoxLayout()
+
+            # Pulsanti play/pausa/stop
+            self.play_button = QPushButton("▶️ Play")
+            self.play_button.clicked.connect(lambda: self.toggle_audio_playback(file_path))
+            controls_layout.addWidget(self.play_button)
+
+            self.pause_button = QPushButton("⏸️ Pausa")
+            self.pause_button.clicked.connect(self.pause_audio)
+            controls_layout.addWidget(self.pause_button)
+
+            self.stop_button = QPushButton("⏹️ Stop")
+            self.stop_button.clicked.connect(self.stop_audio)
+            controls_layout.addWidget(self.stop_button)
+
+            # Slider per posizione
+            self.position_slider = QSlider(Qt.Orientation.Horizontal)
+            self.position_slider.setRange(0, 100)
+            controls_layout.addWidget(self.position_slider)
+
+            # Etichetta durata
+            self.duration_label = QLabel("00:00 / 00:00")
+            controls_layout.addWidget(self.duration_label)
+
+            # Inizializza variabili per controlli
+            self.current_position = 0
+            self.total_duration = 0
+
+            audio_layout.addLayout(controls_layout)
+
+            # Placeholder per analizzatore spettro (implementazione futura)
+            spectrum_label = QLabel("🎵 Analizzatore Spettro - In sviluppo")
+            spectrum_label.setStyleSheet("color: #666; font-style: italic; padding: 10px;")
+            audio_layout.addWidget(spectrum_label)
+
+            # Inizializza media player
+            self.media_player = QMediaPlayer()
+            self.audio_output = QAudioOutput()
+            self.media_player.setAudioOutput(self.audio_output)
+            self.media_player.setSource(QUrl.fromLocalFile(file_path))
+
+            # Connetti segnali
+            self.media_player.positionChanged.connect(self.update_position)
+            self.media_player.durationChanged.connect(self.update_duration)
+            self.position_slider.sliderMoved.connect(self.set_position)
+
+            # Aggiungi alla colonna pensierini
+            if DraggableTextWidget:
+                # Crea un wrapper per rendere trascinabile
+                wrapper_widget = DraggableTextWidget(f"🎵 Audio: {file_name}", self.settings)
+                # Sostituisci il contenuto con il widget audio
+                wrapper_layout = QVBoxLayout(wrapper_widget)
+                wrapper_layout.addWidget(audio_widget)
+                self.pensierini_layout.addWidget(wrapper_widget)
+
+            QMessageBox.information(self, "File Audio Caricato",
+                                  f"✅ File audio '{file_name}' caricato con successo!\n\n"
+                                  f"🎵 Controlli multimediali disponibili\n"
+                                  f"📊 Analizzatore spettro in sviluppo")
+
+        except ImportError as e:
+            QMessageBox.warning(self, "Funzionalità Limitata",
+                              f"Alcune funzionalità audio potrebbero non essere disponibili:\n{str(e)}\n\n"
+                              f"Il file è stato comunque aggiunto come elemento generico.")
+            self.create_generic_media_widget(file_path, file_name)
+
+    def create_video_widget(self, file_path, file_name):
+        """Crea un widget semplice per file video."""
+        try:
+            # Crea widget semplice con icona video
+            video_widget = QWidget()
+            video_layout = QVBoxLayout(video_widget)
+
+            # Icona e nome file
+            icon_label = QLabel("🎥")
+            icon_label.setStyleSheet("font-size: 48px; color: #dc3545;")
+            video_layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+            name_label = QLabel(file_name)
+            name_label.setStyleSheet("font-weight: bold; color: #333;")
+            video_layout.addWidget(name_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+            # Nota che è un video
+            type_label = QLabel("(File Video)")
+            type_label.setStyleSheet("color: #666; font-style: italic;")
+            video_layout.addWidget(type_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+            # Aggiungi alla colonna pensierini
+            if DraggableTextWidget:
+                wrapper_widget = DraggableTextWidget(f"🎥 Video: {file_name}", self.settings)
+                wrapper_layout = QVBoxLayout(wrapper_widget)
+                wrapper_layout.addWidget(video_widget)
+                self.pensierini_layout.addWidget(wrapper_widget)
+
+            QMessageBox.information(self, "File Video Caricato",
+                                  f"✅ File video '{file_name}' caricato con successo!")
+
+        except Exception as e:
+            logging.error(f"Errore creazione widget video: {e}")
+            self.create_generic_media_widget(file_path, file_name)
+
+    def create_generic_media_widget(self, file_path, file_name):
+        """Crea un widget generico per file non riconosciuti."""
+        try:
+            # Crea widget semplice con icona file
+            generic_widget = QWidget()
+            generic_layout = QVBoxLayout(generic_widget)
+
+            # Icona file generica
+            icon_label = QLabel("📄")
+            icon_label.setStyleSheet("font-size: 48px; color: #6c757d;")
+            generic_layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+            name_label = QLabel(file_name)
+            name_label.setStyleSheet("font-weight: bold; color: #333;")
+            generic_layout.addWidget(name_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+            # Aggiungi alla colonna pensierini
+            if DraggableTextWidget:
+                wrapper_widget = DraggableTextWidget(f"📄 File: {file_name}", self.settings)
+                wrapper_layout = QVBoxLayout(wrapper_widget)
+                wrapper_layout.addWidget(generic_widget)
+                self.pensierini_layout.addWidget(wrapper_widget)
+
+            QMessageBox.information(self, "File Caricato",
+                                  f"✅ File '{file_name}' caricato con successo!")
+
+        except Exception as e:
+            logging.error(f"Errore creazione widget generico: {e}")
+            QMessageBox.critical(self, "Errore", f"Errore durante la creazione del widget:\n{str(e)}")
+
+    def toggle_audio_playback(self, file_path):
+        """Alterna play/pausa per l'audio."""
+        if hasattr(self, 'media_player'):
+            if self.media_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+                self.media_player.pause()
+                self.play_button.setText("▶️ Play")
+            else:
+                self.media_player.play()
+                self.play_button.setText("⏸️ Pausa")
+
+    def pause_audio(self):
+        """Mette in pausa l'audio."""
+        if hasattr(self, 'media_player'):
+            self.media_player.pause()
+            if hasattr(self, 'play_button'):
+                self.play_button.setText("▶️ Play")
+
+    def stop_audio(self):
+        """Ferma l'audio."""
+        if hasattr(self, 'media_player'):
+            self.media_player.stop()
+            if hasattr(self, 'play_button'):
+                self.play_button.setText("▶️ Play")
+
+    def update_position(self, position):
+        """Aggiorna la posizione del slider."""
+        if hasattr(self, 'position_slider'):
+            self.position_slider.setValue(position)
+
+    def update_duration(self, duration):
+        """Aggiorna la durata totale."""
+        if hasattr(self, 'position_slider'):
+            self.position_slider.setRange(0, duration)
+        if hasattr(self, 'duration_label'):
+            # Converti millisecondi in formato MM:SS
+            total_seconds = duration // 1000
+            minutes = total_seconds // 60
+            seconds = total_seconds % 60
+            self.duration_label.setText(f"00:00 / {minutes:02d}:{seconds:02d}")
+
+    def set_position(self, position):
+        """Imposta la posizione dell'audio."""
+        if hasattr(self, 'media_player'):
+            self.media_player.setPosition(position)
+
     def handle_clean_button(self):
         """Gestisce la pulizia di tutti i widget con conferma utente."""
         # Mostra finestra di conferma
@@ -1168,7 +1427,7 @@ Riformulazione intensa:"""
                 if item:
                     try:
                         widget = item.widget()
-                        if widget and hasattr(widget, 'deleteLater'):
+                        if widget and hasattr(widget, 'deleteLater') and callable(getattr(widget, 'deleteLater', None)):
                             widget.deleteLater()
                     except (AttributeError, TypeError):
                         pass
@@ -1177,7 +1436,7 @@ Riformulazione intensa:"""
                 if item:
                     try:
                         widget = item.widget()
-                        if widget and hasattr(widget, 'deleteLater'):
+                        if widget and hasattr(widget, 'deleteLater') and callable(getattr(widget, 'deleteLater', None)):
                             widget.deleteLater()
                     except (AttributeError, TypeError):
                         pass
