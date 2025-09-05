@@ -392,6 +392,21 @@ class MainWindow(QMainWindow):
                 background-color: #218838;
             }
 
+            /* Pulsante Log */
+            QPushButton#log_button {
+                background-color: #6f42c1;
+                min-width: 160px;
+            }
+
+            QPushButton#log_button:hover {
+                background-color: #5a359a;
+            }
+
+            QPushButton#log_button:checked {
+                background-color: #e8590c;
+                border: 2px solid #d0390c;
+            }
+
             /* Pulsante Pulisci */
             QPushButton#clean_button {
                 background-color: #dc3545;
@@ -605,6 +620,12 @@ class MainWindow(QMainWindow):
         self.ocr_button.setObjectName("ocr_button")  # ID per CSS
         self.ocr_button.clicked.connect(self.handle_ocr_button)
         buttons_layout.addWidget(self.ocr_button)
+
+        self.log_button = QPushButton("📋 Log Errori/Warning")
+        self.log_button.setObjectName("log_button")  # ID per CSS
+        self.log_button.setCheckable(True)  # Pulsante toggle
+        self.log_button.clicked.connect(self.handle_log_toggle)
+        buttons_layout.addWidget(self.log_button)
 
         self.clean_button = QPushButton("🧹 Pulisci")
         self.clean_button.setObjectName("clean_button")  # ID per CSS
@@ -1490,6 +1511,93 @@ Riformulazione intensa:"""
         return "📄 OCR per PDF non ancora implementato.\n\n" \
                "Converti prima il PDF in immagini per utilizzare l'OCR.\n\n" \
                "Funzionalità futura: estrazione automatica immagini da PDF."
+
+    def handle_log_toggle(self):
+        """Gestisce il toggle per visualizzare errori e warning dal log."""
+        try:
+            if self.log_button.isChecked():
+                # Attiva visualizzazione log
+                self.show_log_errors_warnings()
+                self.log_button.setText("📋 Log ATTIVO")
+            else:
+                # Disattiva visualizzazione log
+                self.hide_log_view()
+                self.log_button.setText("📋 Log Errori/Warning")
+
+        except Exception as e:
+            logging.error(f"Errore toggle log: {e}")
+            QMessageBox.critical(self, "Errore Log", f"Errore durante la gestione del log:\n{str(e)}")
+
+    def show_log_errors_warnings(self):
+        """Mostra errori e warning dal file di log."""
+        try:
+            # Ottieni il percorso del file di log
+            log_config = get_config()
+            log_file = log_config.get_setting('files.log_file', 'Save/LOG/app.log')
+
+            if not os.path.exists(log_file):
+                QMessageBox.warning(self, "File Log Non Trovato",
+                                  f"Il file di log non esiste:\n{log_file}")
+                self.log_button.setChecked(False)
+                return
+
+            # Leggi il file di log
+            with open(log_file, 'r', encoding='utf-8') as f:
+                log_content = f.read()
+
+            # Filtra solo errori e warning
+            lines = log_content.split('\n')
+            filtered_lines = []
+
+            for line in lines:
+                line_lower = line.lower()
+                if ('error' in line_lower or
+                    'warning' in line_lower or
+                    'critical' in line_lower or
+                    'exception' in line_lower):
+                    filtered_lines.append(line)
+
+            if not filtered_lines:
+                log_display = "📋 LOG ERRORI E WARNING\n\n" \
+                             "✅ Nessun errore o warning trovato nel log!\n\n" \
+                             f"📁 File log: {log_file}\n" \
+                             f"📊 Righe totali nel log: {len(lines)}"
+            else:
+                log_display = f"📋 LOG ERRORI E WARNING\n\n" \
+                             f"🔍 Trovati {len(filtered_lines)} errori/warning:\n\n" \
+                             f"{'='*50}\n\n" \
+                             f"{chr(10).join(filtered_lines[-20:])}\n\n" \
+                             f"{'='*50}\n\n" \
+                             f"📁 File log completo: {log_file}\n" \
+                             f"📊 Errori/warning totali: {len(filtered_lines)}\n" \
+                             f"📈 Mostrati ultimi 20"
+
+            # Mostra nel pannello dettagli
+            self.show_text_in_details(log_display)
+
+            QMessageBox.information(self, "Log Caricato",
+                                  f"✅ Log errori/warning visualizzato!\n\n"
+                                  f"📊 Trovati: {len(filtered_lines)} errori/warning\n"
+                                  f"📁 File: {os.path.basename(log_file)}")
+
+        except Exception as e:
+            logging.error(f"Errore lettura log: {e}")
+            QMessageBox.critical(self, "Errore Lettura Log",
+                               f"Errore durante la lettura del file di log:\n{str(e)}")
+            self.log_button.setChecked(False)
+
+    def hide_log_view(self):
+        """Nasconde la visualizzazione del log."""
+        try:
+            # Pulisce la sezione dettagli se contiene il log
+            if hasattr(self, 'full_text') and self.full_text:
+                if "📋 LOG ERRORI E WARNING" in self.full_text:
+                    self._clear_details()
+                    QMessageBox.information(self, "Log Nascosto",
+                                          "✅ Visualizzazione log disattivata!")
+
+        except Exception as e:
+            logging.error(f"Errore nascondendo log: {e}")
 
     def toggle_audio_playback(self, file_path):
         """Alterna play/pausa per l'audio."""
