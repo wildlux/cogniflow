@@ -364,12 +364,12 @@ class MainWindow(QMainWindow):
 
             /* Pulsante Voce */
             QPushButton#voice_button {
-                background-color: #6f42c1;
+                background-color: #9c27b0;
                 min-width: 130px;
             }
 
             QPushButton#voice_button:hover {
-                background-color: #5a359a;
+                background-color: #7b1fa2;
             }
 
             /* Pulsante Media */
@@ -635,7 +635,7 @@ class MainWindow(QMainWindow):
         tools_layout.addLayout(buttons_layout)
         main_layout.addWidget(tools_group)
 
-        # Footer con pulsante log in basso a destra
+        # Footer con pulsante log in basso a destra (alzato)
         footer_layout = QHBoxLayout()
         footer_layout.addStretch()  # Spazio a sinistra
 
@@ -645,6 +645,9 @@ class MainWindow(QMainWindow):
         self.log_button.clicked.connect(self.handle_log_toggle)
         self.log_button.setFixedSize(120, 35)
         footer_layout.addWidget(self.log_button)
+
+        # Aggiungi spaziatura sotto per alzare il pulsante
+        footer_layout.setContentsMargins(0, 0, 0, 8)  # Margine inferiore di 8px
 
         main_layout.addLayout(footer_layout)
 
