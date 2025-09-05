@@ -392,17 +392,22 @@ class MainWindow(QMainWindow):
                 background-color: #218838;
             }
 
-            /* Pulsante Log */
-            QPushButton#log_button {
+            /* Pulsante Log Footer */
+            QPushButton#footer_log_button {
                 background-color: #6f42c1;
-                min-width: 160px;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 12px;
+                font-weight: bold;
+                font-size: 11px;
             }
 
-            QPushButton#log_button:hover {
+            QPushButton#footer_log_button:hover {
                 background-color: #5a359a;
             }
 
-            QPushButton#log_button:checked {
+            QPushButton#footer_log_button:checked {
                 background-color: #e8590c;
                 border: 2px solid #d0390c;
             }
@@ -621,12 +626,6 @@ class MainWindow(QMainWindow):
         self.ocr_button.clicked.connect(self.handle_ocr_button)
         buttons_layout.addWidget(self.ocr_button)
 
-        self.log_button = QPushButton("📋 Log Errori/Warning")
-        self.log_button.setObjectName("log_button")  # ID per CSS
-        self.log_button.setCheckable(True)  # Pulsante toggle
-        self.log_button.clicked.connect(self.handle_log_toggle)
-        buttons_layout.addWidget(self.log_button)
-
         self.clean_button = QPushButton("🧹 Pulisci")
         self.clean_button.setObjectName("clean_button")  # ID per CSS
         self.clean_button.clicked.connect(self.handle_clean_button)
@@ -635,6 +634,19 @@ class MainWindow(QMainWindow):
         buttons_layout.addStretch()
         tools_layout.addLayout(buttons_layout)
         main_layout.addWidget(tools_group)
+
+        # Footer con pulsante log in basso a destra
+        footer_layout = QHBoxLayout()
+        footer_layout.addStretch()  # Spazio a sinistra
+
+        self.log_button = QPushButton("📋 Log")
+        self.log_button.setObjectName("footer_log_button")
+        self.log_button.setCheckable(True)
+        self.log_button.clicked.connect(self.handle_log_toggle)
+        self.log_button.setFixedSize(120, 35)
+        footer_layout.addWidget(self.log_button)
+
+        main_layout.addLayout(footer_layout)
 
     def setup_work_area(self, layout):
         self.work_area_scroll = QScrollArea()
@@ -1516,29 +1528,93 @@ Riformulazione intensa:"""
         """Gestisce il toggle per visualizzare errori e warning dal log."""
         try:
             if self.log_button.isChecked():
-                # Attiva visualizzazione log
-                self.show_log_errors_warnings()
-                self.log_button.setText("📋 Log ATTIVO")
+                # Attiva visualizzazione log - apri finestra
+                self.show_log_window()
+                self.log_button.setText("📋 Log ON")
             else:
-                # Disattiva visualizzazione log
-                self.hide_log_view()
-                self.log_button.setText("📋 Log Errori/Warning")
+                # Disattiva visualizzazione log - chiudi finestra
+                self.hide_log_window()
+                self.log_button.setText("📋 Log")
 
         except Exception as e:
             logging.error(f"Errore toggle log: {e}")
             QMessageBox.critical(self, "Errore Log", f"Errore durante la gestione del log:\n{str(e)}")
 
-    def show_log_errors_warnings(self):
-        """Mostra errori e warning dal file di log."""
+    def show_log_window(self):
+        """Mostra una finestra separata con errori e warning dal log."""
         try:
+            # Crea finestra log se non esiste
+            if not hasattr(self, 'log_window') or self.log_window is None:
+                self.log_window = QWidget()
+                self.log_window.setWindowTitle("📋 Log Errori e Warning")
+                self.log_window.setFixedSize(600, 400)
+                self.log_window.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint)
+
+                # Layout finestra
+                layout = QVBoxLayout(self.log_window)
+
+                # Titolo
+                title = QLabel("📋 Monitor Log - Errori e Warning")
+                title.setStyleSheet("font-size: 14px; font-weight: bold; margin-bottom: 10px;")
+                layout.addWidget(title)
+
+                # Area testo per il log
+                self.log_text_area = QTextEdit()
+                self.log_text_area.setReadOnly(True)
+                self.log_text_area.setStyleSheet("""
+                    QTextEdit {
+                        background-color: #f8f9fa;
+                        border: 1px solid #dee2e6;
+                        border-radius: 4px;
+                        font-family: monospace;
+                        font-size: 10px;
+                        line-height: 1.3;
+                    }
+                """)
+                layout.addWidget(self.log_text_area)
+
+                # Pulsanti
+                buttons_layout = QHBoxLayout()
+                buttons_layout.addStretch()
+
+                refresh_button = QPushButton("🔄 Aggiorna")
+                refresh_button.clicked.connect(self.refresh_log_content)
+                buttons_layout.addWidget(refresh_button)
+
+                clear_button = QPushButton("🧹 Pulisci Log")
+                clear_button.clicked.connect(self.clear_log_file)
+                buttons_layout.addWidget(clear_button)
+
+                close_button = QPushButton("❌ Chiudi")
+                close_button.clicked.connect(self.hide_log_window)
+                buttons_layout.addWidget(close_button)
+
+                layout.addLayout(buttons_layout)
+
+            # Carica contenuto log
+            self.refresh_log_content()
+
+            # Mostra finestra
+            self.log_window.show()
+
+        except Exception as e:
+            logging.error(f"Errore creazione finestra log: {e}")
+            QMessageBox.critical(self, "Errore Finestra Log",
+                               f"Errore durante la creazione della finestra log:\n{str(e)}")
+            self.log_button.setChecked(False)
+
+    def refresh_log_content(self):
+        """Aggiorna il contenuto del log nella finestra."""
+        try:
+            if not hasattr(self, 'log_text_area'):
+                return
+
             # Ottieni il percorso del file di log
             log_config = get_config()
             log_file = log_config.get_setting('files.log_file', 'Save/LOG/app.log')
 
             if not os.path.exists(log_file):
-                QMessageBox.warning(self, "File Log Non Trovato",
-                                  f"Il file di log non esiste:\n{log_file}")
-                self.log_button.setChecked(False)
+                self.log_text_area.setPlainText(f"📁 File log non trovato:\n{log_file}")
                 return
 
             # Leggi il file di log
@@ -1558,46 +1634,63 @@ Riformulazione intensa:"""
                     filtered_lines.append(line)
 
             if not filtered_lines:
-                log_display = "📋 LOG ERRORI E WARNING\n\n" \
-                             "✅ Nessun errore o warning trovato nel log!\n\n" \
-                             f"📁 File log: {log_file}\n" \
-                             f"📊 Righe totali nel log: {len(lines)}"
+                display_text = f"📋 LOG ERRORI E WARNING\n\n" \
+                              f"✅ Nessun errore o warning trovato nel log!\n\n" \
+                              f"📁 File log: {log_file}\n" \
+                              f"📊 Righe totali nel log: {len(lines)}\n" \
+                              f"🔄 Ultimo aggiornamento: {datetime.now().strftime('%H:%M:%S')}"
             else:
-                log_display = f"📋 LOG ERRORI E WARNING\n\n" \
-                             f"🔍 Trovati {len(filtered_lines)} errori/warning:\n\n" \
-                             f"{'='*50}\n\n" \
-                             f"{chr(10).join(filtered_lines[-20:])}\n\n" \
-                             f"{'='*50}\n\n" \
-                             f"📁 File log completo: {log_file}\n" \
-                             f"📊 Errori/warning totali: {len(filtered_lines)}\n" \
-                             f"📈 Mostrati ultimi 20"
+                display_text = f"📋 LOG ERRORI E WARNING\n\n" \
+                              f"🔍 Trovati {len(filtered_lines)} errori/warning:\n\n" \
+                              f"{'='*60}\n\n" \
+                              f"{chr(10).join(filtered_lines[-50:])}\n\n" \
+                              f"{'='*60}\n\n" \
+                              f"📁 File log: {log_file}\n" \
+                              f"📊 Errori/warning totali: {len(filtered_lines)}\n" \
+                              f"📈 Mostrati ultimi 50\n" \
+                              f"🔄 Ultimo aggiornamento: {datetime.now().strftime('%H:%M:%S')}"
 
-            # Mostra nel pannello dettagli
-            self.show_text_in_details(log_display)
-
-            QMessageBox.information(self, "Log Caricato",
-                                  f"✅ Log errori/warning visualizzato!\n\n"
-                                  f"📊 Trovati: {len(filtered_lines)} errori/warning\n"
-                                  f"📁 File: {os.path.basename(log_file)}")
+            self.log_text_area.setPlainText(display_text)
 
         except Exception as e:
-            logging.error(f"Errore lettura log: {e}")
-            QMessageBox.critical(self, "Errore Lettura Log",
-                               f"Errore durante la lettura del file di log:\n{str(e)}")
-            self.log_button.setChecked(False)
+            logging.error(f"Errore aggiornamento log: {e}")
+            if hasattr(self, 'log_text_area'):
+                self.log_text_area.setPlainText(f"❌ Errore lettura log:\n{str(e)}")
 
-    def hide_log_view(self):
-        """Nasconde la visualizzazione del log."""
+    def clear_log_file(self):
+        """Pulisce il file di log."""
         try:
-            # Pulisce la sezione dettagli se contiene il log
-            if hasattr(self, 'full_text') and self.full_text:
-                if "📋 LOG ERRORI E WARNING" in self.full_text:
-                    self._clear_details()
-                    QMessageBox.information(self, "Log Nascosto",
-                                          "✅ Visualizzazione log disattivata!")
+            reply = QMessageBox.question(self, "Conferma Pulizia Log",
+                                       "Sei sicuro di voler pulire il file di log?\n\n"
+                                       "Questa azione rimuoverà tutti gli errori e warning registrati.",
+                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+
+            if reply == QMessageBox.StandardButton.Yes:
+                log_config = get_config()
+                log_file = log_config.get_setting('files.log_file', 'Save/LOG/app.log')
+
+                # Svuota il file di log
+                with open(log_file, 'w', encoding='utf-8') as f:
+                    f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] INFO Log pulito dall'utente\n")
+
+                self.refresh_log_content()
+                QMessageBox.information(self, "Log Pulito", "✅ File di log pulito con successo!")
 
         except Exception as e:
-            logging.error(f"Errore nascondendo log: {e}")
+            logging.error(f"Errore pulizia log: {e}")
+            QMessageBox.critical(self, "Errore Pulizia Log",
+                               f"Errore durante la pulizia del log:\n{str(e)}")
+
+    def hide_log_window(self):
+        """Nasconde la finestra del log."""
+        try:
+            if hasattr(self, 'log_window') and self.log_window:
+                self.log_window.hide()
+                self.log_button.setChecked(False)
+                self.log_button.setText("📋 Log")
+
+        except Exception as e:
+            logging.error(f"Errore nascondendo finestra log: {e}")
 
     def toggle_audio_playback(self, file_path):
         """Alterna play/pausa per l'audio."""
