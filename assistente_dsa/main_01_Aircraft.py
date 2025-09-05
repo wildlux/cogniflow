@@ -683,7 +683,7 @@ class MainWindow(QMainWindow):
         buttons_layout.addWidget(self.ocr_button)
 
         # Pulsante Riconoscimento Faciale
-        self.face_button = QPushButton("❌ Abilita Riconoscimento Faciale")
+        self.face_button = QPushButton("❌ Riconoscimento Faciale")
         self.face_button.setObjectName("face_button")  # ID per CSS
         self.face_button.setCheckable(True)
         self.face_button.clicked.connect(self.handle_face_recognition)
@@ -1602,7 +1602,7 @@ Riformulazione intensa:"""
         try:
             if self.face_button.isChecked():
                 # Abilita riconoscimento facciale
-                self.face_button.setText("✅ Abilita Riconoscimento Faciale")
+                self.face_button.setText("✅ Riconoscimento Faciale")
                 QMessageBox.information(self, "Funzione in Sviluppo",
                                       "🔧 Riconoscimento Faciale\n\n"
                                       "📋 Stato: ABILITATO\n\n"
@@ -1610,7 +1610,7 @@ Riformulazione intensa:"""
                                       "Questa funzione sarà disponibile nelle prossime versioni.")
             else:
                 # Disabilita riconoscimento facciale
-                self.face_button.setText("❌ Abilita Riconoscimento Faciale")
+                self.face_button.setText("❌ Riconoscimento Faciale")
                 QMessageBox.information(self, "Funzione Disabilitata",
                                       "🔧 Riconoscimento Faciale\n\n"
                                       "📋 Stato: DISABILITATO\n\n"
