@@ -122,6 +122,7 @@ class SettingsDialog(QDialog):
         self.setup_general_tab()
         self.setup_ui_tab()
         self.setup_ai_tab()
+        self.setup_test_tab()
 
         layout.addWidget(self.tab_widget)
 
@@ -231,6 +232,72 @@ class SettingsDialog(QDialog):
 
         self.tab_widget.addTab(widget, "AI")
 
+    def setup_test_tab(self):
+        """Configura il tab di test per scopi di sviluppo."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # Gruppo test input
+        test_input_group = QGroupBox("Input di Test")
+        test_input_layout = QVBoxLayout(test_input_group)
+
+        # Campo di testo
+        text_layout = QHBoxLayout()
+        text_layout.addWidget(QLabel("Testo di prova:"))
+        self.test_text_edit = QLineEdit()
+        self.test_text_edit.setPlaceholderText("Inserisci testo di test...")
+        text_layout.addWidget(self.test_text_edit)
+        test_input_layout.addLayout(text_layout)
+
+        # Campo numerico
+        number_layout = QHBoxLayout()
+        number_layout.addWidget(QLabel("Numero di test:"))
+        self.test_number_spin = QSpinBox()
+        self.test_number_spin.setRange(0, 1000)
+        self.test_number_spin.setValue(42)
+        number_layout.addWidget(self.test_number_spin)
+        test_input_layout.addLayout(number_layout)
+
+        layout.addWidget(test_input_group)
+
+        # Gruppo test opzioni
+        test_options_group = QGroupBox("Opzioni di Test")
+        test_options_layout = QVBoxLayout(test_options_group)
+
+        # Combo box
+        combo_layout = QHBoxLayout()
+        combo_layout.addWidget(QLabel("Opzione test:"))
+        self.test_combo = QComboBox()
+        self.test_combo.addItems(["Opzione 1", "Opzione 2", "Opzione 3", "Debug", "Release"])
+        combo_layout.addWidget(self.test_combo)
+        test_options_layout.addLayout(combo_layout)
+
+        # Checkbox
+        self.test_checkbox = QCheckBox("Abilita modalità test")
+        self.test_checkbox.setChecked(True)
+        test_options_layout.addWidget(self.test_checkbox)
+
+        layout.addWidget(test_options_group)
+
+        # Gruppo azioni test
+        test_actions_group = QGroupBox("Azioni di Test")
+        test_actions_layout = QVBoxLayout(test_actions_group)
+
+        # Pulsante di test
+        test_button = QPushButton("Esegui Test")
+        test_button.clicked.connect(lambda: QMessageBox.information(self, "Test", "Test eseguito con successo!"))
+        test_actions_layout.addWidget(test_button)
+
+        # Label informativo
+        info_label = QLabel("Questa è una scheda di test per scopi di sviluppo.\nPuoi aggiungere qui nuovi widget e funzionalità.")
+        info_label.setStyleSheet("color: #666; font-style: italic;")
+        test_actions_layout.addWidget(info_label)
+
+        layout.addWidget(test_actions_group)
+        layout.addStretch()
+
+        self.tab_widget.addTab(widget, "Test")
+
     def load_current_settings(self):
         """Carica le impostazioni attuali nei controlli."""
         try:
@@ -245,6 +312,12 @@ class SettingsDialog(QDialog):
             # AI
             self.ai_trigger_edit.setText(get_setting('ai.ai_trigger', '++++'))
             self.ai_model_combo.setCurrentText(get_setting('ai.selected_ai_model', 'gemma:2b'))
+
+            # Test
+            self.test_text_edit.setText(get_setting('test.test_text', 'Test di sviluppo'))
+            self.test_number_spin.setValue(get_setting('test.test_number', 42))
+            self.test_combo.setCurrentText(get_setting('test.test_option', 'Opzione 1'))
+            self.test_checkbox.setChecked(get_setting('test.test_enabled', True))
 
         except Exception as e:
             QMessageBox.warning(self, "Errore", f"Errore nel caricamento delle impostazioni: {e}")
@@ -263,6 +336,12 @@ class SettingsDialog(QDialog):
             # AI
             set_setting('ai.ai_trigger', self.ai_trigger_edit.text())
             set_setting('ai.selected_ai_model', self.ai_model_combo.currentText())
+
+            # Test
+            set_setting('test.test_text', self.test_text_edit.text())
+            set_setting('test.test_number', self.test_number_spin.value())
+            set_setting('test.test_option', self.test_combo.currentText())
+            set_setting('test.test_enabled', self.test_checkbox.isChecked())
 
             QMessageBox.information(self, "Successo", "Impostazioni salvate con successo!")
             self.accept()
