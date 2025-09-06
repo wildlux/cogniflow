@@ -677,7 +677,7 @@ class MainWindow(QMainWindow):
         self.media_button.clicked.connect(self.handle_media_button)
         buttons_layout.addWidget(self.media_button)
 
-        self.ocr_button = QPushButton("📄 Trascrizione di Documenti-OCR")
+        self.ocr_button = QPushButton("📄 Trascrizioni Documenti → OCR")
         self.ocr_button.setObjectName("ocr_button")  # ID per CSS
         self.ocr_button.clicked.connect(self.handle_ocr_button)
         buttons_layout.addWidget(self.ocr_button)
