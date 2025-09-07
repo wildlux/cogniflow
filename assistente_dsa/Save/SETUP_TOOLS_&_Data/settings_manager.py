@@ -15,10 +15,12 @@ class SettingsManager:
     DEFAULT_SETTINGS: Dict[str, Any] = {
         "app_name": "CogniFlow",
         "theme": "Chiaro",
-        "main_font_family": "Arial",
-        "main_font_size": 12,
+        "main_font_family": "OpenDyslexic",
+        "main_font_size": 14,
+        "main_font_weight": "Normale",
         "pensierini_font_family": "Arial",
         "pensierini_font_size": 10,
+        "pensierini_font_weight": "Normale",
         "hand_detection_system": "Auto (Migliore)",
         "face_detection_system": "Auto (Migliore)",
         "gesture_system": "Auto (Migliore)",
@@ -160,6 +162,14 @@ class SettingsManager:
     @property
     def default_pensierini_font_size(self) -> int:
         return self.get('default_pensierini_font_size', 10)
+
+    @property
+    def main_font_weight(self) -> str:
+        return self.get('main_font_weight', 'Normale')
+
+    @property
+    def pensierini_font_weight(self) -> str:
+        return self.get('pensierini_font_weight', 'Normale')
 
     @property
     def app_name(self) -> str:

@@ -69,7 +69,7 @@ ApplicationWindow {
     property color successColor: "#27ae60"
     property color errorColor: "#e74c3c"
     property color backgroundColor: "#f8f9fa"
-    property color textColor: "#2c3e50"
+    property color textColor: "#000000"
 
     // Menu principale
     menuBar: MenuBar {
@@ -224,11 +224,17 @@ ApplicationWindow {
             }
         }
 
-        // Area di lavoro principale
+        // SplitView verticale per area principale e pensierini
         SplitView {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            orientation: Qt.Horizontal
+            orientation: Qt.Vertical
+
+            // Area di lavoro principale
+            SplitView {
+                SplitView.fillWidth: true
+                SplitView.fillHeight: true
+                orientation: Qt.Horizontal
 
             // Colonna sinistra - Controlli e opzioni
             Rectangle {
@@ -247,7 +253,7 @@ ApplicationWindow {
                         text: "🎛️ Controlli"
                         font.bold: true
                         font.pixelSize: 16
-                        color: textColor
+                        color: textColor; style: Text.Outline; styleColor: "white"
                     }
 
                     // Sezione TTS
@@ -385,135 +391,141 @@ ApplicationWindow {
                         text: "🎯 Area di Lavoro Principale"
                         font.bold: true
                         font.pixelSize: 16
-                        color: textColor
+                        color: textColor; style: Text.Outline; styleColor: "white"
                     }
 
-                    // Editor principale
-                    ScrollView {
+                    // SplitView verticale per editor e pensierini
+                    SplitView {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
+                        orientation: Qt.Vertical
 
-                        TextArea {
-                            id: mainEditor
-                            placeholderText: "Inserisci qui il tuo testo...\n\nUsa i controlli a sinistra per:\n- Sintetizzare vocalmente il testo\n- Interagire con l'AI\n- Salvare e aprire file\n\nPremi Invio per chiedere all'AI, Shift+Invio per andare a capo"
-                            font.pixelSize: 14
-                            wrapMode: TextArea.Wrap
+                        // Editor principale
+                        ScrollView {
+                            SplitView.fillWidth: true
+                            SplitView.fillHeight: true
 
-                            Keys.onPressed: function(event) {
-                                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                                    if (useShiftEnterForNewline) {
-                                        if (event.modifiers & Qt.ShiftModifier) {
-                                            // Shift+Enter: new line
-                                            event.accepted = false
+                            TextArea {
+                                id: mainEditor
+                                placeholderText: "Inserisci qui il tuo testo...\n\nUsa i controlli a sinistra per:\n- Sintetizzare vocalmente il testo\n- Interagire con l'AI\n- Salvare e aprire file\n\nPremi Invio per chiedere all'AI, Shift+Invio per andare a capo"
+                                font.pixelSize: 14
+                                wrapMode: TextArea.Wrap
+
+                                Keys.onPressed: function(event) {
+                                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                        if (useShiftEnterForNewline) {
+                                            if (event.modifiers & Qt.ShiftModifier) {
+                                                // Shift+Enter: new line
+                                                event.accepted = false
+                                            } else {
+                                                // Enter: send to AI
+                                                event.accepted = true
+                                                sendToAI()
+                                            }
                                         } else {
-                                            // Enter: send to AI
-                                            event.accepted = true
-                                            sendToAI()
-                                        }
-                                    } else {
-                                        if (event.modifiers & Qt.ShiftModifier) {
-                                            // Shift+Enter: send to AI
-                                            event.accepted = true
-                                            sendToAI()
-                                        } else {
-                                            // Enter: new line
-                                            event.accepted = false
+                                            if (event.modifiers & Qt.ShiftModifier) {
+                                                // Shift+Enter: send to AI
+                                                event.accepted = true
+                                                sendToAI()
+                                            } else {
+                                                // Enter: new line
+                                                event.accepted = false
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    // Sezione Pensierini nell'Area di Lavoro
-                    GroupBox {
-                        title: "💭 Pensierini Area di Lavoro"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 200
+                        // Sezione Pensierini nell'Area di Lavoro
+                        GroupBox {
+                            title: "💭 Pensierini Area di Lavoro"
+                            SplitView.preferredHeight: 200
 
-                        ColumnLayout {
-                            anchors.fill: parent
+                            ColumnLayout {
+                                anchors.fill: parent
 
-                            // Input per nuovo pensierino
-                            RowLayout {
-                                Layout.fillWidth: true
-
-                                TextField {
-                                    id: workspacePensierinoInput
+                                // Input per nuovo pensierino
+                                RowLayout {
                                     Layout.fillWidth: true
-                                    placeholderText: "Scrivi un pensierino..."
-                                    onAccepted: addWorkspacePensierino()
+
+                                    TextField {
+                                        id: workspacePensierinoInput
+                                        Layout.fillWidth: true
+                                        placeholderText: "Scrivi un pensierino..."
+                                        onAccepted: addWorkspacePensierino()
+                                    }
+
+                                    Button {
+                                        text: "➕ Aggiungi"
+                                        onClicked: addWorkspacePensierino()
+                                    }
+
+                                    Button {
+                                        text: "📤 Esporta"
+                                        onClicked: exportWorkspacePensierini()
+                                    }
+
+                                    Button {
+                                        text: "🗑️ Pulisci Tutto"
+                                        onClicked: clearWorkspacePensierini()
+                                    }
                                 }
 
-                                Button {
-                                    text: "➕ Aggiungi"
-                                    onClicked: addWorkspacePensierino()
-                                }
+                                // Lista pensierini
+                                ScrollView {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
 
-                                Button {
-                                    text: "📤 Esporta"
-                                    onClicked: exportWorkspacePensierini()
-                                }
+                                    ListView {
+                                        id: workspacePensieriniList
+                                        model: workspacePensierini
+                                        clip: true
 
-                                Button {
-                                    text: "🗑️ Pulisci Tutto"
-                                    onClicked: clearWorkspacePensierini()
-                                }
-                            }
+                                        delegate: Rectangle {
+                                            width: parent.width
+                                            height: 60
+                                            color: index % 2 === 0 ? "#f8f9fa" : "#ffffff"
+                                            border.color: primaryColor
+                                            border.width: 1
+                                            radius: 3
 
-                            // Lista pensierini
-                            ScrollView {
-                                Layout.fillWidth: true
-                                Layout.fillHeight: true
+                                            RowLayout {
+                                                anchors.fill: parent
+                                                anchors.margins: 5
 
-                                ListView {
-                                    id: workspacePensieriniList
-                                    model: workspacePensierini
-                                    clip: true
-
-                                    delegate: Rectangle {
-                                        width: parent.width
-                                        height: 60
-                                        color: index % 2 === 0 ? "#f8f9fa" : "#ffffff"
-                                        border.color: primaryColor
-                                        border.width: 1
-                                        radius: 3
-
-                                        RowLayout {
-                                            anchors.fill: parent
-                                            anchors.margins: 5
-
-                                            TextArea {
-                                                Layout.fillWidth: true
-                                                text: modelData.text
-                                                wrapMode: TextArea.Wrap
-                                                background: Rectangle { color: "transparent" }
-                                                onTextChanged: updateWorkspacePensierino(index, text)
-                                            }
-
-                                            ColumnLayout {
-                                                Layout.alignment: Qt.AlignRight
-
-                                                Button {
-                                                    text: "🔊"
-                                                    onClicked: readWorkspacePensierino(modelData.text)
+                                                TextArea {
+                                                    Layout.fillWidth: true
+                                                    text: modelData.text
+                                                    wrapMode: TextArea.Wrap
+                                                    background: Rectangle { color: "transparent" }
+                                                    onTextChanged: updateWorkspacePensierino(index, text)
                                                 }
 
-                                                Button {
-                                                    text: "🗑️"
-                                                    onClicked: removeWorkspacePensierino(index)
+                                                ColumnLayout {
+                                                    Layout.alignment: Qt.AlignRight
+
+                                                    Button {
+                                                        text: "🔊"
+                                                        onClicked: readWorkspacePensierino(modelData.text)
+                                                    }
+
+                                                    Button {
+                                                        text: "🗑️"
+                                                        onClicked: removeWorkspacePensierino(index)
+                                                    }
                                                 }
                                             }
                                         }
                                     }
                                 }
-                            }
 
-                            // Contatore pensierini
-                            Label {
-                                text: "📝 Pensierini: " + workspacePensierini.length
-                                font.pixelSize: 11
-                                color: textColor
+                                // Contatore pensierini
+                                Label {
+                                    text: "📝 Pensierini: " + workspacePensierini.length
+                                    font.pixelSize: 11
+                                    color: textColor; style: Text.Outline; styleColor: "white"
+                                }
                             }
                         }
                     }
@@ -531,13 +543,13 @@ ApplicationWindow {
 
                             Label {
                                 text: "📝 Caratteri: " + mainEditor.text.length
-                                color: "white"
+                                color: "black"; style: Text.Outline; styleColor: "white"
                                 font.pixelSize: 12
                             }
 
                             Label {
                                 text: "📄 Parole: " + (mainEditor.text.split(/\s+/).filter(word => word.length > 0).length)
-                                color: "white"
+                                color: "black"; style: Text.Outline; styleColor: "white"
                                 font.pixelSize: 12
                             }
 
@@ -570,7 +582,7 @@ ApplicationWindow {
                         text: "🤖 Risultati AI"
                         font.bold: true
                         font.pixelSize: 16
-                        color: textColor
+                        color: textColor; style: Text.Outline; styleColor: "white"
                     }
 
                     // Lista dei risultati AI
@@ -601,7 +613,7 @@ ApplicationWindow {
                                         wrapMode: Label.Wrap
                                         font.pixelSize: 11
                                         font.bold: true
-                                        color: textColor
+                                        color: textColor; style: Text.Outline; styleColor: "white"
                                     }
 
                                     // Full response with scroll (250 caratteri alla volta)
