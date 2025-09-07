@@ -1850,6 +1850,70 @@ Riformulazione intensa:"""
             logging.error(f"Errore toggle riconoscimento gesti mani: {e}")
             QMessageBox.critical(self, "Errore", f"Errore durante la gestione del riconoscimento gesti mani:\n{str(e)}")
 
+    def _ipa_to_pronunciation_text(self, symbol):
+        """Converte un simbolo IPA in testo pronunciabile per il TTS."""
+        # Mappa dei simboli IPA a testi pronunciabili in italiano
+        ipa_mapping = {
+            # Vocali
+            '[i]': 'i come in mìle',
+            '[e]': 'e come in mèta',
+            '[ɛ]': 'e aperta come in mèta',
+            '[a]': 'a come in casa',
+            '[ɔ]': 'o aperta come in còrso',
+            '[o]': 'o come in còrso',
+            '[u]': 'u come in cùpa',
+
+            # Consonanti
+            '[p]': 'p come in pane',
+            '[b]': 'b come in buono',
+            '[t]': 't come in tavolo',
+            '[d]': 'd come in dono',
+            '[k]': 'c come in cane',
+            '[g]': 'g come in gatto',
+            '[f]': 'f come in fare',
+            '[v]': 'v come in vino',
+            '[s]': 's come in sole',
+            '[z]': 's sonora come in rosa',
+            '[ʃ]': 'sc come in scena',
+            '[ʒ]': 'j francese come in jour',
+            '[m]': 'm come in mamma',
+            '[n]': 'n come in nonna',
+            '[ɲ]': 'gn come in gnomo',
+            '[l]': 'l come in luna',
+            '[ʎ]': 'gl come in gli',
+            '[r]': 'r come in rosa',
+            '[ʁ]': 'r francese come in rouge',
+
+            # Simboli speciali
+            '[ˈ]': 'accento principale',
+            '[ˌ]': 'accento secondario',
+            '[.]': 'sillaba',
+            '[:]': 'lunga',
+            '[̯]': 'semi vocale',
+            '[̃]': 'nasale',
+
+            # Altri simboli comuni
+            '[t͡s]': 'z come in grazie',
+            '[d͡z]': 'z sonora come in zero',
+            '[t͡ʃ]': 'c come in cena',
+            '[d͡ʒ]': 'g come in giro',
+        }
+
+        # Rimuovi le parentesi quadre se presenti
+        clean_symbol = symbol.strip('[]')
+
+        # Cerca corrispondenza esatta
+        if symbol in ipa_mapping:
+            return ipa_mapping[symbol]
+
+        # Cerca corrispondenza senza parentesi
+        bracketed_symbol = f'[{clean_symbol}]'
+        if bracketed_symbol in ipa_mapping:
+            return ipa_mapping[bracketed_symbol]
+
+        # Se non trovato, restituisci il simbolo pulito
+        return clean_symbol
+
     def handle_log_toggle(self):
         """Gestisce il toggle per visualizzare errori e warning dal log."""
         try:
@@ -1858,7 +1922,7 @@ Riformulazione intensa:"""
                 self.show_log_window()
                 self.log_button.setText("📋 Log ON")
             else:
-                # Disattiva visualizzazione log - chiudi finestra
+                # Disabilita visualizzazione log - chiudi finestra
                 self.hide_log_window()
                 self.log_button.setText("📋 Log")
 
@@ -2149,23 +2213,7 @@ Riformulazione intensa:"""
                 QPushButton.clipboard_btn:hover {
                     background-color: #218838;
                 }
-                QPushButton#ipa_pronounce {
-                    background-color: #17a2b8;
-                    color: white;
-                    border: 2px solid #138496;
-                    border-radius: 15px;
-                    padding: 2px;
-                    font-size: 12px;
-                    font-weight: bold;
-                }
-                QPushButton#ipa_pronounce:hover {
-                    background-color: #138496;
-                    border-color: #117a8b;
-                }
-                QPushButton#ipa_pronounce:pressed {
-                    background-color: #117a8b;
-                    border-color: #0e5f6a;
-                }
+
                 QScrollArea {
                     border: 1px solid #dee2e6;
                     border-radius: 6px;
@@ -2232,28 +2280,12 @@ Riformulazione intensa:"""
             ]
 
             for symbol, example in vocali_data:
-                # Container per simbolo + pulsante pronuncia
-                symbol_container = QWidget()
-                symbol_layout = QHBoxLayout(symbol_container)
-                symbol_layout.setContentsMargins(0, 0, 0, 0)
-                symbol_layout.setSpacing(2)
-
-                # Pulsante principale del simbolo
+                # Pulsante principale del simbolo (copia negli appunti)
                 btn = QPushButton(f"{symbol}\n{example}")
                 btn.setObjectName("ipa_symbol")
                 btn.setToolTip(f"Esempio: '{example}' → trascrizione fonetica con {symbol}")
                 btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
-                symbol_layout.addWidget(btn)
-
-                # Pulsante pronuncia
-                pronounce_btn = QPushButton("🔊")
-                pronounce_btn.setObjectName("ipa_pronounce")
-                pronounce_btn.setToolTip(f"Pronuncia il suono di {symbol}")
-                pronounce_btn.setFixedSize(30, 30)
-                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s, ipa_dialog))
-                symbol_layout.addWidget(pronounce_btn)
-
-                vocali_layout.addWidget(symbol_container)
+                vocali_layout.addWidget(btn)
 
             vocali_layout.addStretch()
             scroll_layout.addLayout(vocali_layout)
@@ -2277,28 +2309,12 @@ Riformulazione intensa:"""
             ]
 
             for symbol, example in cons1_data:
-                # Container per simbolo + pulsante pronuncia
-                symbol_container = QWidget()
-                symbol_layout = QHBoxLayout(symbol_container)
-                symbol_layout.setContentsMargins(0, 0, 0, 0)
-                symbol_layout.setSpacing(2)
-
-                # Pulsante principale del simbolo
+                # Pulsante principale del simbolo (copia negli appunti)
                 btn = QPushButton(f"{symbol}\n{example}")
                 btn.setObjectName("ipa_symbol")
                 btn.setToolTip(f"Esempio: '{example}' → trascrizione fonetica con {symbol}")
                 btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
-                symbol_layout.addWidget(btn)
-
-                # Pulsante pronuncia
-                pronounce_btn = QPushButton("🔊")
-                pronounce_btn.setObjectName("ipa_pronounce")
-                pronounce_btn.setToolTip(f"Pronuncia il suono di {symbol}")
-                pronounce_btn.setFixedSize(30, 30)
-                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s))
-                symbol_layout.addWidget(pronounce_btn)
-
-                cons1_layout.addWidget(symbol_container)
+                cons1_layout.addWidget(btn)
 
             cons1_layout.addStretch()
             scroll_layout.addLayout(cons1_layout)
@@ -2317,28 +2333,12 @@ Riformulazione intensa:"""
             ]
 
             for symbol, example in cons2_data:
-                # Container per simbolo + pulsante pronuncia
-                symbol_container = QWidget()
-                symbol_layout = QHBoxLayout(symbol_container)
-                symbol_layout.setContentsMargins(0, 0, 0, 0)
-                symbol_layout.setSpacing(2)
-
-                # Pulsante principale del simbolo
+                # Pulsante principale del simbolo (copia negli appunti)
                 btn = QPushButton(f"{symbol}\n{example}")
                 btn.setObjectName("ipa_symbol")
                 btn.setToolTip(f"Esempio: '{example}' → trascrizione fonetica con {symbol}")
                 btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
-                symbol_layout.addWidget(btn)
-
-                # Pulsante pronuncia
-                pronounce_btn = QPushButton("🔊")
-                pronounce_btn.setObjectName("ipa_pronounce")
-                pronounce_btn.setToolTip(f"Pronuncia il suono di {symbol}")
-                pronounce_btn.setFixedSize(30, 30)
-                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s, ipa_dialog))
-                symbol_layout.addWidget(pronounce_btn)
-
-                cons2_layout.addWidget(symbol_container)
+                cons2_layout.addWidget(btn)
 
             cons2_layout.addStretch()
             scroll_layout.addLayout(cons2_layout)
@@ -2352,28 +2352,12 @@ Riformulazione intensa:"""
             ]
 
             for symbol, example in cons3_data:
-                # Container per simbolo + pulsante pronuncia
-                symbol_container = QWidget()
-                symbol_layout = QHBoxLayout(symbol_container)
-                symbol_layout.setContentsMargins(0, 0, 0, 0)
-                symbol_layout.setSpacing(2)
-
-                # Pulsante principale del simbolo
+                # Pulsante principale del simbolo (copia negli appunti)
                 btn = QPushButton(f"{symbol}\n{example}")
                 btn.setObjectName("ipa_symbol")
                 btn.setToolTip(f"Esempio: '{example}' → trascrizione fonetica con {symbol}")
                 btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
-                symbol_layout.addWidget(btn)
-
-                # Pulsante pronuncia
-                pronounce_btn = QPushButton("🔊")
-                pronounce_btn.setObjectName("ipa_pronounce")
-                pronounce_btn.setToolTip(f"Pronuncia il suono di {symbol}")
-                pronounce_btn.setFixedSize(30, 30)
-                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s, ipa_dialog))
-                symbol_layout.addWidget(pronounce_btn)
-
-                cons3_layout.addWidget(symbol_container)
+                cons3_layout.addWidget(btn)
 
             cons3_layout.addStretch()
             scroll_layout.addLayout(cons3_layout)
@@ -2394,13 +2378,7 @@ Riformulazione intensa:"""
             ]
 
             for symbol, example in speciali_data:
-                # Container per simbolo + pulsante pronuncia
-                symbol_container = QWidget()
-                symbol_layout = QHBoxLayout(symbol_container)
-                symbol_layout.setContentsMargins(0, 0, 0, 0)
-                symbol_layout.setSpacing(2)
-
-                # Pulsante principale del simbolo
+                # Pulsante principale del simbolo (copia negli appunti)
                 btn = QPushButton(f"{symbol}\n{example}")
                 btn.setObjectName("ipa_symbol")
                 if symbol == "[ˈ]":
@@ -2408,17 +2386,7 @@ Riformulazione intensa:"""
                 else:
                     btn.setToolTip(f"Esempio pratico con {symbol}: {example}")
                 btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
-                symbol_layout.addWidget(btn)
-
-                # Pulsante pronuncia
-                pronounce_btn = QPushButton("🔊")
-                pronounce_btn.setObjectName("ipa_pronounce")
-                pronounce_btn.setToolTip(f"Pronuncia il suono di {symbol}")
-                pronounce_btn.setFixedSize(30, 30)
-                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s, ipa_dialog))
-                symbol_layout.addWidget(pronounce_btn)
-
-                speciali_layout.addWidget(symbol_container)
+                speciali_layout.addWidget(btn)
 
             speciali_layout.addStretch()
             scroll_layout.addLayout(speciali_layout)
@@ -2522,7 +2490,7 @@ Riformulazione intensa:"""
             QMessageBox.critical(self, "Errore", f"Errore nell'apertura della guida IPA:\n{str(e)}")
 
     def copy_single_ipa_symbol_with_clipboard(self, symbol, dialog):
-        """Copia un singolo simbolo IPA negli appunti e aggiungilo al clipboard del dialog."""
+        """Copia un singolo simbolo IPA negli appunti e aggiungilo al clipboard del dialog. Se TTS è abilitato, pronuncia anche il simbolo."""
         try:
             # Copia negli appunti di sistema
             clipboard = QApplication.clipboard()
@@ -2540,6 +2508,39 @@ Riformulazione intensa:"""
             cursor = self.clipboard_text.textCursor()
             cursor.movePosition(cursor.MoveOperation.End)
             self.clipboard_text.setTextCursor(cursor)
+
+            # Se TTS è abilitato, pronuncia il simbolo
+            if hasattr(self, 'tts_enabled') and self.tts_enabled:
+                try:
+                    # Converti il simbolo IPA in testo pronunciabile
+                    pronunciation_text = self._ipa_to_pronunciation_text(symbol)
+
+                    if pronunciation_text and TTS_AVAILABLE and TTSThread:
+                        # Crea e avvia il thread TTS
+                        tts_thread = TTSThread(
+                            text=pronunciation_text,
+                            engine_name='pyttsx3',  # Usa pyttsx3 per velocità
+                            voice_or_lang='it',     # Voce italiana
+                            speed=0.8,              # Più lento per chiarezza
+                            pitch=1.0
+                        )
+
+                        # Connetti segnali
+                        tts_thread.started_reading.connect(lambda: logging.info(f"🔊 Pronunciando simbolo IPA: {symbol}"))
+                        tts_thread.finished_reading.connect(lambda: logging.info(f"✅ Pronuncia simbolo IPA completata: {symbol}"))
+                        tts_thread.error_occurred.connect(lambda err: logging.error(f"❌ Errore pronuncia simbolo IPA {symbol}: {err}"))
+
+                        # Avvia la pronuncia
+                        tts_thread.start()
+
+                        # Salva riferimento per evitare garbage collection
+                        if not hasattr(self, '_tts_threads'):
+                            self._tts_threads = []
+                        self._tts_threads.append(tts_thread)
+
+                except Exception as tts_error:
+                    logging.warning(f"Errore TTS per simbolo IPA {symbol}: {tts_error}")
+                    # Non mostrare errori TTS per non interrompere l'esperienza utente
 
             # Rimossa la notifica popup per un'esperienza più fluida
 
