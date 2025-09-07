@@ -2250,7 +2250,7 @@ Riformulazione intensa:"""
                 pronounce_btn.setObjectName("ipa_pronounce")
                 pronounce_btn.setToolTip(f"Pronuncia il suono di {symbol}")
                 pronounce_btn.setFixedSize(30, 30)
-                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s))
+                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s, ipa_dialog))
                 symbol_layout.addWidget(pronounce_btn)
 
                 vocali_layout.addWidget(symbol_container)
@@ -2335,7 +2335,7 @@ Riformulazione intensa:"""
                 pronounce_btn.setObjectName("ipa_pronounce")
                 pronounce_btn.setToolTip(f"Pronuncia il suono di {symbol}")
                 pronounce_btn.setFixedSize(30, 30)
-                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s))
+                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s, ipa_dialog))
                 symbol_layout.addWidget(pronounce_btn)
 
                 cons2_layout.addWidget(symbol_container)
@@ -2370,7 +2370,7 @@ Riformulazione intensa:"""
                 pronounce_btn.setObjectName("ipa_pronounce")
                 pronounce_btn.setToolTip(f"Pronuncia il suono di {symbol}")
                 pronounce_btn.setFixedSize(30, 30)
-                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s))
+                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s, ipa_dialog))
                 symbol_layout.addWidget(pronounce_btn)
 
                 cons3_layout.addWidget(symbol_container)
@@ -2415,7 +2415,7 @@ Riformulazione intensa:"""
                 pronounce_btn.setObjectName("ipa_pronounce")
                 pronounce_btn.setToolTip(f"Pronuncia il suono di {symbol}")
                 pronounce_btn.setFixedSize(30, 30)
-                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s))
+                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s, ipa_dialog))
                 symbol_layout.addWidget(pronounce_btn)
 
                 speciali_layout.addWidget(symbol_container)
@@ -2573,22 +2573,50 @@ Riformulazione intensa:"""
             logging.error(f"Errore copia clipboard: {e}")
             QMessageBox.critical(self, "Errore Copia", f"Errore durante la copia:\n{str(e)}")
 
-    def pronounce_ipa_symbol(self, symbol):
-        """Pronuncia un simbolo IPA utilizzando il sistema TTS."""
-        # Controlla se TTS è abilitato
-        if not hasattr(self, 'tts_enabled') or not self.tts_enabled:
-            QMessageBox.information(self, "TTS Disabilitato",
-                                  "🔇 La sintesi vocale è attualmente disabilitata.\n\n"
-                                  "Clicca sul pulsante '🔇 TTS OFF' per riabilitarla.")
-            return
-
-        if not TTS_AVAILABLE or not TTSThread:
-            QMessageBox.warning(self, "TTS Non Disponibile",
-                              "Il sistema di sintesi vocale non è disponibile.\n\n"
-                              "Assicurati che le librerie 'pyttsx3' e 'gtts' siano installate.")
-            return
-
+    def pronounce_ipa_symbol(self, symbol, dialog=None):
+        """Pronuncia un simbolo IPA e lo aggiunge al clipboard del dialog."""
         try:
+            # Prima copia il simbolo nel clipboard (se dialog è fornito)
+            if dialog and hasattr(self, 'clipboard_text'):
+                # Copia negli appunti di sistema
+                clipboard = QApplication.clipboard()
+                if clipboard:
+                    clipboard.setText(symbol)
+
+                # Aggiungi al clipboard del dialog
+                current_text = self.clipboard_text.toPlainText()
+                if current_text and not current_text.endswith(' '):
+                    self.clipboard_text.setPlainText(current_text + symbol)
+                else:
+                    self.clipboard_text.setPlainText(current_text + symbol)
+
+                # Scorri automaticamente alla fine
+                cursor = self.clipboard_text.textCursor()
+                cursor.movePosition(cursor.MoveOperation.End)
+                self.clipboard_text.setTextCursor(cursor)
+
+            # Controlla se TTS è abilitato
+            if not hasattr(self, 'tts_enabled') or not self.tts_enabled:
+                QMessageBox.information(self, "TTS Disabilitato",
+                                      "🔇 La sintesi vocale è attualmente disabilitata.\n\n"
+                                      "Clicca sul pulsante '🔇 TTS OFF' per riabilitarla.")
+                return
+
+            if not TTS_AVAILABLE or not TTSThread:
+                QMessageBox.warning(self, "TTS Non Disponibile",
+                                  "Il sistema di sintesi vocale non è disponibile.\n\n"
+                                  "Assicurati che le librerie 'pyttsx3' e 'gtts' siano installate.")
+                return
+
+            # Converti il simbolo IPA in testo pronunciabile
+            pronunciation_text = self._ipa_to_pronunciation_text(symbol)
+
+            if not pronunciation_text:
+                QMessageBox.warning(self, "Simbolo Non Supportato",
+                                  f"Il simbolo '{symbol}' non ha una pronuncia definita.")
+                return
+
+            # Crea e avvia il thread TTS
             # Converti il simbolo IPA in testo pronunciabile
             pronunciation_text = self._ipa_to_pronunciation_text(symbol)
 
@@ -2620,64 +2648,8 @@ Riformulazione intensa:"""
             self._tts_threads.append(tts_thread)
 
         except Exception as e:
-            logging.error(f"Errore pronuncia IPA {symbol}: {e}")
-            QMessageBox.critical(self, "Errore Pronuncia", f"Errore durante la pronuncia:\n{str(e)}")
-
-    def _ipa_to_pronunciation_text(self, symbol):
-        """Converte un simbolo IPA in testo pronunciabile."""
-        ipa_pronunciations = {
-            # Vocali
-            "[i]": "ee come in mìle",
-            "[e]": "e aperta come in mèta",
-            "[ɛ]": "e molto aperta come in mèta",
-            "[a]": "a come in casa",
-            "[ɔ]": "o aperta come in còrso",
-            "[o]": "o chiusa come in còrso",
-            "[u]": "u come in cùpa",
-
-            # Consonanti
-            "[p]": "p come in pane",
-            "[b]": "b come in bene",
-            "[t]": "t come in tavolo",
-            "[d]": "d come in dado",
-            "[k]": "c dura come in casa",
-            "[g]": "g dura come in gatto",
-            "[f]": "f come in fame",
-            "[v]": "v come in vino",
-            "[s]": "s sorda come in sasso",
-            "[z]": "s sonora come in rosa",
-            "[ʃ]": "sc come in scena",
-            "[ʒ]": "j francese come in Gange",
-            "[m]": "m come in mamma",
-            "[n]": "n come in nono",
-            "[ɲ]": "gn come in gnomo",
-            "[l]": "l come in luna",
-            "[ʎ]": "gli come in figli",
-            "[r]": "r come in raro",
-            "[ʁ]": "r francese uvulare",
-
-            # Simboli speciali
-            "[ˈ]": "accento primario, sillaba tonica",
-            "[ˌ]": "accento secondario, sillaba atona",
-            "[.]": "separatore di sillabe",
-            "[:]": "vocale lunga",
-            "[̯]": "semivocale, suono di transizione",
-            "[̃]": "nasalizzazione, suono nasale"
-        }
-
-        return ipa_pronunciations.get(symbol, "")
-
-    def copy_single_ipa_symbol(self, symbol):
-        """Copia un singolo simbolo IPA negli appunti."""
-        try:
-            clipboard = QApplication.clipboard()
-            if clipboard:
-                clipboard.setText(symbol)
-                # Mostra notifica temporanea
-                QMessageBox.information(self, "Simbolo Copiato",
-                                      f"✅ Simbolo '{symbol}' copiato negli appunti!\n\n"
-                                      f"Puoi ora incollarlo dove necessario.")
-        except Exception as e:
+            logging.error(f"Errore integrato pronuncia+copia IPA {symbol}: {e}")
+            QMessageBox.critical(self, "Errore Integrato", f"Errore durante copia e pronuncia:\n{str(e)}")
             logging.error(f"Errore copia simbolo IPA: {e}")
             QMessageBox.critical(self, "Errore Copia", f"Errore durante la copia:\n{str(e)}")
 
