@@ -393,174 +393,22 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         # Applica stile globale con font sicuro
+        # Carica colori dalle impostazioni
+        button_border_color = self.settings.get('button_border_color', '#357abd')
+        general_button_color = self.settings.get('general_button_color', '#4a90e2')
+        hover_button_color = self.settings.get('hover_button_color', '#357abd')
+        pressed_button_color = self.settings.get('pressed_button_color', '#2e5f8f')
+        options_button_color = self.settings.get('options_button_color', '#6c757d')
+        save_button_color = self.settings.get('save_button_color', '#28a745')
+        load_button_color = self.settings.get('load_button_color', '#ffc107')
+        add_pensierino_button_color = self.settings.get('add_pensierino_button_color', '#17a2b8')
+
+        # Simplified CSS to avoid parsing issues
         self.setStyleSheet("""
             QMainWindow {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #f8f9fa, stop:1 #e9ecef);
+                background: #f8f9fa;
                 font-size: 13px;
             }
-
-            /* Font ottimizzato per leggibilità */
-            * {
-                font-family: inherit;
-            }
-
-            /* Font specifici per diversi elementi con dimensioni bilanciate */
-            QPushButton {
-                font-size: 14px;
-                font-weight: 500;
-            }
-
-            QLabel {
-                font-size: 13px;
-            }
-
-            QTextEdit {
-                font-size: 13px;
-                line-height: 1.4;
-            }
-
-            QLineEdit {
-                font-size: 13px;
-            }
-
-            QGroupBox {
-                font-size: 14px;
-                font-weight: 600;
-            }
-
-            QGroupBox {
-                font-weight: bold;
-                border: 2px solid;
-                border-radius: 8px;
-                margin-top: 6px;
-                padding-top: 10px;
-                background: rgba(255, 255, 255, 0.8);
-            }
-
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-                color: #2c3e50;
-                font-weight: bold;
-                font-size: 14px;
-            }
-
-            /* Colonna A - Pensierini (Verde) */
-            QGroupBox#pensierini {
-                border-color: #28a745;
-                background: transparent;
-            }
-
-            /* Colonna B - Area Lavoro (Giallo) */
-            QGroupBox#work_area {
-                border-color: #ffc107;
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(255, 193, 7, 0.1), stop:1 rgba(255, 193, 7, 0.05));
-            }
-
-            /* Colonna C - Dettagli (Viola) */
-            QGroupBox#details {
-                border-color: #6f42c1;
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(111, 66, 193, 0.1), stop:1 rgba(111, 66, 193, 0.05));
-            }
-
-            /* Gruppo creazione pensierini */
-            QGroupBox#pensierini_input {
-                border-color: #28a745;
-                background: transparent;
-            }
-
-            QGroupBox#pensierini_input::title {
-                color: #155724;
-                font-weight: bold;
-                font-size: 14px;
-                padding: 5px 10px;
-                background: rgba(255, 255, 255, 0.9);
-                border-radius: 4px;
-                margin-top: 5px;
-            }
-
-            /* Barra strumenti */
-            QGroupBox#tools {
-                border-color: #4a90e2;
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(74, 144, 226, 0.1), stop:1 rgba(74, 144, 226, 0.05));
-            }
-
-            QGroupBox#tools::title {
-                color: #2c3e50;
-                font-weight: bold;
-                font-size: 14px;
-                padding: 5px 10px;
-                background: rgba(255, 255, 255, 0.9);
-                border-radius: 4px;
-                margin-top: 5px;
-            }
-
-             /* Sottogruppi nella barra strumenti - Migliorata leggibilità */
-             QGroupBox#transcription_subgroup {
-                 border-color: #17a2b8;
-                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                     stop:0 rgba(248, 249, 250, 0.95), stop:1 rgba(241, 243, 244, 0.98));
-                 margin-top: 5px;
-                 padding-top: 5px;
-                 color: #2c3e50;
-             }
-
-             QGroupBox#ai_media_subgroup {
-                 border-color: #28a745;
-                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                     stop:0 rgba(248, 249, 250, 0.95), stop:1 rgba(241, 243, 244, 0.98));
-                 margin-top: 5px;
-                 padding-top: 5px;
-                 color: #2c3e50;
-             }
-
-             QGroupBox#recognition_subgroup {
-                 border-color: #20b2aa;
-                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                     stop:0 rgba(248, 249, 250, 0.95), stop:1 rgba(241, 243, 244, 0.98));
-                 margin-top: 3px;
-                 padding-top: 3px;
-                 font-size: 13px;
-                 color: #2c3e50;
-             }
-
-              QGroupBox#recognition_subgroup::title {
-                  color: #155724;
-                  font-weight: bold;
-                  font-size: 14px;
-              }
-
-             QGroupBox#utilities_subgroup {
-                 border-color: #ffc107;
-                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                     stop:0 rgba(248, 249, 250, 0.95), stop:1 rgba(241, 243, 244, 0.98));
-                 margin-top: 5px;
-                 padding-top: 5px;
-                 color: #2c3e50;
-             }
-
-             QGroupBox#knowledge_subgroup {
-                 border-color: #20b2aa;
-                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                     stop:0 rgba(248, 249, 250, 0.95), stop:1 rgba(241, 243, 244, 0.98));
-                 margin-top: 5px;
-                 padding-top: 5px;
-                 color: #2c3e50;
-             }
-
-             QGroupBox#iot_subgroup {
-                 border-color: #6f42c1;
-                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                     stop:0 rgba(248, 249, 250, 0.95), stop:1 rgba(241, 243, 244, 0.98));
-                 margin-top: 5px;
-                 padding-top: 5px;
-                 color: #000000;
-             }
 
             QPushButton {
                 background-color: #4a90e2;
@@ -572,282 +420,21 @@ class MainWindow(QMainWindow):
                 min-width: 140px;
                 min-height: 40px;
                 font-size: 14px;
-                text-align: center;
-                vertical-align: middle;
-                line-height: 1.2;
             }
 
             QPushButton:hover {
                 background-color: #357abd;
-                border: 2px solid #2e5f8f;
             }
 
-            QPushButton:pressed {
-                background-color: #2e5f8f;
-            }
-
-            /* Pulsante Opzioni */
-            QPushButton#options_button {
-                background-color: #6c757d;
-                min-width: 140px;
-            }
-
-            QPushButton#options_button:hover {
-                background-color: #5a6268;
-            }
-
-            /* Pulsante Salva */
-            QPushButton#save_button {
-                background-color: #28a745;
-                min-width: 140px;
-            }
-
-            QPushButton#save_button:hover {
-                background-color: #218838;
-            }
-
-            /* Pulsante Carica */
-            QPushButton#load_button {
-                background-color: #ffc107;
-                color: black;
-                min-width: 140px;
-            }
-
-            QPushButton#load_button:hover {
-                background-color: #e0a800;
-            }
-
-            /* Pulsante Aggiungi Pensierino */
-            QPushButton#add_pensierino_button {
-                background-color: #17a2b8;
-                min-width: 180px;
-            }
-
-            QPushButton#add_pensierino_button:hover {
-                background-color: #138496;
-            }
-
-            /* Pulsante AI */
-            QPushButton#ai_button {
-                background-color: #28a745;
-                color: black;
-                min-width: 170px;
-            }
-
-            QPushButton#ai_button:hover {
-                background-color: #218838;
-            }
-
-            /* Pulsante Voce */
-            QPushButton#voice_button {
-                background-color: #9c27b0;
-                color: black;
-                min-width: 170px;
-            }
-
-            QPushButton#voice_button:hover {
-                background-color: #7b1fa2;
-            }
-
-             /* Pulsante Media */
-             QPushButton#media_button {
-                 background-color: #17a2b8;
-                 color: black;
-                 min-width: 170px;
-             }
-
-             QPushButton#media_button:hover {
-                 background-color: #138496;
-             }
-
-              /* Pulsante IPA */
-              QPushButton#ipa_button {
-                  background-color: #6f42c1;
-                  color: white;
-                  min-width: 120px;
-              }
-
-              QPushButton#ipa_button:hover {
-                  background-color: #5a359a;
-              }
-
-              /* Pulsante OCR */
-              QPushButton#ocr_button {
-                  background-color: #28a745;
-                  color: black;
-                  min-width: 260px;
-              }
-
-              QPushButton#ocr_button:hover {
-                  background-color: #218838;
-              }
-
-              /* Pulsante Trascrizione Audio */
-              QPushButton#audio_transcription_button {
-                  background-color: #17a2b8;
-                  color: black;
-                  min-width: 260px;
-              }
-
-              QPushButton#audio_transcription_button:hover {
-                  background-color: #138496;
-              }
-
-            /* Pulsante Riconoscimento Faciale */
-            QPushButton#face_button {
-                background-color: #f8f9fa;
-                color: #6c757d;
-                border: 2px solid #dee2e6;
-                border-radius: 8px;
-                padding: 10px 14px;
-                font-weight: bold;
-                min-width: 220px;
-                min-height: 45px;
-            }
-
-            QPushButton#face_button:hover {
-                background-color: #e9ecef;
-                border-color: #adb5bd;
-            }
-
-            QPushButton#face_button:checked {
-                background-color: #d4edda;
-                color: #155724;
-                border: 2px solid #c3e6cb;
-            }
-
-            QPushButton#face_button:checked:hover {
-                background-color: #c3e6cb;
-                border-color: #8fd19e;
-            }
-
-            /* Pulsante Riconoscimento Gesti Mani */
-            QPushButton#hand_button {
-                background-color: #f8f9fa;
-                color: #6c757d;
-                border: 2px solid #dee2e6;
-                border-radius: 8px;
-                padding: 10px 14px;
-                font-weight: bold;
-                min-width: 190px;
-                min-height: 45px;
-            }
-
-            QPushButton#hand_button:hover {
-                background-color: #e9ecef;
-                border-color: #adb5bd;
-            }
-
-            QPushButton#hand_button:checked {
-                background-color: #d4edda;
-                color: #155724;
-                border: 2px solid #c3e6cb;
-            }
-
-            QPushButton#hand_button:checked:hover {
-                background-color: #c3e6cb;
-                border-color: #8fd19e;
-            }
-
-            /* Pulsante Log Footer */
-            QPushButton#footer_log_button {
-                background-color: #6f42c1;
-                color: black;
-                border: none;
-                border-radius: 10px;
-                padding: 14px 20px;
-                font-weight: bold;
-                font-size: 15px;
-                min-width: 120px;
-                min-height: 50px;
-                text-align: center;
-            }
-
-            QPushButton#footer_log_button:hover {
-                background-color: #5a359a;
-            }
-
-            QPushButton#footer_log_button:checked {
-                background-color: #e8590c;
-                border: 2px solid #d0390c;
-            }
-
-            /* Pulsante Pulisci */
-            QPushButton#clean_button {
-                background-color: #dc3545;
-                color: black;
-                min-width: 170px;
-            }
-
-            QPushButton#clean_button:hover {
-                background-color: #c82333;
-            }
-
-
-
-            /* Pulsanti delle materie nella sezione conoscenza */
-            QPushButton#ipa_button,
-            QPushButton#math_button,
-            QPushButton#chemistry_button,
-            QPushButton#physics_button,
-            QPushButton#biology_button,
-            QPushButton#italian_button,
-            QPushButton#history_button,
-            QPushButton#computer_science_button,
-            QPushButton#os_scripting_button,
-            QPushButton#astronomy_button,
-            QPushButton#advanced_math_button,
-            QPushButton#law_button,
-            QPushButton#probability_stats_button,
-            QPushButton#english_button,
-            QPushButton#german_button,
-            QPushButton#spanish_button,
-            QPushButton#sicilian_button,
-            QPushButton#japanese_button,
-            QPushButton#chinese_button,
-            QPushButton#russian_button {
-                color: black;
+            QLabel {
                 font-size: 13px;
-                padding: 12px 8px;
-                min-width: 120px;
-                min-height: 45px;
-                font-weight: bold;
-                text-align: center;
-                vertical-align: middle;
-                line-height: 1.2;
+            }
+
+            QTextEdit {
+                font-size: 13px;
                 border: 1px solid #dee2e6;
                 border-radius: 6px;
-                background-color: #f8f9fa;
-            }
-
-            /* Assicurati che tutti gli elementi di testo nella sezione strumenti abbiano colore nero */
-            QGroupBox#transcription_subgroup,
-            QGroupBox#ai_media_subgroup,
-            QGroupBox#recognition_subgroup,
-            QGroupBox#utilities_subgroup,
-            QGroupBox#knowledge_subgroup,
-            QGroupBox#iot_subgroup {
-                color: #2c3e50;
-            }
-
-            /* Titoli dei gruppi */
-            QGroupBox#transcription_subgroup::title,
-            QGroupBox#ai_media_subgroup::title,
-            QGroupBox#utilities_subgroup::title,
-            QGroupBox#knowledge_subgroup::title,
-            QGroupBox#iot_subgroup::title {
-                color: #2c3e50;
-                font-weight: bold;
-            }
-
-            /* Pulsante Copia */
-            QPushButton#copy_button {
-                background-color: #007bff;
-                min-width: 140px;
-            }
-
-            QPushButton#copy_button:hover {
-                background-color: #0056b3;
+                padding: 8px;
             }
 
             QLineEdit {
@@ -855,62 +442,6 @@ class MainWindow(QMainWindow):
                 border-radius: 10px;
                 padding: 12px 16px;
                 font-size: 16px;
-                font-weight: bold;
-                text-align: center;
-                background: rgba(255, 255, 255, 0.9);
-            }
-
-            QLineEdit:focus {
-                border-color: #357abd;
-                background-color: #f8f9fa;
-                border-width: 3px;
-            }
-
-            QLineEdit::placeholder {
-                color: #6c757d;
-                font-style: italic;
-            }
-
-            QTextEdit {
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                background-color: rgba(255, 255, 255, 0.9);
-                font-size: 16px;
-                line-height: 1.4;
-                padding: 8px;
-                min-height: 80px;
-                max-height: 120px;
-            }
-
-            QScrollArea {
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                background-color: rgba(248, 249, 250, 0.8);
-            }
-
-            /* Scrollbar styling */
-            QScrollBar:vertical {
-                background: rgba(255, 255, 255, 0.5);
-                width: 12px;
-                border-radius: 6px;
-            }
-
-            QScrollBar::handle:vertical {
-                background: #4a90e2;
-                border-radius: 6px;
-                min-height: 30px;
-            }
-
-            QScrollBar::handle:vertical:hover {
-                background: #357abd;
-            }
-
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                background: none;
-            }
-
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
-                background: none;
             }
         """)
 
@@ -946,7 +477,7 @@ class MainWindow(QMainWindow):
 
         # Create splitter for resizable columns
         self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.main_splitter.setHandleWidth(5)  # Clean, modern handle width
+        self.main_splitter.setHandleWidth(0)  # Remove divider line
         self.main_splitter.setStyleSheet("""
             QSplitter::handle {
                 background: transparent;
@@ -1253,6 +784,18 @@ class MainWindow(QMainWindow):
             }
         """)
 
+        # Aggiungi stili per tutti i pulsanti in Ingranaggi
+        self.setStyleSheet(self.styleSheet() + """
+            QGroupBox#tools QPushButton {
+                background: transparent;
+                color: black;
+                border: 2px solid #357abd;
+            }
+            QGroupBox#tools QPushButton:hover {
+                background: rgba(0,0,0,0.05);
+            }
+        """)
+
         subgroups_container.addWidget(self.iot_group)
 
         # ===========================================
@@ -1268,21 +811,18 @@ class MainWindow(QMainWindow):
         # Create vertical splitter for adjustable tools panel height
         from PyQt6.QtWidgets import QSplitter
         vertical_splitter = QSplitter(Qt.Orientation.Vertical)
-        vertical_splitter.setHandleWidth(0)  # Remove divider line completely
+        vertical_splitter.setHandleWidth(5)  # Add divider
         vertical_splitter.setStyleSheet("""
             QSplitter::handle {
-                background: transparent;
+                background: rgba(74, 144, 226, 0.3);
                 border: none;
                 border-radius: 0px;
-                image: none;
             }
             QSplitter::handle:hover {
-                background: transparent;
-                border: none;
+                background: rgba(74, 144, 226, 0.5);
             }
             QSplitter::handle:pressed {
-                background: transparent;
-                border: none;
+                background: rgba(74, 144, 226, 0.7);
             }
         """)
 
@@ -4062,11 +3602,13 @@ def main():
         # Carica configurazione
         config = get_config()
         settings = load_settings()
+        print("Settings loaded successfully")
 
         # Crea applicazione Qt
         app = QApplication(sys.argv)
         app.setApplicationName(settings['application']['app_name'])
         app.setOrganizationName("DSA Aircraft")
+        print("QApplication created successfully")
 
         # Imposta icona se disponibile
         icon_path = "ICO-fonts-wallpaper/ICONA.ico"
@@ -4075,8 +3617,10 @@ def main():
             app.setWindowIcon(QIcon(icon_path))
             logger.info("Icona caricata: {icon_path}")
 
+        print("About to create MainWindow...")
         # Crea e mostra finestra principale (Aircraft)
         window = MainWindow()
+        print("MainWindow created successfully")
         window.show()
 
         logger.info("✓ Aircraft avviata con successo")
@@ -4085,9 +3629,9 @@ def main():
         # Avvia event loop
         sys.exit(app.exec())
 
-    except Exception:
-        logger.error("Errore avvio Aircraft: {e}")
-        print("❌ Errore avvio Aircraft: {e}")
+    except Exception as e:
+        logger.error(f"Errore avvio Aircraft: {e}")
+        print(f"❌ Errore avvio Aircraft: {e}")
         sys.exit(1)
 
 

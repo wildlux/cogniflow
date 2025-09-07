@@ -8,6 +8,7 @@ import sys
 import traceback
 import threading
 import time
+import multiprocessing
 from typing import cast, Callable, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -104,7 +105,7 @@ def start_performance_monitoring():
                 if performance_monitor:
                     _snapshot: SnapshotType = cast(SnapshotType, performance_monitor.take_snapshot("periodic_{snapshot_count}"))
                 time.sleep(30)  # Take snapshot every 30 seconds
-            except Exception:
+            except Exception as e:
                 print(f"Performance monitoring error: {e}")
                 break
 
@@ -122,6 +123,20 @@ def stop_performance_monitoring():
         stop_monitoring = True
         performance_thread.join(timeout=5)
         print("✅ Performance monitoring stopped")
+
+
+def check_package(package: str) -> tuple[str, bool]:
+    """Check if a package is available."""
+    try:
+        __import__(package)
+        return package, True
+    except ImportError:
+        return package, False
+
+
+def check_directory(dir_path: str) -> tuple[str, bool]:
+    """Check if a directory exists."""
+    return os.path.basename(dir_path), os.path.exists(dir_path)
 
 
 def perform_security_checks():
@@ -156,30 +171,35 @@ def perform_security_checks():
         os.remove(test_file)
         log_security_event("PERMISSION_CHECK", "Write permissions verified", "INFO")
         print("✅ Write permissions verified")
-    except Exception:
+    except Exception as e:
         log_security_event("PERMISSION_CHECK", f"No write permissions: {e}", "ERROR")
         print(f"❌ ERROR: No write permissions in current directory: {e}")
         return False
 
-    # Check required directories exist
+    # Check required directories exist (parallel)
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     required_dirs = ['Save', 'Screenshot', 'assistente_dsa']
-    for dir_name in required_dirs:
-        if not os.path.exists(dir_name):
+    required_paths = [os.path.join(project_root, d) for d in required_dirs]
+    with multiprocessing.Pool(processes=min(len(required_paths), multiprocessing.cpu_count())) as pool:
+        dir_results = pool.map(check_directory, required_paths)
+    for dir_name, exists in dir_results:
+        if not exists:
             log_security_event("DIRECTORY_CHECK", f"Directory '{dir_name}' missing", "WARNING")
             print(f"⚠️  WARNING: Required directory '{dir_name}' not found")
         else:
             log_security_event("DIRECTORY_CHECK", f"Directory '{dir_name}' exists", "INFO")
             print(f"✅ Directory '{dir_name}' exists")
 
-    # Check required Python packages
-    required_packages = ['PyQt5', 'subprocess', 'os', 'sys']
+    # Check required Python packages (parallel)
+    required_packages = ['PyQt6', 'subprocess', 'os', 'sys']
+    with multiprocessing.Pool(processes=min(len(required_packages), multiprocessing.cpu_count())) as pool:
+        package_results = pool.map(check_package, required_packages)
     missing_packages: list[str] = []
-    for package in required_packages:
-        try:
-            __import__(package)
+    for package, available in package_results:
+        if available:
             log_security_event("PACKAGE_CHECK", f"Package '{package}' available", "INFO")
             print(f"✅ Package '{package}' available")
-        except ImportError:
+        else:
             missing_packages.append(package)
             log_security_event("PACKAGE_CHECK", f"Package '{package}' missing", "WARNING")
             print(f"❌ Package '{package}' missing")
@@ -302,6 +322,8 @@ def run_app():
 
         if result.returncode != 0:
             print(f"Aircraft exited with error code: {result.returncode}")
+            print(f"STDOUT: {result.stdout}")
+            print(f"STDERR: {result.stderr}")
         else:
             print("Aircraft completed successfully")
 
