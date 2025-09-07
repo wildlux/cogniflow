@@ -13,8 +13,17 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel,
     QPushButton, QHBoxLayout, QLineEdit, QTextEdit, QGroupBox,
-    QScrollArea, QMessageBox, QFileDialog, QSlider
+    QScrollArea, QMessageBox, QFileDialog, QSlider, QDialog, QSplitter
 )
+
+# Import TTS per la pronuncia IPA
+try:
+    from Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager import TTSThread
+    TTS_AVAILABLE = True
+except ImportError:
+    TTSThread = None
+    TTS_AVAILABLE = False
+    logging.warning("Sistema TTS non disponibile - funzionalità di pronuncia IPA limitata")
 
 # Import del sistema di configurazione
 from main_03_configurazione_e_opzioni import get_config, load_settings
@@ -39,10 +48,12 @@ except ImportError:
 try:
     from Artificial_Intelligence.Riconoscimento_Vocale.managers.speech_recognition_manager import (
         SpeechRecognitionThread,
+        AudioFileTranscriptionThread,
         ensure_vosk_model_available
     )
 except ImportError:
     SpeechRecognitionThread = None
+    AudioFileTranscriptionThread = None
     ensure_vosk_model_available = None
 
 # Import per funzionalità multimediali
@@ -372,25 +383,46 @@ class MainWindow(QMainWindow):
                 background-color: #7b1fa2;
             }
 
-            /* Pulsante Media */
-            QPushButton#media_button {
-                background-color: #17a2b8;
-                min-width: 130px;
-            }
+             /* Pulsante Media */
+             QPushButton#media_button {
+                 background-color: #17a2b8;
+                 min-width: 130px;
+             }
 
-            QPushButton#media_button:hover {
-                background-color: #138496;
-            }
+             QPushButton#media_button:hover {
+                 background-color: #138496;
+             }
 
-            /* Pulsante OCR */
-            QPushButton#ocr_button {
-                background-color: #28a745;
-                min-width: 200px;
-            }
+             /* Pulsante IPA */
+             QPushButton#ipa_button {
+                 background-color: #6f42c1;
+                 color: white;
+                 min-width: 80px;
+             }
 
-            QPushButton#ocr_button:hover {
-                background-color: #218838;
-            }
+             QPushButton#ipa_button:hover {
+                 background-color: #5a359a;
+             }
+
+             /* Pulsante OCR */
+             QPushButton#ocr_button {
+                 background-color: #28a745;
+                 min-width: 200px;
+             }
+
+             QPushButton#ocr_button:hover {
+                 background-color: #218838;
+             }
+
+             /* Pulsante Trascrizione Audio */
+             QPushButton#audio_transcription_button {
+                 background-color: #17a2b8;
+                 min-width: 200px;
+             }
+
+             QPushButton#audio_transcription_button:hover {
+                 background-color: #138496;
+             }
 
             /* Pulsante Riconoscimento Faciale */
             QPushButton#face_button {
@@ -656,53 +688,74 @@ class MainWindow(QMainWindow):
         self.input_text_area.installEventFilter(self)
         tools_layout.addWidget(self.input_text_area)
 
-        buttons_layout = QHBoxLayout()
+        # Contenitore per i pulsanti in più righe
+        buttons_container = QVBoxLayout()
+
+        # Prima riga di pulsanti
+        first_row_layout = QHBoxLayout()
         self.add_pensierino_button = QPushButton("➕ Aggiungi Pensierino")
         self.add_pensierino_button.setObjectName("add_pensierino_button")  # ID per CSS
         self.add_pensierino_button.clicked.connect(self.add_text_from_input_area)
-        buttons_layout.addWidget(self.add_pensierino_button)
+        first_row_layout.addWidget(self.add_pensierino_button)
 
         self.ai_button = QPushButton("🧠 Chiedi ad A.I. !")
         self.ai_button.setObjectName("ai_button")  # ID per CSS
         self.ai_button.clicked.connect(self.handle_ai_button)
-        buttons_layout.addWidget(self.ai_button)
+        first_row_layout.addWidget(self.ai_button)
 
         self.voice_button = QPushButton("🎤 Trascrivi la mia voce")
         self.voice_button.setObjectName("voice_button")  # ID per CSS
         self.voice_button.clicked.connect(self.handle_voice_button)
-        buttons_layout.addWidget(self.voice_button)
+        first_row_layout.addWidget(self.voice_button)
 
         self.media_button = QPushButton("📁 Carica Media")
         self.media_button.setObjectName("media_button")  # ID per CSS
         self.media_button.clicked.connect(self.handle_media_button)
-        buttons_layout.addWidget(self.media_button)
+        first_row_layout.addWidget(self.media_button)
 
+        self.ipa_button = QPushButton("📝 IPA")
+        self.ipa_button.setObjectName("ipa_button")  # ID per CSS
+        self.ipa_button.clicked.connect(self.handle_ipa_button)
+        first_row_layout.addWidget(self.ipa_button)
+
+        first_row_layout.addStretch()
+        buttons_container.addLayout(first_row_layout)
+
+        # Seconda riga di pulsanti
+        second_row_layout = QHBoxLayout()
         self.ocr_button = QPushButton("📄 Trascrizioni Documenti → OCR")
         self.ocr_button.setObjectName("ocr_button")  # ID per CSS
         self.ocr_button.clicked.connect(self.handle_ocr_button)
-        buttons_layout.addWidget(self.ocr_button)
+        second_row_layout.addWidget(self.ocr_button)
+
+        self.audio_transcription_button = QPushButton("🎵 Trascrizione Audio → Testo")
+        self.audio_transcription_button.setObjectName("audio_transcription_button")  # ID per CSS
+        self.audio_transcription_button.clicked.connect(self.handle_audio_transcription_button)
+        second_row_layout.addWidget(self.audio_transcription_button)
 
         # Pulsante Riconoscimento Faciale
         self.face_button = QPushButton("❌ Riconoscimento Faciale")
         self.face_button.setObjectName("face_button")  # ID per CSS
         self.face_button.setCheckable(True)
         self.face_button.clicked.connect(self.handle_face_recognition)
-        buttons_layout.addWidget(self.face_button)
+        second_row_layout.addWidget(self.face_button)
 
         # Pulsante Riconoscimento Gesti Mani
         self.hand_button = QPushButton("❌ Abilita Gesti Mani")
         self.hand_button.setObjectName("hand_button")  # ID per CSS
         self.hand_button.setCheckable(True)
         self.hand_button.clicked.connect(self.handle_hand_gestures)
-        buttons_layout.addWidget(self.hand_button)
+        second_row_layout.addWidget(self.hand_button)
 
         self.clean_button = QPushButton("🧹 Pulisci")
         self.clean_button.setObjectName("clean_button")  # ID per CSS
         self.clean_button.clicked.connect(self.handle_clean_button)
-        buttons_layout.addWidget(self.clean_button)
+        second_row_layout.addWidget(self.clean_button)
 
-        buttons_layout.addStretch()
-        tools_layout.addLayout(buttons_layout)
+        second_row_layout.addStretch()
+        buttons_container.addLayout(second_row_layout)
+
+        tools_layout.addLayout(buttons_container)
         main_layout.addWidget(tools_group)
 
         # Footer con pulsante log in basso a destra (alzato)
@@ -1597,6 +1650,160 @@ Riformulazione intensa:"""
                "Converti prima il PDF in immagini per utilizzare l'OCR.\n\n" \
                "Funzionalità futura: estrazione automatica immagini da PDF."
 
+    def handle_audio_transcription_button(self):
+        """Gestisce la trascrizione di file audio in testo."""
+        try:
+            if not AudioFileTranscriptionThread:
+                QMessageBox.critical(self, "Errore", "Modulo di trascrizione audio non disponibile.\n\n"
+                                                   "Assicurati che le librerie 'vosk' e 'wave' siano installate.")
+                return
+
+            # Apri dialog per selezionare file audio
+            file_dialog = QFileDialog(self)
+            file_dialog.setWindowTitle("Seleziona file audio per trascrizione")
+            file_dialog.setNameFilter("File audio (*.wav *.mp3 *.flac *.aac *.ogg);;WAV (*.wav);;MP3 (*.mp3);;FLAC (*.flac);;AAC (*.aac);;OGG (*.ogg);;Tutti i file (*)")
+            file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+
+            if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
+                selected_files = file_dialog.selectedFiles()
+                if selected_files:
+                    audio_file_path = selected_files[0]
+                    self.transcribe_audio_file(audio_file_path)
+
+        except Exception as e:
+            logging.error(f"Errore caricamento file audio: {e}")
+            QMessageBox.critical(self, "Errore", f"Errore durante il caricamento del file:\n{str(e)}")
+
+    def transcribe_audio_file(self, audio_file_path):
+        """Trascrive un file audio in testo."""
+        import os
+        from pathlib import Path
+
+        file_name = os.path.basename(audio_file_path)
+        file_ext = Path(audio_file_path).suffix.lower()
+
+        # Verifica formato supportato
+        supported_formats = ['.wav', '.mp3', '.flac', '.aac', '.ogg']
+        if file_ext not in supported_formats:
+            QMessageBox.warning(self, "Formato Non Supportato",
+                              f"Il formato '{file_ext}' non è attualmente supportato.\n\n"
+                              f"Formati supportati: {', '.join(supported_formats)}\n\n"
+                              f"Converti il file in uno dei formati supportati.")
+            return
+
+        try:
+            # Mostra progresso
+            progress_msg = QMessageBox(self)
+            progress_msg.setWindowTitle("Trascrizione Audio")
+            progress_msg.setText("🔄 Preparazione trascrizione...")
+            progress_msg.setStandardButtons(QMessageBox.StandardButton.Cancel)
+            progress_msg.show()
+
+            # Ottieni il modello Vosk dalle impostazioni
+            vosk_model = self.settings.get('vosk_model', 'vosk-model-it-0.22')
+
+            # Se il modello non è configurato, usa quello italiano di default
+            if not vosk_model or vosk_model == 'auto':
+                vosk_model = 'vosk-model-it-0.22'
+
+            # Verifica che il modello esista e scaricalo se necessario
+            import os
+            model_path = os.path.join("Artificial_Intelligence", "Riconoscimento_Vocale", "models", "vosk_models", vosk_model)
+            if not os.path.exists(model_path):
+                if ensure_vosk_model_available:
+                    # Mostra dialog di progresso per il download
+                    progress_msg.setText("🔄 Scaricamento modello necessario...")
+
+                    def progress_callback(message):
+                        progress_msg.setText(message)
+                        QApplication.processEvents()  # Aggiorna l'interfaccia
+
+                    # Tenta di scaricare il modello
+                    if not ensure_vosk_model_available(vosk_model, progress_callback):
+                        progress_msg.close()
+                        QMessageBox.critical(self, "Download Fallito",
+                                           f"Impossibile scaricare il modello '{vosk_model}'.\n\n"
+                                           "Verifica la connessione internet e riprova.")
+                        return
+
+                    progress_msg.close()
+                    QMessageBox.information(self, "Download Completato",
+                                          f"✅ Modello '{vosk_model}' scaricato con successo!")
+                else:
+                    progress_msg.close()
+                    QMessageBox.warning(self, "Funzione Download Non Disponibile",
+                                      f"Il modello Vosk '{vosk_model}' non è stato trovato.\n\n"
+                                      f"Percorso: {model_path}\n\n"
+                                      "La funzione di download automatico non è disponibile.")
+                    return
+
+            progress_msg.close()
+
+            # Mostra messaggio di inizio trascrizione
+            QMessageBox.information(self, "Trascrizione Avviata",
+                                  f"🎵 Avvio trascrizione del file:\n{file_name}\n\n"
+                                  f"📝 Il testo trascritto verrà aggiunto ai pensierini.\n"
+                                  f"⏳ L'operazione potrebbe richiedere alcuni minuti...")
+
+            # Crea il thread di trascrizione
+            self.audio_transcription_thread = AudioFileTranscriptionThread(
+                audio_file_path,
+                vosk_model,
+                text_callback=self._on_audio_transcription_completed
+            )
+
+            # Connetti i segnali
+            self.audio_transcription_thread.transcription_progress.connect(self._on_transcription_progress)
+            self.audio_transcription_thread.transcription_completed.connect(self._on_audio_transcription_completed)
+            self.audio_transcription_thread.transcription_error.connect(self._on_transcription_error)
+
+            # Avvia la trascrizione
+            self.audio_transcription_thread.start()
+
+        except Exception as e:
+            if 'progress_msg' in locals():
+                progress_msg.close()
+            logging.error(f"Errore avvio trascrizione: {e}")
+            QMessageBox.critical(self, "Errore Avvio", f"Errore nell'avvio della trascrizione:\n{str(e)}")
+
+    def _on_transcription_progress(self, message):
+        """Gestisce gli aggiornamenti di progresso della trascrizione."""
+        logging.info(f"Progresso trascrizione: {message}")
+        # Potrebbe essere utile mostrare un dialog di progresso più dettagliato in futuro
+
+    def _on_audio_transcription_completed(self, text):
+        """Callback quando la trascrizione è completata."""
+        logging.info(f"🎵 Trascrizione completata: '{text[:100]}...'")
+
+        if text and text.strip():
+            # Mostra il testo trascritto nei dettagli
+            transcription_content = f"🎵 Trascrizione Audio Completata\n\n{'='*50}\n\n{text}\n\n{'='*50}\n\n📊 Statistiche Trascrizione:\n• Caratteri: {len(text)}\n• Parole: {len(text.split())}\n• Righe: {len(text.split(chr(10)))}"
+            self.show_text_in_details(transcription_content)
+
+            # Crea anche un pensierino con il testo trascritto
+            if DraggableTextWidget:
+                transcription_pensierino_text = f"🎵 Trascrizione: {text[:50]}... ({len(text)} caratteri)"
+                pensierino_widget = DraggableTextWidget(transcription_pensierino_text, self.settings)
+                self.pensierini_layout.addWidget(pensierino_widget)
+
+            QMessageBox.information(self, "Trascrizione Completata",
+                                  f"✅ Trascrizione completata con successo!\n\n"
+                                  f"🎵 File audio elaborato\n"
+                                  f"📝 Caratteri: {len(text)}\n"
+                                  f"📊 Parole: {len(text.split())}")
+        else:
+            QMessageBox.warning(self, "Trascrizione Vuota",
+                              "La trascrizione non ha prodotto testo.\n\n"
+                              "Possibili cause:\n"
+                              "• File audio di bassa qualità\n"
+                              "• Audio senza parlato\n"
+                              "• Problemi di riconoscimento")
+
+    def _on_transcription_error(self, error_msg):
+        """Gestisce gli errori della trascrizione."""
+        logging.error(f"Errore trascrizione: {error_msg}")
+        QMessageBox.critical(self, "Errore Trascrizione", f"Errore durante la trascrizione:\n\n{error_msg}")
+
     def handle_face_recognition(self):
         """Gestisce il toggle per il riconoscimento facciale."""
         try:
@@ -1855,6 +2062,716 @@ Riformulazione intensa:"""
         """Imposta la posizione dell'audio."""
         if hasattr(self, 'media_player'):
             self.media_player.setPosition(position)
+
+    def handle_ipa_button(self):
+        """Mostra un dialog con pulsanti interattivi per i simboli IPA e area clipboard."""
+        try:
+            # Crea il dialog IPA
+            ipa_dialog = QDialog(self)
+            ipa_dialog.setWindowTitle("📝 Simboli IPA - Alfabeto Fonetico Internazionale")
+            ipa_dialog.setFixedSize(1200, 1000)  # Aumentato l'altezza per vedere nasalizzazione e suggerimento
+            ipa_dialog.setStyleSheet("""
+                QDialog {
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                        stop:0 #f8f9fa, stop:1 #e9ecef);
+                    border: 2px solid #6f42c1;
+                    border-radius: 10px;
+                }
+                QLabel {
+                    font-size: 14px;
+                    color: #333;
+                    padding: 5px;
+                }
+                QLabel.title {
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: #6f42c1;
+                    margin-bottom: 10px;
+                }
+                QLabel.section {
+                    font-size: 14px;
+                    font-weight: bold;
+                    color: #495057;
+                    margin-top: 15px;
+                    margin-bottom: 5px;
+                }
+                QLabel.clipboard_title {
+                    font-size: 14px;
+                    font-weight: bold;
+                    color: #28a745;
+                    margin-top: 10px;
+                    margin-bottom: 5px;
+                }
+                QPushButton.ipa_symbol {
+                    background-color: #e9ecef;
+                    color: #495057;
+                    border: 2px solid #dee2e6;
+                    border-radius: 8px;
+                    padding: 10px 14px;
+                    font-weight: bold;
+                    font-size: 14px;
+                    font-family: "Courier New", monospace;
+                    min-width: 65px;
+                    min-height: 45px;
+                }
+                QPushButton.ipa_symbol:hover {
+                    background-color: #6f42c1;
+                    color: white;
+                    border-color: #5a359a;
+                }
+                QPushButton.ipa_symbol:pressed {
+                    background-color: #5a359a;
+                    border-color: #4a2e7a;
+                }
+                QPushButton.control {
+                    background-color: #6f42c1;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 10px 18px;
+                    font-weight: bold;
+                    min-width: 120px;
+                    font-size: 14px;
+                }
+                QPushButton.control:hover {
+                    background-color: #5a359a;
+                }
+                QPushButton.clipboard_btn {
+                    background-color: #28a745;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 8px 16px;
+                    font-weight: bold;
+                    min-width: 100px;
+                    font-size: 12px;
+                }
+                QPushButton.clipboard_btn:hover {
+                    background-color: #218838;
+                }
+                QPushButton#ipa_pronounce {
+                    background-color: #17a2b8;
+                    color: white;
+                    border: 2px solid #138496;
+                    border-radius: 15px;
+                    padding: 2px;
+                    font-size: 12px;
+                    font-weight: bold;
+                }
+                QPushButton#ipa_pronounce:hover {
+                    background-color: #138496;
+                    border-color: #117a8b;
+                }
+                QPushButton#ipa_pronounce:pressed {
+                    background-color: #117a8b;
+                    border-color: #0e5f6a;
+                }
+                QScrollArea {
+                    border: 1px solid #dee2e6;
+                    border-radius: 6px;
+                    background-color: rgba(255, 255, 255, 0.8);
+                }
+                QTextEdit {
+                    border: 2px solid #28a745;
+                    border-radius: 8px;
+                    background-color: rgba(255, 255, 255, 0.95);
+                    font-family: "Courier New", monospace;
+                    font-size: 14px;
+                    padding: 10px;
+                    min-height: 120px;
+                }
+                QSplitter::handle {
+                    background-color: #6f42c1;
+                    height: 4px;
+                }
+                QSplitter::handle:hover {
+                    background-color: #5a359a;
+                }
+            """)
+
+            # Layout principale con splitter
+            main_layout = QVBoxLayout(ipa_dialog)
+
+            # Titolo
+            title = QLabel("📝 Simboli IPA Interattivi con Clipboard")
+            title.setObjectName("title")
+            main_layout.addWidget(title)
+
+            # Descrizione
+            desc = QLabel("Clicca sui simboli IPA per copiarli negli appunti. Tutto quello che copi appare anche nell'area clipboard qui sotto per un riscontro immediato.")
+            desc.setWordWrap(True)
+            main_layout.addWidget(desc)
+
+            # Splitter per dividere pulsanti e clipboard
+            splitter = QSplitter(Qt.Orientation.Vertical)
+            main_layout.addWidget(splitter)
+
+            # Widget superiore: pulsanti IPA
+            top_widget = QWidget()
+            top_layout = QVBoxLayout(top_widget)
+
+            # Scroll area per contenere tutti i pulsanti
+            scroll_area = QScrollArea()
+            scroll_widget = QWidget()
+            scroll_layout = QVBoxLayout(scroll_widget)
+
+            # VOCALI ITALIANE
+            vocali_label = QLabel("🔤 VOCALI ITALIANE")
+            vocali_label.setObjectName("section")
+            scroll_layout.addWidget(vocali_label)
+
+            vocali_layout = QHBoxLayout()
+            vocali_data = [
+                ("[i]", "mìle"),
+                ("[e]", "mèta"),
+                ("[ɛ]", "mèta"),
+                ("[a]", "casa"),
+                ("[ɔ]", "còrso"),
+                ("[o]", "còrso"),
+                ("[u]", "cùpa")
+            ]
+
+            for symbol, example in vocali_data:
+                # Container per simbolo + pulsante pronuncia
+                symbol_container = QWidget()
+                symbol_layout = QHBoxLayout(symbol_container)
+                symbol_layout.setContentsMargins(0, 0, 0, 0)
+                symbol_layout.setSpacing(2)
+
+                # Pulsante principale del simbolo
+                btn = QPushButton(f"{symbol}\n{example}")
+                btn.setObjectName("ipa_symbol")
+                btn.setToolTip(f"Esempio: '{example}' → trascrizione fonetica con {symbol}")
+                btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
+                symbol_layout.addWidget(btn)
+
+                # Pulsante pronuncia
+                pronounce_btn = QPushButton("🔊")
+                pronounce_btn.setObjectName("ipa_pronounce")
+                pronounce_btn.setToolTip(f"Pronuncia il suono di {symbol}")
+                pronounce_btn.setFixedSize(30, 30)
+                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s))
+                symbol_layout.addWidget(pronounce_btn)
+
+                vocali_layout.addWidget(symbol_container)
+
+            vocali_layout.addStretch()
+            scroll_layout.addLayout(vocali_layout)
+
+            # CONSONANTI
+            consonanti_label = QLabel("🔤 CONSONANTI")
+            consonanti_label.setObjectName("section")
+            scroll_layout.addWidget(consonanti_label)
+
+            # Prima riga consonanti
+            cons1_layout = QHBoxLayout()
+            cons1_data = [
+                ("[p]", "pane"),
+                ("[b]", "bene"),
+                ("[t]", "tavolo"),
+                ("[d]", "dado"),
+                ("[k]", "casa"),
+                ("[g]", "gatto"),
+                ("[f]", "fame"),
+                ("[v]", "vino")
+            ]
+
+            for symbol, example in cons1_data:
+                # Container per simbolo + pulsante pronuncia
+                symbol_container = QWidget()
+                symbol_layout = QHBoxLayout(symbol_container)
+                symbol_layout.setContentsMargins(0, 0, 0, 0)
+                symbol_layout.setSpacing(2)
+
+                # Pulsante principale del simbolo
+                btn = QPushButton(f"{symbol}\n{example}")
+                btn.setObjectName("ipa_symbol")
+                btn.setToolTip(f"Esempio: '{example}' → trascrizione fonetica con {symbol}")
+                btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
+                symbol_layout.addWidget(btn)
+
+                # Pulsante pronuncia
+                pronounce_btn = QPushButton("🔊")
+                pronounce_btn.setObjectName("ipa_pronounce")
+                pronounce_btn.setToolTip(f"Pronuncia il suono di {symbol}")
+                pronounce_btn.setFixedSize(30, 30)
+                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s))
+                symbol_layout.addWidget(pronounce_btn)
+
+                cons1_layout.addWidget(symbol_container)
+
+            cons1_layout.addStretch()
+            scroll_layout.addLayout(cons1_layout)
+
+            # Seconda riga consonanti
+            cons2_layout = QHBoxLayout()
+            cons2_data = [
+                ("[s]", "sasso"),
+                ("[z]", "rosa"),
+                ("[ʃ]", "scena"),
+                ("[ʒ]", "Gange"),
+                ("[m]", "mamma"),
+                ("[n]", "nono"),
+                ("[ɲ]", "gnomo"),
+                ("[l]", "luna")
+            ]
+
+            for symbol, example in cons2_data:
+                # Container per simbolo + pulsante pronuncia
+                symbol_container = QWidget()
+                symbol_layout = QHBoxLayout(symbol_container)
+                symbol_layout.setContentsMargins(0, 0, 0, 0)
+                symbol_layout.setSpacing(2)
+
+                # Pulsante principale del simbolo
+                btn = QPushButton(f"{symbol}\n{example}")
+                btn.setObjectName("ipa_symbol")
+                btn.setToolTip(f"Esempio: '{example}' → trascrizione fonetica con {symbol}")
+                btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
+                symbol_layout.addWidget(btn)
+
+                # Pulsante pronuncia
+                pronounce_btn = QPushButton("🔊")
+                pronounce_btn.setObjectName("ipa_pronounce")
+                pronounce_btn.setToolTip(f"Pronuncia il suono di {symbol}")
+                pronounce_btn.setFixedSize(30, 30)
+                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s))
+                symbol_layout.addWidget(pronounce_btn)
+
+                cons2_layout.addWidget(symbol_container)
+
+            cons2_layout.addStretch()
+            scroll_layout.addLayout(cons2_layout)
+
+            # Terza riga consonanti
+            cons3_layout = QHBoxLayout()
+            cons3_data = [
+                ("[ʎ]", "gli"),
+                ("[r]", "raro"),
+                ("[ʁ]", "r francese")
+            ]
+
+            for symbol, example in cons3_data:
+                # Container per simbolo + pulsante pronuncia
+                symbol_container = QWidget()
+                symbol_layout = QHBoxLayout(symbol_container)
+                symbol_layout.setContentsMargins(0, 0, 0, 0)
+                symbol_layout.setSpacing(2)
+
+                # Pulsante principale del simbolo
+                btn = QPushButton(f"{symbol}\n{example}")
+                btn.setObjectName("ipa_symbol")
+                btn.setToolTip(f"Esempio: '{example}' → trascrizione fonetica con {symbol}")
+                btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
+                symbol_layout.addWidget(btn)
+
+                # Pulsante pronuncia
+                pronounce_btn = QPushButton("🔊")
+                pronounce_btn.setObjectName("ipa_pronounce")
+                pronounce_btn.setToolTip(f"Pronuncia il suono di {symbol}")
+                pronounce_btn.setFixedSize(30, 30)
+                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s))
+                symbol_layout.addWidget(pronounce_btn)
+
+                cons3_layout.addWidget(symbol_container)
+
+            cons3_layout.addStretch()
+            scroll_layout.addLayout(cons3_layout)
+
+            # SIMBOLI SPECIALI
+            speciali_label = QLabel("🔤 SIMBOLI SPECIALI")
+            speciali_label.setObjectName("section")
+            scroll_layout.addWidget(speciali_label)
+
+            speciali_layout = QHBoxLayout()
+            speciali_data = [
+                ("[ˈ]", "accento primario"),
+                ("[ˌ]", "accento secondario"),
+                ("[.]", "separatore sillabe"),
+                ("[:]", "vocale lunga"),
+                ("[̯]", "semivocale"),
+                ("[̃]", "nasalizzazione")
+            ]
+
+            for symbol, example in speciali_data:
+                # Container per simbolo + pulsante pronuncia
+                symbol_container = QWidget()
+                symbol_layout = QHBoxLayout(symbol_container)
+                symbol_layout.setContentsMargins(0, 0, 0, 0)
+                symbol_layout.setSpacing(2)
+
+                # Pulsante principale del simbolo
+                btn = QPushButton(f"{symbol}\n{example}")
+                btn.setObjectName("ipa_symbol")
+                if symbol == "[ˈ]":
+                    btn.setToolTip("Esempio: 'grazie' → [ˈɡrat.t͡sje] (accento primario sulla prima sillaba)")
+                else:
+                    btn.setToolTip(f"Esempio pratico con {symbol}: {example}")
+                btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
+                symbol_layout.addWidget(btn)
+
+                # Pulsante pronuncia
+                pronounce_btn = QPushButton("🔊")
+                pronounce_btn.setObjectName("ipa_pronounce")
+                pronounce_btn.setToolTip(f"Pronuncia il suono di {symbol}")
+                pronounce_btn.setFixedSize(30, 30)
+                pronounce_btn.clicked.connect(lambda checked, s=symbol: self.pronounce_ipa_symbol(s))
+                symbol_layout.addWidget(pronounce_btn)
+
+                speciali_layout.addWidget(symbol_container)
+
+            speciali_layout.addStretch()
+            scroll_layout.addLayout(speciali_layout)
+
+            # SPIEGAZIONE
+            info_label = QLabel("💡 Guida all'utilizzo:\n\n"
+                               "• Utilizza questi simboli per trascrivere correttamente la pronuncia delle parole italiane\n"
+                               "• Passa il mouse sui pulsanti per vedere esempi pratici di utilizzo\n"
+                               "• Clicca sui simboli per copiarli negli appunti\n"
+                               "• Tutto quello che copi appare automaticamente nel clipboard sottostante\n\n"
+                               "🔍 Suggerimento: Inizia con le vocali e consonanti più comuni!")
+            info_label.setObjectName("section")
+            info_label.setWordWrap(True)
+            info_label.setStyleSheet("font-size: 14px; color: #28a745; margin-top: 25px; margin-bottom: 15px; "
+                                   "background-color: rgba(40, 167, 69, 0.1); padding: 15px; border-radius: 8px; "
+                                   "border: 1px solid rgba(40, 167, 69, 0.3);")
+            scroll_layout.addWidget(info_label)
+
+            # Imposta lo scroll
+            scroll_area.setWidget(scroll_widget)
+            scroll_area.setWidgetResizable(True)
+            scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            top_layout.addWidget(scroll_area)
+
+            # Aggiungi il top_widget al splitter
+            splitter.addWidget(top_widget)
+
+            # Widget inferiore: area clipboard
+            bottom_widget = QWidget()
+            bottom_layout = QVBoxLayout(bottom_widget)
+
+            # Titolo clipboard
+            clipboard_title = QLabel("📋 CLIPBOARD - Tutto quello che copi")
+            clipboard_title.setObjectName("clipboard_title")
+            bottom_layout.addWidget(clipboard_title)
+
+            # Area di testo per il clipboard
+            self.clipboard_text = QTextEdit()
+            self.clipboard_text.setPlaceholderText("Qui appariranno tutti i simboli IPA che copi...\n\nInizia cliccando sui pulsanti sopra! 🎵")
+            self.clipboard_text.setReadOnly(False)  # Permetti modifica manuale
+            bottom_layout.addWidget(self.clipboard_text)
+
+            # Tutti i pulsanti di controllo su una sola riga
+            all_buttons_layout = QHBoxLayout()
+
+            # Pulsanti clipboard
+            clear_clipboard_btn = QPushButton("🧹 Pulisci")
+            clear_clipboard_btn.setObjectName("clipboard_btn")
+            clear_clipboard_btn.clicked.connect(self.clear_clipboard)
+            all_buttons_layout.addWidget(clear_clipboard_btn)
+
+            copy_clipboard_btn = QPushButton("📋 Copia Tutto")
+            copy_clipboard_btn.setObjectName("clipboard_btn")
+            copy_clipboard_btn.clicked.connect(self.copy_clipboard_content)
+            all_buttons_layout.addWidget(copy_clipboard_btn)
+
+            select_all_btn = QPushButton("📝 Seleziona Tutto")
+            select_all_btn.setObjectName("clipboard_btn")
+            select_all_btn.clicked.connect(lambda: self.clipboard_text.selectAll())
+            all_buttons_layout.addWidget(select_all_btn)
+
+            # Separatore visivo
+            all_buttons_layout.addStretch()
+
+            # Pulsanti principali
+            copy_all_symbols_btn = QPushButton("📚 Copia Tutti i Simboli")
+            copy_all_symbols_btn.setObjectName("control")
+            copy_all_symbols_btn.clicked.connect(lambda: self.copy_all_ipa_symbols())
+            all_buttons_layout.addWidget(copy_all_symbols_btn)
+
+            # Pulsante per abilitare/disabilitare TTS
+            self.tts_enabled = True  # Stato iniziale: TTS abilitato
+            tts_toggle_btn = QPushButton("🔊 TTS ON")
+            tts_toggle_btn.setObjectName("control")
+            tts_toggle_btn.clicked.connect(lambda: self.toggle_tts(tts_toggle_btn))
+            all_buttons_layout.addWidget(tts_toggle_btn)
+
+            close_button = QPushButton("❌ Chiudi")
+            close_button.setObjectName("control")
+            close_button.clicked.connect(ipa_dialog.close)
+            all_buttons_layout.addWidget(close_button)
+
+            # Aggiungi i pulsanti al layout del bottom_widget
+            bottom_layout.addLayout(all_buttons_layout)
+
+            # Aggiungi il bottom_widget al splitter
+            splitter.addWidget(bottom_widget)
+
+            # Imposta le proporzioni del splitter (70% pulsanti, 30% clipboard)
+            splitter.setSizes([700, 300])
+
+            # Inizializza clipboard vuoto
+            self.clipboard_text.clear()
+
+            # Mostra il dialog
+            ipa_dialog.exec()
+
+        except Exception as e:
+            logging.error(f"Errore apertura dialog IPA: {e}")
+            QMessageBox.critical(self, "Errore", f"Errore nell'apertura della guida IPA:\n{str(e)}")
+
+    def copy_single_ipa_symbol_with_clipboard(self, symbol, dialog):
+        """Copia un singolo simbolo IPA negli appunti e aggiungilo al clipboard del dialog."""
+        try:
+            # Copia negli appunti di sistema
+            clipboard = QApplication.clipboard()
+            if clipboard:
+                clipboard.setText(symbol)
+
+            # Aggiungi al clipboard del dialog
+            current_text = self.clipboard_text.toPlainText()
+            if current_text and not current_text.endswith(' '):
+                self.clipboard_text.setPlainText(current_text + symbol)
+            else:
+                self.clipboard_text.setPlainText(current_text + symbol)
+
+            # Scorri automaticamente alla fine
+            cursor = self.clipboard_text.textCursor()
+            cursor.movePosition(cursor.MoveOperation.End)
+            self.clipboard_text.setTextCursor(cursor)
+
+            # Rimossa la notifica popup per un'esperienza più fluida
+
+        except Exception as e:
+            logging.error(f"Errore copia simbolo IPA: {e}")
+            QMessageBox.critical(dialog, "Errore Copia", f"Errore durante la copia:\n{str(e)}")
+
+    def clear_clipboard(self):
+        """Pulisce l'area clipboard."""
+        try:
+            self.clipboard_text.clear()
+            self.clipboard_text.setPlaceholderText("Clipboard pulito! 🎵\n\nInizia cliccando sui pulsanti sopra!")
+        except Exception as e:
+            logging.error(f"Errore pulizia clipboard: {e}")
+
+    def copy_clipboard_content(self):
+        """Copia tutto il contenuto del clipboard negli appunti di sistema."""
+        try:
+            content = self.clipboard_text.toPlainText()
+            if content.strip():
+                clipboard = QApplication.clipboard()
+                if clipboard:
+                    clipboard.setText(content)
+                    QMessageBox.information(self, "Clipboard Copiato",
+                                          f"✅ Tutto il contenuto del clipboard copiato negli appunti!\n\n"
+                                          f"📝 {len(content)} caratteri copiati")
+            else:
+                QMessageBox.warning(self, "Clipboard Vuoto",
+                                  "Il clipboard è vuoto. Clicca prima sui simboli IPA per riempirlo!")
+        except Exception as e:
+            logging.error(f"Errore copia clipboard: {e}")
+            QMessageBox.critical(self, "Errore Copia", f"Errore durante la copia:\n{str(e)}")
+
+    def pronounce_ipa_symbol(self, symbol):
+        """Pronuncia un simbolo IPA utilizzando il sistema TTS."""
+        # Controlla se TTS è abilitato
+        if not hasattr(self, 'tts_enabled') or not self.tts_enabled:
+            QMessageBox.information(self, "TTS Disabilitato",
+                                  "🔇 La sintesi vocale è attualmente disabilitata.\n\n"
+                                  "Clicca sul pulsante '🔇 TTS OFF' per riabilitarla.")
+            return
+
+        if not TTS_AVAILABLE or not TTSThread:
+            QMessageBox.warning(self, "TTS Non Disponibile",
+                              "Il sistema di sintesi vocale non è disponibile.\n\n"
+                              "Assicurati che le librerie 'pyttsx3' e 'gtts' siano installate.")
+            return
+
+        try:
+            # Converti il simbolo IPA in testo pronunciabile
+            pronunciation_text = self._ipa_to_pronunciation_text(symbol)
+
+            if not pronunciation_text:
+                QMessageBox.warning(self, "Simbolo Non Supportato",
+                                  f"Il simbolo '{symbol}' non ha una pronuncia definita.")
+                return
+
+            # Crea e avvia il thread TTS
+            tts_thread = TTSThread(
+                text=pronunciation_text,
+                engine_name='pyttsx3',  # Usa pyttsx3 per velocità
+                voice_or_lang='it',     # Voce italiana
+                speed=0.8,              # Più lento per chiarezza
+                pitch=1.0
+            )
+
+            # Connetti segnali
+            tts_thread.started_reading.connect(lambda: logging.info(f"🔊 Pronunciando: {symbol}"))
+            tts_thread.finished_reading.connect(lambda: logging.info(f"✅ Pronuncia completata: {symbol}"))
+            tts_thread.error_occurred.connect(lambda err: logging.error(f"❌ Errore pronuncia {symbol}: {err}"))
+
+            # Avvia la pronuncia
+            tts_thread.start()
+
+            # Salva riferimento per evitare garbage collection
+            if not hasattr(self, '_tts_threads'):
+                self._tts_threads = []
+            self._tts_threads.append(tts_thread)
+
+        except Exception as e:
+            logging.error(f"Errore pronuncia IPA {symbol}: {e}")
+            QMessageBox.critical(self, "Errore Pronuncia", f"Errore durante la pronuncia:\n{str(e)}")
+
+    def _ipa_to_pronunciation_text(self, symbol):
+        """Converte un simbolo IPA in testo pronunciabile."""
+        ipa_pronunciations = {
+            # Vocali
+            "[i]": "ee come in mìle",
+            "[e]": "e aperta come in mèta",
+            "[ɛ]": "e molto aperta come in mèta",
+            "[a]": "a come in casa",
+            "[ɔ]": "o aperta come in còrso",
+            "[o]": "o chiusa come in còrso",
+            "[u]": "u come in cùpa",
+
+            # Consonanti
+            "[p]": "p come in pane",
+            "[b]": "b come in bene",
+            "[t]": "t come in tavolo",
+            "[d]": "d come in dado",
+            "[k]": "c dura come in casa",
+            "[g]": "g dura come in gatto",
+            "[f]": "f come in fame",
+            "[v]": "v come in vino",
+            "[s]": "s sorda come in sasso",
+            "[z]": "s sonora come in rosa",
+            "[ʃ]": "sc come in scena",
+            "[ʒ]": "j francese come in Gange",
+            "[m]": "m come in mamma",
+            "[n]": "n come in nono",
+            "[ɲ]": "gn come in gnomo",
+            "[l]": "l come in luna",
+            "[ʎ]": "gli come in figli",
+            "[r]": "r come in raro",
+            "[ʁ]": "r francese uvulare",
+
+            # Simboli speciali
+            "[ˈ]": "accento primario, sillaba tonica",
+            "[ˌ]": "accento secondario, sillaba atona",
+            "[.]": "separatore di sillabe",
+            "[:]": "vocale lunga",
+            "[̯]": "semivocale, suono di transizione",
+            "[̃]": "nasalizzazione, suono nasale"
+        }
+
+        return ipa_pronunciations.get(symbol, "")
+
+    def copy_single_ipa_symbol(self, symbol):
+        """Copia un singolo simbolo IPA negli appunti."""
+        try:
+            clipboard = QApplication.clipboard()
+            if clipboard:
+                clipboard.setText(symbol)
+                # Mostra notifica temporanea
+                QMessageBox.information(self, "Simbolo Copiato",
+                                      f"✅ Simbolo '{symbol}' copiato negli appunti!\n\n"
+                                      f"Puoi ora incollarlo dove necessario.")
+        except Exception as e:
+            logging.error(f"Errore copia simbolo IPA: {e}")
+            QMessageBox.critical(self, "Errore Copia", f"Errore durante la copia:\n{str(e)}")
+
+    def copy_all_ipa_symbols(self):
+        """Copia tutti i simboli IPA negli appunti."""
+        try:
+            all_symbols = """
+VOCALI: [i] [e] [ɛ] [a] [ɔ] [o] [u]
+CONSONANTI: [p] [b] [t] [d] [k] [g] [f] [v] [s] [z] [ʃ] [ʒ] [m] [n] [ɲ] [l] [ʎ] [r] [ʁ]
+SPECIALI: [ˈ] [ˌ] [.] [:] [̯] [̃]
+
+ESEMPI:
+"casa" → [ˈka.za]
+"pasta" → [ˈpas.ta]
+"telefono" → [teˈlɛ.fo.no]
+"grazie" → [ˈɡrat.t͡sje]
+"occhio" → [ˈɔk.kjo]
+            """
+
+            clipboard = QApplication.clipboard()
+            if clipboard:
+                clipboard.setText(all_symbols.strip())
+                QMessageBox.information(self, "Guida Completa Copiata",
+                                      "✅ Tutti i simboli IPA copiati negli appunti!\n\n"
+                                      "Ora hai a disposizione la guida completa per le trascrizioni fonetiche.")
+        except Exception as e:
+            logging.error(f"Errore copia tutti i simboli IPA: {e}")
+            QMessageBox.critical(self, "Errore Copia", f"Errore durante la copia:\n{str(e)}")
+
+    def copy_ipa_symbols(self, content):
+        """Copia il contenuto IPA negli appunti."""
+        try:
+            clipboard = QApplication.clipboard()
+            if clipboard:
+                clipboard.setText(content)
+                QMessageBox.information(self, "Copia Completata",
+                                      "✅ Contenuto IPA copiato negli appunti!\n\n"
+                                      "Ora puoi incollarlo dove necessario.")
+            else:
+                QMessageBox.warning(self, "Errore Appunti",
+                                  "Impossibile accedere agli appunti del sistema.")
+        except Exception as e:
+            logging.error(f"Errore copia IPA: {e}")
+            QMessageBox.critical(self, "Errore Copia", f"Errore durante la copia:\n{str(e)}")
+
+    def toggle_tts(self, button):
+        """Abilita/disabilita la sintesi vocale per i simboli IPA."""
+        try:
+            self.tts_enabled = not self.tts_enabled
+
+            if self.tts_enabled:
+                button.setText("🔊 TTS ON")
+                button.setStyleSheet("""
+                    QPushButton {
+                        background-color: #28a745;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        padding: 10px 18px;
+                        font-weight: bold;
+                        min-width: 120px;
+                        font-size: 14px;
+                    }
+                    QPushButton:hover {
+                        background-color: #218838;
+                    }
+                """)
+                QMessageBox.information(self, "TTS Abilitato",
+                                      "🔊 Sintesi vocale abilitata!\n\n"
+                                      "Ora puoi cliccare sui pulsanti 🔊 accanto ai simboli IPA per sentirne la pronuncia.")
+            else:
+                button.setText("🔇 TTS OFF")
+                button.setStyleSheet("""
+                    QPushButton {
+                        background-color: #dc3545;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        padding: 10px 18px;
+                        font-weight: bold;
+                        min-width: 120px;
+                        font-size: 14px;
+                    }
+                    QPushButton:hover {
+                        background-color: #c82333;
+                    }
+                """)
+                QMessageBox.information(self, "TTS Disabilitato",
+                                      "🔇 Sintesi vocale disabilitata!\n\n"
+                                      "I pulsanti 🔊 sono ora disattivati per risparmiare risorse.")
+
+        except Exception as e:
+            logging.error(f"Errore toggle TTS: {e}")
+            QMessageBox.critical(self, "Errore TTS", f"Errore durante il cambio stato TTS:\n{str(e)}")
 
     def handle_clean_button(self):
         """Gestisce la pulizia di tutti i widget con conferma utente."""

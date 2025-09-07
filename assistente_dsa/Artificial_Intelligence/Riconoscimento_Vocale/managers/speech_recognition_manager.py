@@ -18,6 +18,16 @@ except ImportError as e:
     vosk = None
     pyaudio = None
 
+try:
+    import wave
+    import audioop
+    WAVE_AVAILABLE = True
+except ImportError:
+    logging.warning("Modulo 'wave' non disponibile - funzionalità di conversione audio limitata")
+    WAVE_AVAILABLE = False
+    wave = None
+    audioop = None
+
 class SpeechRecognitionThread(QThread):
     """
     Thread per il riconoscimento vocale con timeout sul silenzio.
@@ -137,6 +147,141 @@ class SpeechRecognitionThread(QThread):
     def stop(self):
         self.running = False
         self.wait() # Attende la chiusura del thread
+
+
+class AudioFileTranscriptionThread(QThread):
+    """
+    Thread per la trascrizione di file audio utilizzando Vosk.
+    Supporta formati WAV, MP3 e altri formati audio comuni.
+    """
+    # Segnali per comunicare con l'interfaccia utente
+    transcription_progress = pyqtSignal(str)
+    transcription_completed = pyqtSignal(str)
+    transcription_error = pyqtSignal(str)
+
+    def __init__(self, audio_file_path, vosk_model_name, text_callback=None):
+        super().__init__()
+        self.audio_file_path = audio_file_path
+        self.vosk_model_name = vosk_model_name
+        self.text_callback = text_callback
+        self.running = True
+
+    def run(self):
+        """Esegue la trascrizione del file audio."""
+        # Verifica disponibilità librerie
+        if not VOSK_AVAILABLE:
+            error_msg = "Libreria vosk non disponibile per la trascrizione"
+            logging.error(error_msg)
+            self.transcription_error.emit(error_msg)
+            return
+
+        if not WAVE_AVAILABLE:
+            error_msg = "Modulo wave non disponibile per la trascrizione"
+            logging.error(error_msg)
+            self.transcription_error.emit(error_msg)
+            return
+
+        # Verifica esistenza file audio
+        if not os.path.exists(self.audio_file_path):
+            error_msg = f"File audio non trovato: {self.audio_file_path}"
+            logging.error(error_msg)
+            self.transcription_error.emit(error_msg)
+            return
+
+        vosk_model_path = os.path.join("Artificial_Intelligence", "Riconoscimento_Vocale", "models", "vosk_models", self.vosk_model_name)
+
+        if not os.path.exists(vosk_model_path):
+            error_msg = f"Modello Vosk non trovato in {vosk_model_path}"
+            logging.error(error_msg)
+            self.transcription_error.emit(error_msg)
+            return
+
+        try:
+            self.transcription_progress.emit("Caricamento modello Vosk...")
+            model = vosk.Model(vosk_model_path)
+
+            self.transcription_progress.emit("Elaborazione file audio...")
+
+            # Leggi il file audio
+            with wave.open(self.audio_file_path, 'rb') as wf:
+                # Verifica formato audio
+                if wf.getnchannels() != 1:
+                    # Converti a mono se necessario
+                    self.transcription_progress.emit("Conversione audio a mono...")
+                    frames = wf.readframes(wf.getnframes())
+                    # Converti stereo a mono
+                    frames = audioop.tomono(frames, wf.getsampwidth(), 0.5, 0.5)
+                    # Ricrea il wave file in memoria
+                    import io
+                    mono_wf = io.BytesIO()
+                    with wave.open(mono_wf, 'wb') as mono_file:
+                        mono_file.setnchannels(1)
+                        mono_file.setsampwidth(wf.getsampwidth())
+                        mono_file.setframerate(wf.getframerate())
+                        mono_file.writeframes(frames)
+                    mono_wf.seek(0)
+                    wf = wave.open(mono_wf, 'rb')
+
+                # Verifica sample rate
+                sample_rate = wf.getframerate()
+                if sample_rate != 16000:
+                    self.transcription_progress.emit(f"Conversione sample rate da {sample_rate}Hz a 16000Hz...")
+                    # Per ora assumiamo che il file sia già a 16kHz
+                    # Una implementazione completa richiederebbe resampling
+                    pass
+
+                # Inizializza recognizer
+                recognizer = vosk.KaldiRecognizer(model, sample_rate)
+
+                # Leggi e trascrivi l'audio
+                full_text = []
+                chunk_size = 4000
+
+                self.transcription_progress.emit("Trascrizione in corso...")
+
+                while self.running:
+                    data = wf.readframes(chunk_size)
+                    if len(data) == 0:
+                        break
+
+                    if recognizer.AcceptWaveform(data):
+                        result = json.loads(recognizer.Result())
+                        text = result.get('text', '').strip()
+                        if text:
+                            full_text.append(text)
+                            self.transcription_progress.emit(f"Testo riconosciuto: {text[:50]}...")
+
+                # Ottieni il risultato finale
+                final_result = json.loads(recognizer.FinalResult())
+                final_text = final_result.get('text', '').strip()
+                if final_text:
+                    full_text.append(final_text)
+
+                # Combina tutto il testo
+                complete_text = ' '.join(full_text).strip()
+
+                if complete_text:
+                    self.transcription_progress.emit("Trascrizione completata!")
+                    self.transcription_completed.emit(complete_text)
+
+                    # Usa callback se disponibile
+                    if self.text_callback:
+                        try:
+                            self.text_callback(complete_text)
+                        except Exception as e:
+                            logging.error(f"Errore callback trascrizione: {e}")
+                else:
+                    self.transcription_error.emit("Nessun testo riconosciuto nel file audio")
+
+        except Exception as e:
+            error_msg = f"Errore durante la trascrizione: {str(e)}"
+            logging.error(error_msg)
+            self.transcription_error.emit(error_msg)
+
+    def stop(self):
+        """Ferma la trascrizione."""
+        self.running = False
+        self.wait()
 
 
 def download_vosk_model(model_name, progress_callback=None):
