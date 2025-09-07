@@ -29,45 +29,45 @@ class CPUHandlers:
 
             logging.info("Monitoraggio CPU inizializzato")
 
-        except Exception as e:
-            logging.error(f"Errore nell'inizializzazione del monitoraggio CPU: {e}")
+        except Exception:
+            logging.error("Errore nell'inizializzazione del monitoraggio CPU: {e}")
             self.main_window.cpu_monitor = None
 
     def on_cpu_warning(self, message):
         """Gestisce gli avvisi di CPU alta."""
-        logging.warning(f"Avviso CPU: {message}")
+        logging.warning("Avviso CPU: {message}")
 
         # Mostra un messaggio all'utente
         QMessageBox.warning(self.main_window, "Avviso CPU Alta",
-                           f"L'applicazione sta utilizzando molta CPU:\n\n{message}\n\n"
-                           "Considera di chiudere alcune applicazioni o riavviare il sistema.")
+                            "L'applicazione sta utilizzando molta CPU:\n\n{message}\n\n"
+                            "Considera di chiudere alcune applicazioni o riavviare il sistema.")
 
     def on_cpu_critical(self, message):
         """Gestisce situazioni critiche di CPU."""
-        logging.critical(f"CPU Critica: {message}")
+        logging.critical("CPU Critica: {message}")
 
         # Mostra un messaggio critico all'utente
         QMessageBox.critical(self.main_window, "CPU Critica - Terminazione",
-                            f"L'applicazione ha superato i limiti di CPU consentiti:\n\n{message}\n\n"
-                            "L'applicazione verrà terminata per proteggere il sistema.")
+                             "L'applicazione ha superato i limiti di CPU consentiti:\n\n{message}\n\n"
+                             "L'applicazione verrà terminata per proteggere il sistema.")
 
     def on_temperature_warning(self, message):
         """Gestisce gli avvisi di temperatura alta."""
-        logging.warning(f"Avviso Temperatura: {message}")
+        logging.warning("Avviso Temperatura: {message}")
 
         # Mostra un messaggio di avviso all'utente
         QMessageBox.warning(self.main_window, "Avviso Temperatura Alta",
-                           f"La temperatura del processore è elevata:\n\n{message}\n\n"
-                           "Considera di:\n"
-                           "• Chiudere altre applicazioni\n"
-                           "• Migliorare la ventilazione\n"
-                           "• Controllare le ventole del sistema")
+                            "La temperatura del processore è elevata:\n\n{message}\n\n"
+                            "Considera di:\n"
+                            "• Chiudere altre applicazioni\n"
+                            "• Migliorare la ventilazione\n"
+                            "• Controllare le ventole del sistema")
 
     def on_temperature_critical(self, message):
         """Gestisce situazioni critiche di temperatura."""
-        logging.critical(f"Temperatura Critica: {message}")
+        logging.critical("Temperatura Critica: {message}")
 
         # Mostra un messaggio critico all'utente
         QMessageBox.critical(self.main_window, "Temperatura Critica - Terminazione",
-                            f"La temperatura del processore è CRITICAMENTE alta:\n\n{message}\n\n"
-                            "L'applicazione verrà terminata per proteggere l'hardware.")
+                             "La temperatura del processore è CRITICAMENTE alta:\n\n{message}\n\n"
+                             "L'applicazione verrà terminata per proteggere l'hardware.")

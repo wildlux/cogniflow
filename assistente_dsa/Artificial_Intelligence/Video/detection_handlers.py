@@ -47,7 +47,7 @@ class DetectionHandlers:
                         self.main_window.hand_detector = None
                         self.main_window.face_detector = None
             else:
-                logging.warning(f"Sistema di rilevamento '{detection_system}' non riconosciuto, uso OpenCV")
+                logging.warning("Sistema di rilevamento '{detection_system}' non riconosciuto, uso OpenCV")
                 try:
                     from Video.opencv.opencv_recognizer import OpenCVRecognizer
                     self.main_window.hand_detector = OpenCVRecognizer()
@@ -58,8 +58,8 @@ class DetectionHandlers:
                     self.main_window.hand_detector = None
                     self.main_window.face_detector = None
 
-        except Exception as e:
-            logging.error(f"Errore nell'inizializzazione del sistema di rilevamento: {e}")
+        except Exception:
+            logging.error("Errore nell'inizializzazione del sistema di rilevamento: {e}")
             # Fallback a rilevamento disabilitato
             self.main_window.hand_detector = None
             self.main_window.face_detector = None

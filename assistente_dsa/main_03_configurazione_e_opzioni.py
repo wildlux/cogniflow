@@ -4,34 +4,43 @@ Configurazioni e Opzioni - DSA Assistant
 Modulo centralizzato per la gestione delle impostazioni dell'applicazione
 """
 
-import os
 import json
 import logging
-from typing import Dict, Any, Optional, Union
+from typing import Any
+
+# Import del cache manager per ottimizzazioni
+try:
+    from core.cache_manager import get_cache_manager
+    cache_manager = get_cache_manager()
+    CACHE_AVAILABLE = True
+except ImportError:
+    cache_manager = None
+    CACHE_AVAILABLE = False
 
 # Configurazione logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class ConfigManager:
     """Gestore centralizzato delle configurazioni dell'applicazione DSA."""
 
-    def __init__(self, config_dir: Union[str, None] = None):
+    def __init__(self, config_dir: str | None = None):
         if config_dir is None:
             # Usa il percorso assoluto della cartella Save principale
-            self.config_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "SETUP_TOOLS_&_Data")
+            self.config_dir: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "SETUP_TOOLS_&_Data")
         else:
             self.config_dir = config_dir
-        self.settings_file = os.path.join(self.config_dir, "settings.json")
+        self.settings_file: str = os.path.join(self.config_dir, "settings.json")
         self.ensure_config_dir()
 
     def ensure_config_dir(self):
         """Assicura che la directory di configurazione esista."""
         if not os.path.exists(self.config_dir):
             os.makedirs(self.config_dir, exist_ok=True)
-            logger.info(f"Directory configurazione creata: {self.config_dir}")
+            logger.info("Directory configurazione creata: {self.config_dir}")
 
-    def get_default_settings(self) -> Dict[str, Any]:
+    def get_default_settings(self) -> dict[str, Any]:
         """Restituisce le impostazioni di default."""
         return {
             "application": {
@@ -121,64 +130,91 @@ class ConfigManager:
             }
         }
 
-    def load_settings(self) -> Dict[str, Any]:
+    def load_settings(self) -> dict[str, Any]:
         """Carica le impostazioni dal file JSON."""
         try:
             if os.path.exists(self.settings_file):
                 with open(self.settings_file, 'r', encoding='utf-8') as f:
                     settings = json.load(f)
-                logger.info(f"✓ Impostazioni caricate da: {self.settings_file}")
+                logger.info("✓ Impostazioni caricate da: {self.settings_file}")
                 return settings
             else:
-                logger.warning(f"File impostazioni non trovato: {self.settings_file}")
+                logger.warning("File impostazioni non trovato: {self.settings_file}")
                 return self.create_default_settings()
         except json.JSONDecodeError as e:
-            logger.error(f"Errore parsing JSON: {e}")
+            logger.error("Errore parsing JSON: {e}")
             return self.create_default_settings()
-        except Exception as e:
-            logger.error(f"Errore caricamento impostazioni: {e}")
+        except Exception:
+            logger.error("Errore caricamento impostazioni: {e}")
             return self.create_default_settings()
 
-    def create_default_settings(self) -> Dict[str, Any]:
+    def create_default_settings(self) -> dict[str, Any]:
         """Crea e salva le impostazioni di default."""
         default_settings = self.get_default_settings()
         self.save_settings(default_settings)
-        logger.info(f"✓ Impostazioni di default create: {self.settings_file}")
+        logger.info("✓ Impostazioni di default create: {self.settings_file}")
         return default_settings
 
-    def save_settings(self, settings: Dict[str, Any]) -> bool:
+    def save_settings(self, settings: dict[str, Any]) -> bool:
         """Salva le impostazioni su file."""
         try:
             with open(self.settings_file, 'w', encoding='utf-8') as f:
                 json.dump(settings, f, indent=4, ensure_ascii=False)
             logger.info("✓ Impostazioni salvate con successo")
             return True
-        except Exception as e:
-            logger.error(f"Errore salvataggio impostazioni: {e}")
+        except Exception:
+            logger.error("Errore salvataggio impostazioni: {e}")
             return False
 
     def get_setting(self, key_path: str, default: Any = None) -> Any:
         """Ottiene un'impostazione specifica usando la notazione con punti."""
+        # Input validation
+        if not key_path or not isinstance(key_path, str):
+            logger.warning("Invalid key_path: {key_path}")
+            return default
+
+        # Prevent path traversal attacks
+        if '..' in key_path or key_path.startswith('/') or '\\' in key_path:
+            logger.error("Security violation: Suspicious key_path: {key_path}")
+            return default
+
         settings = self.load_settings()
         keys = key_path.split('.')
-        value = settings
+        value: Any = settings
 
         try:
             for key in keys:
+                if not isinstance(value, dict):
+                    logger.warning("Invalid path structure at key '{key}' in path '{key_path}'")
+                    return default
                 value = value[key]
             return value
-        except (KeyError, TypeError):
+        except (KeyError, TypeError) as e:
+            logger.debug("Setting not found: {key_path}, returning default: {default}")
             return default
 
     def set_setting(self, key_path: str, value: Any) -> bool:
         """Imposta un'impostazione specifica usando la notazione con punti."""
+        # Input validation
+        if not key_path or not isinstance(key_path, str):
+            logger.error("Invalid key_path for set_setting: {key_path}")
+            return False
+
+        # Prevent path traversal attacks
+        if '..' in key_path or key_path.startswith('/') or '\\' in key_path:
+            logger.error("Security violation: Suspicious key_path for set_setting: {key_path}")
+            return False
+
         settings = self.load_settings()
         keys = key_path.split('.')
-        target = settings
+        target: Any = settings
 
         try:
             # Naviga fino all'ultimo livello
             for key in keys[:-1]:
+                if not isinstance(target, dict):
+                    logger.error("Invalid path structure at key '{key}' in path '{key_path}'")
+                    return False
                 if key not in target:
                     target[key] = {}
                 target = target[key]
@@ -186,11 +222,11 @@ class ConfigManager:
             # Imposta il valore
             target[keys[-1]] = value
             return self.save_settings(settings)
-        except Exception as e:
-            logger.error(f"Errore impostazione {key_path}: {e}")
+        except Exception:
+            logger.error("Errore impostazione {key_path}: {e}")
             return False
 
-    def validate_settings(self, settings: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_settings(self, settings: dict[str, Any]) -> dict[str, Any]:
         """Valida e corregge le impostazioni caricate."""
         validated = settings.copy()
         defaults = self.get_default_settings()
@@ -199,7 +235,7 @@ class ConfigManager:
         if 'ui' not in validated:
             validated['ui'] = defaults['ui']
 
-        ui_settings = validated['ui']
+        ui_settings: Any = validated['ui']
         if 'window_width' in ui_settings:
             ui_settings['window_width'] = max(800, min(3000, ui_settings['window_width']))
         if 'window_height' in ui_settings:
@@ -207,7 +243,7 @@ class ConfigManager:
 
         # Validazione confidenza rilevamento
         if 'detection_parameters' in validated:
-            params = validated['detection_parameters']
+            params: Any = validated['detection_parameters']
             if 'hand_confidence' in params:
                 params['hand_confidence'] = max(1, min(100, params['hand_confidence']))
             if 'face_confidence' in params:
@@ -217,7 +253,7 @@ class ConfigManager:
 
     def reset_to_defaults(self) -> bool:
         """Resetta tutte le impostazioni ai valori di default."""
-        return self.create_default_settings() is not None
+        return True
 
     def export_settings(self, export_path: str) -> bool:
         """Esporta le impostazioni in un file specifico."""
@@ -225,10 +261,10 @@ class ConfigManager:
             settings = self.load_settings()
             with open(export_path, 'w', encoding='utf-8') as f:
                 json.dump(settings, f, indent=4, ensure_ascii=False)
-            logger.info(f"✓ Impostazioni esportate in: {export_path}")
+            logger.info("✓ Impostazioni esportate in: {export_path}")
             return True
-        except Exception as e:
-            logger.error(f"Errore esportazione impostazioni: {e}")
+        except Exception:
+            logger.error("Errore esportazione impostazioni: {e}")
             return False
 
     def import_settings(self, import_path: str) -> bool:
@@ -238,49 +274,56 @@ class ConfigManager:
                 settings = json.load(f)
             validated_settings = self.validate_settings(settings)
             return self.save_settings(validated_settings)
-        except Exception as e:
-            logger.error(f"Errore importazione impostazioni: {e}")
+        except Exception:
+            logger.error("Errore importazione impostazioni: {e}")
             return False
+
 
 # Istanza globale del gestore configurazione
 config_manager = ConfigManager()
+
 
 def get_config() -> ConfigManager:
     """Restituisce l'istanza globale del gestore configurazione."""
     return config_manager
 
-def load_settings() -> Dict[str, Any]:
+
+def load_settings() -> dict[str, Any]:
     """Funzione di comodo per caricare le impostazioni."""
     return config_manager.load_settings()
 
-def save_settings(settings: Dict[str, Any]) -> bool:
+
+def save_settings(settings: dict[str, Any]) -> bool:
     """Funzione di comodo per salvare le impostazioni."""
     return config_manager.save_settings(settings)
+
 
 def get_setting(key_path: str, default: Any = None) -> Any:
     """Funzione di comodo per ottenere un'impostazione specifica."""
     return config_manager.get_setting(key_path, default)
 
+
 def set_setting(key_path: str, value: Any) -> bool:
     """Funzione di comodo per impostare un'impostazione specifica."""
     return config_manager.set_setting(key_path, value)
 
+
 # Costanti derivate dalle impostazioni (per retrocompatibilità)
 try:
     settings = load_settings()
-    WINDOW_WIDTH = settings['ui']['window_width']
-    WINDOW_HEIGHT = settings['ui']['window_height']
-    CONFIG_DIALOG_WIDTH = settings['ui']['config_dialog_width']
-    CONFIG_DIALOG_HEIGHT = settings['ui']['config_dialog_height']
-    WIDGET_MIN_HEIGHT = settings['ui']['widget_min_height']
-    DEFAULT_FONT_SIZE = settings['fonts']['default_font_size']
-    DEFAULT_PENSIERINI_FONT_SIZE = settings['fonts']['default_pensierini_font_size']
-except Exception as e:
-    logger.warning(f"Errore caricamento costanti: {e}, uso valori di default")
-    WINDOW_WIDTH = 1200
-    WINDOW_HEIGHT = 800
-    CONFIG_DIALOG_WIDTH = 1000
-    CONFIG_DIALOG_HEIGHT = 700
-    WIDGET_MIN_HEIGHT = 60
-    DEFAULT_FONT_SIZE = 12
-    DEFAULT_PENSIERINI_FONT_SIZE = 10
+    window_width = settings['ui']['window_width']
+    window_height = settings['ui']['window_height']
+    config_dialog_width = settings['ui']['config_dialog_width']
+    config_dialog_height = settings['ui']['config_dialog_height']
+    widget_min_height = settings['ui']['widget_min_height']
+    default_font_size = settings['fonts']['default_font_size']
+    default_pensierini_font_size = settings['fonts']['default_pensierini_font_size']
+except Exception:
+    logger.warning("Errore caricamento costanti: {e}, uso valori di default")
+    window_width = 1200
+    window_height = 800
+    config_dialog_width = 1000
+    config_dialog_height = 700
+    widget_min_height = 60
+    default_font_size = 12
+    default_pensierini_font_size = 10

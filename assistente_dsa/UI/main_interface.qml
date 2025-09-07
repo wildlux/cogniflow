@@ -63,13 +63,110 @@ ApplicationWindow {
         onActivated: loadContent()
     }
 
-    // Tema dell'applicazione
-    property color primaryColor: "#4a90e2"
-    property color secondaryColor: "#f39c12"
-    property color successColor: "#27ae60"
-    property color errorColor: "#e74c3c"
-    property color backgroundColor: "#f8f9fa"
-    property color textColor: "#000000"
+    // Sistema di temi dell'applicazione
+    property int currentTheme: 0  // 0-9 per 10 temi diversi
+
+    // Definizione dei 10 temi
+    property var themes: [
+        // Tema 0: Classico (Blu)
+        {
+            primaryColor: "#4a90e2",
+            secondaryColor: "#f39c12",
+            successColor: "#27ae60",
+            errorColor: "#e74c3c",
+            backgroundColor: "#f8f9fa",
+            textColor: "#000000"
+        },
+        // Tema 1: Scuro
+        {
+            primaryColor: "#6c757d",
+            secondaryColor: "#495057",
+            successColor: "#28a745",
+            errorColor: "#dc3545",
+            backgroundColor: "#343a40",
+            textColor: "#ffffff"
+        },
+        // Tema 2: Chiaro
+        {
+            primaryColor: "#007bff",
+            secondaryColor: "#6c757d",
+            successColor: "#28a745",
+            errorColor: "#dc3545",
+            backgroundColor: "#ffffff",
+            textColor: "#000000"
+        },
+        // Tema 3: Natura (Verdi)
+        {
+            primaryColor: "#28a745",
+            secondaryColor: "#20c997",
+            successColor: "#17a2b8",
+            errorColor: "#dc3545",
+            backgroundColor: "#f8fff8",
+            textColor: "#155724"
+        },
+        // Tema 4: Sunset (Arancione/Rosso)
+        {
+            primaryColor: "#fd7e14",
+            secondaryColor: "#e83e8c",
+            successColor: "#ffc107",
+            errorColor: "#dc3545",
+            backgroundColor: "#fff8f3",
+            textColor: "#721c24"
+        },
+        // Tema 5: Oceano (Blu/Azzurro)
+        {
+            primaryColor: "#17a2b8",
+            secondaryColor: "#6f42c1",
+            successColor: "#28a745",
+            errorColor: "#dc3545",
+            backgroundColor: "#f0f8ff",
+            textColor: "#0c5460"
+        },
+        // Tema 6: Lavanda (Viola)
+        {
+            primaryColor: "#6f42c1",
+            secondaryColor: "#e83e8c",
+            successColor: "#28a745",
+            errorColor: "#dc3545",
+            backgroundColor: "#faf5ff",
+            textColor: "#4b0082"
+        },
+        // Tema 7: Moderno (Grigio/Nero)
+        {
+            primaryColor: "#000000",
+            secondaryColor: "#6c757d",
+            successColor: "#28a745",
+            errorColor: "#dc3545",
+            backgroundColor: "#f8f9fa",
+            textColor: "#000000"
+        },
+        // Tema 8: Arcobaleno (Colori Vivaci)
+        {
+            primaryColor: "#ff6b6b",
+            secondaryColor: "#4ecdc4",
+            successColor: "#45b7d1",
+            errorColor: "#f9ca24",
+            backgroundColor: "#fff5f5",
+            textColor: "#2d3436"
+        },
+        // Tema 9: Minimal (Bianco/Nero)
+        {
+            primaryColor: "#000000",
+            secondaryColor: "#ffffff",
+            successColor: "#000000",
+            errorColor: "#ff0000",
+            backgroundColor: "#ffffff",
+            textColor: "#000000"
+        }
+    ]
+
+    // Proprietà calcolate per il tema corrente
+    property color primaryColor: themes[currentTheme].primaryColor
+    property color secondaryColor: themes[currentTheme].secondaryColor
+    property color successColor: themes[currentTheme].successColor
+    property color errorColor: themes[currentTheme].errorColor
+    property color backgroundColor: themes[currentTheme].backgroundColor
+    property color textColor: themes[currentTheme].textColor
 
     // Menu principale
     menuBar: MenuBar {
@@ -132,14 +229,17 @@ ApplicationWindow {
         }
 
         Menu {
-            title: "🔧 Impostazioni"
+            title: "🔧 Opzioni"
             MenuItem {
                 text: "⚙️ Configurazione Generale"
                 onTriggered: openSettings()
             }
             MenuItem {
-                text: "🎨 Tema e Aspetto"
-                onTriggered: openThemeSettings()
+                text: "🎨 Gestione Temi"
+                onTriggered: {
+                    // Scroll automatico alla scheda temi nel pannello sinistro
+                    // Questa funzionalità potrebbe richiedere implementazione aggiuntiva
+                }
             }
             MenuItem {
                 text: "🎵 Sintesi Vocale"
@@ -177,50 +277,74 @@ ApplicationWindow {
                 anchors.fill: parent
                 spacing: 10
 
-                // Pulsanti principali
-                ToolButton {
-                    text: "🆕 Nuovo"
-                    onClicked: clearAll()
-                }
+                 // Pulsanti principali
+                 ToolButton {
+                     text: "🆕 Nuovo Documento"
+                     Layout.minimumWidth: 120
+                     font.pixelSize: 11
+                     font.bold: true
+                     onClicked: clearAll()
+                 }
 
-                ToolButton {
-                    text: "💾 Salva"
-                    onClicked: saveContent()
-                }
+                 ToolButton {
+                     text: "💾 Salva Documento"
+                     Layout.minimumWidth: 120
+                     font.pixelSize: 11
+                     font.bold: true
+                     onClicked: saveContent()
+                 }
 
-                ToolButton {
-                    text: "📂 Apri"
-                    onClicked: openFile()
-                }
-
-                ToolSeparator {}
-
-                ToolButton {
-                    text: isReading ? "⏹️" : "🔊"
-                    onClicked: toggleTTS()
-                }
-
-                ToolButton {
-                    text: isRecording ? "⏹️" : "🎤"
-                    onClicked: toggleSpeechRecognition()
-                }
-
-                ToolButton {
-                    text: "🤖 AI"
-                    onClicked: openAIAssistant()
-                }
-
-                ToolButton {
-                    text: "📊 Log"
-                    onClicked: toggleLog()
-                }
+                 ToolButton {
+                     text: "📂 Apri Documento"
+                     Layout.minimumWidth: 120
+                     font.pixelSize: 11
+                     font.bold: true
+                     onClicked: openFile()
+                 }
 
                 ToolSeparator {}
 
-                ToolButton {
-                    text: "⚙️ Impostazioni"
-                    onClicked: openSettings()
-                }
+                 ToolButton {
+                     text: isReading ? "⏹️ Ferma Lettura" : "🔊 Avvia Lettura"
+                     Layout.minimumWidth: 110
+                     font.pixelSize: 11
+                     font.bold: true
+                     onClicked: toggleTTS()
+                 }
+
+                 ToolButton {
+                     text: isRecording ? "⏹️ Ferma Registrazione" : "🎤 Avvia Registrazione"
+                     Layout.minimumWidth: 130
+                     font.pixelSize: 11
+                     font.bold: true
+                     onClicked: toggleSpeechRecognition()
+                 }
+
+                 ToolButton {
+                     text: "🤖 AI Assistant"
+                     Layout.minimumWidth: 110
+                     font.pixelSize: 11
+                     font.bold: true
+                     onClicked: openAIAssistant()
+                 }
+
+                 ToolButton {
+                     text: "📊 Mostra Log"
+                     Layout.minimumWidth: 110
+                     font.pixelSize: 11
+                     font.bold: true
+                     onClicked: toggleLog()
+                 }
+
+                ToolSeparator {}
+
+                 ToolButton {
+                     text: "⚙️ Apri Impostazioni"
+                     Layout.minimumWidth: 130
+                     font.pixelSize: 11
+                     font.bold: true
+                     onClicked: openSettings()
+                 }
             }
         }
 
@@ -264,61 +388,177 @@ ApplicationWindow {
                         ColumnLayout {
                             anchors.fill: parent
 
-                            ComboBox {
-                                id: voiceCombo
-                                Layout.fillWidth: true
-                                model: ["it-IT", "en-US", "es-ES", "fr-FR", "de-DE"]
-                                currentIndex: 0
-                            }
+                             ComboBox {
+                                 id: voiceCombo
+                                 Layout.fillWidth: true
+                                 Layout.minimumWidth: 200
+                                 Layout.preferredWidth: 250
+                                 model: ["🇮🇹 Italiano (it-IT)", "🇺🇸 Inglese (en-US)", "🇪🇸 Spagnolo (es-ES)", "🇫🇷 Francese (fr-FR)", "🇩🇪 Tedesco (de-DE)"]
+                                 currentIndex: 0
+                                 font.pixelSize: 12
+                                 font.bold: true
+                             }
 
-                            Slider {
-                                id: speedSlider
-                                Layout.fillWidth: true
-                                from: 0.5
-                                to: 2.0
-                                value: 1.0
-                            }
+                             Slider {
+                                 id: speedSlider
+                                 Layout.fillWidth: true
+                                 Layout.minimumWidth: 180
+                                 from: 0.5
+                                 to: 2.0
+                                 value: 1.0
+                             }
 
-                            Label {
-                                text: "Velocità: " + speedSlider.value.toFixed(1) + "x"
-                            }
+                             Label {
+                                 text: "Velocità: " + speedSlider.value.toFixed(1) + "x"
+                                 font.pixelSize: 12
+                                 font.bold: true
+                                 Layout.alignment: Qt.AlignCenter
+                             }
 
-                            Button {
-                                text: isReading ? "⏹️ Ferma" : "🔊 Leggi"
-                                Layout.fillWidth: true
-                                onClicked: toggleTTS()
-                            }
+                             Button {
+                                 text: isReading ? "⏹️ Ferma Lettura" : "🔊 Avvia Lettura"
+                                 Layout.fillWidth: true
+                                 Layout.minimumHeight: 35
+                                 font.pixelSize: 12
+                                 font.bold: true
+                                 onClicked: toggleTTS()
+                             }
                         }
-                    }
+                     }
 
-                    // Sezione AI
-                    GroupBox {
-                        title: "🤖 AI Assistant"
-                        Layout.fillWidth: true
+                     // Sezione Temi e Personalizzazione
+                     GroupBox {
+                         title: "🎨 Temi e Aspetto"
+                         Layout.fillWidth: true
+
+                         ColumnLayout {
+                             anchors.fill: parent
+
+                             // Selettore tema principale
+                             Label {
+                                 text: "Tema Attuale:"
+                                 font.pixelSize: 12
+                                 font.bold: true
+                                 color: textColor
+                             }
+
+                             ComboBox {
+                                 id: themeSelector
+                                 Layout.fillWidth: true
+                                 Layout.minimumWidth: 180
+                                 model: ["🔵 Classico (Blu)", "⚫ Scuro", "⚪ Chiaro", "🌿 Natura (Verde)", "🌅 Sunset (Arancione)", "🌊 Oceano (Azzurro)", "💜 Lavanda (Viola)", "🎯 Moderno (Nero)", "🌈 Arcobaleno", "🎨 Minimal (Bianco/Nero)"]
+                                 currentIndex: currentTheme
+                                 font.pixelSize: 11
+                                 font.bold: true
+                                 onCurrentIndexChanged: {
+                                     if (currentIndex !== currentTheme) {
+                                         currentTheme = currentIndex
+                                     }
+                                 }
+                             }
+
+                             // Anteprima colori tema corrente
+                             Rectangle {
+                                 Layout.fillWidth: true
+                                 height: 40
+                                 color: backgroundColor
+                                 border.color: primaryColor
+                                 border.width: 2
+                                 radius: 5
+
+                                 RowLayout {
+                                     anchors.fill: parent
+                                     anchors.margins: 5
+
+                                     Rectangle {
+                                         width: 20
+                                         height: 20
+                                         color: primaryColor
+                                         radius: 3
+                                     }
+
+                                     Rectangle {
+                                         width: 20
+                                         height: 20
+                                         color: secondaryColor
+                                         radius: 3
+                                     }
+
+                                     Rectangle {
+                                         width: 20
+                                         height: 20
+                                         color: successColor
+                                         radius: 3
+                                     }
+
+                                     Label {
+                                         text: "Anteprima Tema"
+                                         font.pixelSize: 10
+                                         color: textColor
+                                         Layout.fillWidth: true
+                                         horizontalAlignment: Text.AlignHCenter
+                                     }
+                                 }
+                             }
+
+                             // Pulsanti di azione tema
+                             RowLayout {
+                                 Layout.fillWidth: true
+
+                                 Button {
+                                     text: "🔄 Reset Tema"
+                                     Layout.fillWidth: true
+                                     font.pixelSize: 10
+                                     onClicked: currentTheme = 0  // Torna al tema classico
+                                 }
+
+                                 Button {
+                                     text: "🎲 Tema Casuale"
+                                     Layout.fillWidth: true
+                                     font.pixelSize: 10
+                                     onClicked: currentTheme = Math.floor(Math.random() * 10)
+                                 }
+                             }
+                         }
+                     }
+
+                     // Sezione AI
+                     GroupBox {
+                         title: "🤖 AI Assistant"
+                         Layout.fillWidth: true
 
                         ColumnLayout {
                             anchors.fill: parent
 
-                            ComboBox {
-                                id: aiModelCombo
-                                Layout.fillWidth: true
-                                model: availableModels
-                                currentIndex: 0
-                                onCurrentTextChanged: selectedModel = currentText
-                            }
+                             ComboBox {
+                                 id: aiModelCombo
+                                 Layout.fillWidth: true
+                                 Layout.minimumWidth: 200
+                                 Layout.preferredWidth: 250
+                                 model: availableModels
+                                 currentIndex: 0
+                                 font.pixelSize: 11
+                                 font.bold: true
+                                 onCurrentTextChanged: selectedModel = currentText
+                             }
 
-                            CheckBox {
-                                id: shiftEnterNewlineCheck
-                                text: "Usa Shift+Invio per andare a capo"
-                                checked: useShiftEnterForNewline
-                                onCheckedChanged: useShiftEnterForNewline = checked
-                            }
+                             CheckBox {
+                                 id: shiftEnterNewlineCheck
+                                 text: "Usa Shift+Invio per andare a capo"
+                                 checked: useShiftEnterForNewline
+                                 font.pixelSize: 11
+                                 font.bold: true
+                                 onCheckedChanged: useShiftEnterForNewline = checked
+                             }
 
-                            Button {
-                                text: "🚀 Chiedi all'AI"
-                                Layout.fillWidth: true
-                                onClicked: sendToAI()
-                            }
+                             Button {
+                                 text: "🚀 Chiedi all'AI"
+                                 Layout.fillWidth: true
+                                 Layout.minimumHeight: 35
+                                 font.pixelSize: 12
+                                 font.bold: true
+                                 onClicked: sendToAI()
+                             }
                         }
                     }
 
@@ -456,20 +696,29 @@ ApplicationWindow {
                                         onAccepted: addWorkspacePensierino()
                                     }
 
-                                    Button {
-                                        text: "➕ Aggiungi"
-                                        onClicked: addWorkspacePensierino()
-                                    }
+                                     Button {
+                                         text: "➕ Aggiungi Pensierino"
+                                         Layout.minimumWidth: 140
+                                         font.pixelSize: 11
+                                         font.bold: true
+                                         onClicked: addWorkspacePensierino()
+                                     }
 
-                                    Button {
-                                        text: "📤 Esporta"
-                                        onClicked: exportWorkspacePensierini()
-                                    }
+                                     Button {
+                                         text: "📤 Esporta Pensierini"
+                                         Layout.minimumWidth: 140
+                                         font.pixelSize: 11
+                                         font.bold: true
+                                         onClicked: exportWorkspacePensierini()
+                                     }
 
-                                    Button {
-                                        text: "🗑️ Pulisci Tutto"
-                                        onClicked: clearWorkspacePensierini()
-                                    }
+                                     Button {
+                                         text: "🗑️ Pulisci Tutto"
+                                         Layout.minimumWidth: 140
+                                         font.pixelSize: 11
+                                         font.bold: true
+                                         onClicked: clearWorkspacePensierini()
+                                     }
                                 }
 
                                 // Lista pensierini
@@ -482,13 +731,13 @@ ApplicationWindow {
                                         model: workspacePensierini
                                         clip: true
 
-                                        delegate: Rectangle {
-                                            width: parent.width
-                                            height: 60
-                                            color: index % 2 === 0 ? "#f8f9fa" : "#ffffff"
-                                            border.color: primaryColor
-                                            border.width: 1
-                                            radius: 3
+                                         delegate: Rectangle {
+                                             width: parent.width
+                                             height: 60
+                                             color: index % 2 === 0 ? "#f8f9fa" : "transparent"
+                                             border.color: primaryColor
+                                             border.width: 1
+                                             radius: 3
 
                                             RowLayout {
                                                 anchors.fill: parent
@@ -505,15 +754,23 @@ ApplicationWindow {
                                                 ColumnLayout {
                                                     Layout.alignment: Qt.AlignRight
 
-                                                    Button {
-                                                        text: "🔊"
-                                                        onClicked: readWorkspacePensierino(modelData.text)
-                                                    }
+                                                     Button {
+                                                         text: "🔊 Leggi"
+                                                         Layout.minimumWidth: 70
+                                                         Layout.minimumHeight: 30
+                                                         font.pixelSize: 10
+                                                         font.bold: true
+                                                         onClicked: readWorkspacePensierino(modelData.text)
+                                                     }
 
-                                                    Button {
-                                                        text: "🗑️"
-                                                        onClicked: removeWorkspacePensierino(index)
-                                                    }
+                                                     Button {
+                                                         text: "🗑️ Rimuovi"
+                                                         Layout.minimumWidth: 80
+                                                         Layout.minimumHeight: 30
+                                                         font.pixelSize: 10
+                                                         font.bold: true
+                                                         onClicked: removeWorkspacePensierino(index)
+                                                     }
                                                 }
                                             }
                                         }
@@ -594,13 +851,13 @@ ApplicationWindow {
                             id: aiResultsList
                             model: ListModel {}
 
-                            delegate: Rectangle {
-                                width: parent.width
-                                height: 120
-                                color: index % 2 === 0 ? "#ffffff" : "#f8f9fa"
-                                border.color: primaryColor
-                                border.width: 1
-                                radius: 5
+                             delegate: Rectangle {
+                                 width: parent.width
+                                 height: 120
+                                 color: index % 2 === 0 ? "transparent" : "#f8f9fa"
+                                 border.color: primaryColor
+                                 border.width: 1
+                                 radius: 5
 
                                 ColumnLayout {
                                     anchors.fill: parent
@@ -643,12 +900,15 @@ ApplicationWindow {
                         }
                     }
 
-                    // Pulsante per pulire risultati
-                    Button {
-                        text: "🗑️ Pulisci Risultati"
-                        Layout.fillWidth: true
-                        onClicked: aiResultsList.model.clear()
-                    }
+                     // Pulsante per pulire risultati
+                     Button {
+                         text: "🗑️ Pulisci Tutti i Risultati AI"
+                         Layout.fillWidth: true
+                         Layout.minimumHeight: 35
+                         font.pixelSize: 12
+                         font.bold: true
+                         onClicked: aiResultsList.model.clear()
+                     }
                 }
             }
         }

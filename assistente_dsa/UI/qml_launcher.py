@@ -3,8 +3,6 @@
 Launcher per l'interfaccia QML con integrazione Ollama
 """
 
-import sys
-import os
 from PyQt6.QtCore import QUrl
 from PyQt6.QtQml import QQmlApplicationEngine
 from PyQt6.QtWidgets import QApplication
@@ -15,6 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", "Artificial_Intell
 
 # Import del bridge
 from Artificial_Intelligence.Ollama.ollama_bridge import register_bridge
+
 
 def main():
     """Avvia l'applicazione QML con il bridge Ollama"""
@@ -38,6 +37,7 @@ def main():
 
     # Avvia l'applicazione
     return app.exec()
+
 
 if __name__ == "__main__":
     sys.exit(main())

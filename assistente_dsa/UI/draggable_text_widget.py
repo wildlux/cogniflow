@@ -1,6 +1,5 @@
 import logging
 import pyttsx3
-import os
 from PyQt6.QtCore import Qt, QMimeData, QTimer
 from PyQt6.QtGui import QDrag
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QMessageBox, QInputDialog
@@ -57,7 +56,7 @@ class DraggableTextWidget(QFrame):
 
         layout = QHBoxLayout(self)
         self.text_label = QLabel(text)
-        self.text_label.setStyleSheet(f"font-weight: bold; font-size: {DEFAULT_FONT_SIZE}px;")
+        self.text_label.setStyleSheet("font-weight: bold; font-size: {DEFAULT_FONT_SIZE}px;")
         self.text_label.setWordWrap(True)
         self.text_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.text_label.customContextMenuRequested.connect(self.show_context_menu)
@@ -146,7 +145,7 @@ class DraggableTextWidget(QFrame):
         )
         if ok and new_text.strip():
             self.text_label.setText(new_text.strip())
-            logging.info(f"Testo del widget modificato: {new_text[:50]}...")
+            logging.info("Testo del widget modificato: {new_text[:50]}...")
 
     def mousePressEvent(self, a0):
         """Gestisce l'evento di pressione del mouse per iniziare il trascinamento."""
@@ -156,8 +155,8 @@ class DraggableTextWidget(QFrame):
 
     def mouseMoveEvent(self, a0):
         """Gestisce il movimento del mouse per il trascinamento."""
-        if (self.start_pos is not None and self.text_label and a0 is not None and
-                a0.buttons() == Qt.MouseButton.LeftButton):
+        if (self.start_pos is not None and self.text_label and a0 is not None
+                and a0.buttons() == Qt.MouseButton.LeftButton):
             current_pos = a0.pos()
             if current_pos.x() >= 0 and current_pos.y() >= 0:
                 distance = (current_pos - self.start_pos).manhattanLength()
@@ -210,8 +209,8 @@ class DraggableTextWidget(QFrame):
             # Reset when finished
             self.reset_reading_buttons()
 
-        except Exception as e:
-            QMessageBox.warning(self, "Errore Lettura", f"Errore durante la lettura: {str(e)}")
+        except Exception:
+            QMessageBox.warning(self, "Errore Lettura", "Errore durante la lettura: {str(e)}")
             self.reset_reading_buttons()
 
     def pause_reading(self):
@@ -331,7 +330,7 @@ class DraggableTextWidget(QFrame):
             # Modifica il testo per indicare selezione attiva con icona più prominente
             original_text = self.original_text
             if not original_text.startswith("⭐ "):
-                self.text_label.setText(f"⭐ {original_text}")
+                self.text_label.setText("⭐ {original_text}")
         else:
             # Stile normale
             self.setStyleSheet(base_style)
@@ -388,33 +387,33 @@ class DraggableTextWidget(QFrame):
 
     def _analyze_file(self, file_path):
         """Analizza un file e restituisce le informazioni."""
-        metadata = f"📁 Analisi File\n\n"
-        metadata += f"📂 Percorso: {file_path}\n"
+        metadata = "📁 Analisi File\n\n"
+        metadata += "📂 Percorso: {file_path}\n"
 
         if os.path.exists(file_path):
             try:
                 stat = os.stat(file_path)
-                metadata += f"📏 Dimensione: {stat.st_size} bytes\n"
-                metadata += f"📅 Modificato: {stat.st_mtime}\n"
+                metadata += "📏 Dimensione: {stat.st_size} bytes\n"
+                metadata += "📅 Modificato: {stat.st_mtime}\n"
 
                 if os.path.isfile(file_path):
-                    metadata += f"📄 Tipo: File\n"
+                    metadata += "📄 Tipo: File\n"
                     # Estensione
                     _, ext = os.path.splitext(file_path)
                     if ext:
-                        metadata += f"🏷️ Estensione: {ext}\n"
+                        metadata += "🏷️ Estensione: {ext}\n"
                 else:
-                    metadata += f"📁 Tipo: Directory\n"
-            except Exception as e:
-                metadata += f"❌ Errore nell'analisi: {str(e)}\n"
+                    metadata += "📁 Tipo: Directory\n"
+            except Exception:
+                metadata += "❌ Errore nell'analisi: {str(e)}\n"
         else:
-            metadata += f"❌ File non trovato\n"
+            metadata += "❌ File non trovato\n"
 
         return metadata
 
     def _analyze_single_word(self, word):
         """Analizza una singola parola e restituisce analisi grammaticale."""
-        metadata = f"🔤 Analisi Grammaticale: {word}\n\n"
+        metadata = "🔤 Analisi Grammaticale: {word}\n\n"
 
         # Analisi grammaticale di base
         if word.endswith(('are', 'ere', 'ire')):
@@ -422,17 +421,17 @@ class DraggableTextWidget(QFrame):
         elif word.endswith(('a', 'e', 'i', 'o', 'u')):
             metadata += self._analyze_noun(word)
         else:
-            metadata += f"❓ Tipo di parola non identificato\n"
+            metadata += "❓ Tipo di parola non identificato\n"
 
         # Etimologia di base (molto semplificata)
-        metadata += f"\n📚 Etimologia:\n"
+        metadata += "\n📚 Etimologia:\n"
         metadata += self._get_basic_etymology(word)
 
         return metadata
 
     def _analyze_verb(self, verb):
         """Analizza un verbo e mostra le coniugazioni."""
-        metadata = f"🏃 Tipo: Verbo\n"
+        metadata = "🏃 Tipo: Verbo\n"
 
         # Identifica la coniugazione
         if verb.endswith('are'):
@@ -447,22 +446,22 @@ class DraggableTextWidget(QFrame):
         else:
             return "❓ Verbo non riconosciuto\n"
 
-        metadata += f"📊 Coniugazione: {conjugation}\n"
-        metadata += f"🔍 Radice: {stem}\n\n"
+        metadata += "📊 Coniugazione: {conjugation}\n"
+        metadata += "🔍 Radice: {stem}\n\n"
 
         # Mostra coniugazioni principali (semplificate)
-        metadata += f"📝 Coniugazioni principali:\n"
-        metadata += f"• Presente: {stem}o, {stem}i, {stem}a...\n"
-        metadata += f"• Imperfetto: {stem}avo, {stem}avi, {stem}ava...\n"
-        metadata += f"• Futuro: {stem}erò, {stem}erai, {stem}erà...\n"
-        metadata += f"• Passato remoto: {stem}ai, {stem}asti, {stem}ò...\n"
-        metadata += f"• Congiuntivo: che {stem}i, che {stem}i, che {stem}i...\n"
+        metadata += "📝 Coniugazioni principali:\n"
+        metadata += "• Presente: {stem}o, {stem}i, {stem}a...\n"
+        metadata += "• Imperfetto: {stem}avo, {stem}avi, {stem}ava...\n"
+        metadata += "• Futuro: {stem}erò, {stem}erai, {stem}erà...\n"
+        metadata += "• Passato remoto: {stem}ai, {stem}asti, {stem}ò...\n"
+        metadata += "• Congiuntivo: che {stem}i, che {stem}i, che {stem}i...\n"
 
         return metadata
 
     def _analyze_noun(self, noun):
         """Analizza un nome e mostra le declinazioni."""
-        metadata = f"🏷️ Tipo: Nome\n"
+        metadata = "🏷️ Tipo: Nome\n"
 
         # Identifica genere (molto semplificato)
         if noun.endswith(('a', 'e')):
@@ -472,7 +471,7 @@ class DraggableTextWidget(QFrame):
         else:
             gender = "Genere non identificato"
 
-        metadata += f"⚧ Genere: {gender}\n"
+        metadata += "⚧ Genere: {gender}\n"
 
         # Numero
         if noun.endswith('i') or noun.endswith('e'):
@@ -480,56 +479,56 @@ class DraggableTextWidget(QFrame):
         else:
             number = "Singolare"
 
-        metadata += f"🔢 Numero: {number}\n\n"
+        metadata += "🔢 Numero: {number}\n\n"
 
         # Declinazioni (semplificate per italiano)
-        metadata += f"📝 Declinazioni:\n"
+        metadata += "📝 Declinazioni:\n"
         if gender == "Maschile":
             if number == "Singolare":
-                metadata += f"• Nominativo: {noun}\n"
-                metadata += f"• Genitivo: del {noun}\n"
-                metadata += f"• Dativo: al {noun}\n"
-                metadata += f"• Accusativo: il {noun}\n"
+                metadata += "• Nominativo: {noun}\n"
+                metadata += "• Genitivo: del {noun}\n"
+                metadata += "• Dativo: al {noun}\n"
+                metadata += "• Accusativo: il {noun}\n"
             else:
-                metadata += f"• Nominativo: {noun}\n"
-                metadata += f"• Genitivo: dei {noun}\n"
-                metadata += f"• Dativo: ai {noun}\n"
-                metadata += f"• Accusativo: i {noun}\n"
+                metadata += "• Nominativo: {noun}\n"
+                metadata += "• Genitivo: dei {noun}\n"
+                metadata += "• Dativo: ai {noun}\n"
+                metadata += "• Accusativo: i {noun}\n"
         else:
             if number == "Singolare":
-                metadata += f"• Nominativo: {noun}\n"
-                metadata += f"• Genitivo: della {noun}\n"
-                metadata += f"• Dativo: alla {noun}\n"
-                metadata += f"• Accusativo: la {noun}\n"
+                metadata += "• Nominativo: {noun}\n"
+                metadata += "• Genitivo: della {noun}\n"
+                metadata += "• Dativo: alla {noun}\n"
+                metadata += "• Accusativo: la {noun}\n"
             else:
-                metadata += f"• Nominativo: {noun}\n"
-                metadata += f"• Genitivo: delle {noun}\n"
-                metadata += f"• Dativo: alle {noun}\n"
-                metadata += f"• Accusativo: le {noun}\n"
+                metadata += "• Nominativo: {noun}\n"
+                metadata += "• Genitivo: delle {noun}\n"
+                metadata += "• Dativo: alle {noun}\n"
+                metadata += "• Accusativo: le {noun}\n"
 
         return metadata
 
     def _analyze_sentence(self, text):
         """Analizza una frase completa con analisi logica e grammaticale."""
         words = text.split()
-        metadata = f"📝 Analisi Frase Completa\n\n"
-        metadata += f"📊 Numero parole: {len(words)}\n"
-        metadata += f"📏 Lunghezza totale: {len(text)} caratteri\n\n"
+        metadata = "📝 Analisi Frase Completa\n\n"
+        metadata += "📊 Numero parole: {len(words)}\n"
+        metadata += "📏 Lunghezza totale: {len(text)} caratteri\n\n"
 
         # Analisi logica della frase
-        metadata += f"🧠 Analisi Logica:\n"
+        metadata += "🧠 Analisi Logica:\n"
         logical_analysis = self._analyze_logical_structure(text, words)
         metadata += logical_analysis + "\n"
 
         # Analisi grammaticale delle singole parole
-        metadata += f"🔤 Analisi Grammaticale delle Parole:\n"
+        metadata += "🔤 Analisi Grammaticale delle Parole:\n"
         for i, word in enumerate(words, 1):
             clean_word = word.strip('.,!?;:"').lower()
             if clean_word:
-                metadata += f"{i}. {word}\n"
+                metadata += "{i}. {word}\n"
                 word_analysis = self._analyze_word_in_context(clean_word, i, words)
                 if word_analysis:
-                    metadata += f"   {word_analysis}\n"
+                    metadata += "   {word_analysis}\n"
 
         return metadata
 
@@ -546,28 +545,28 @@ class DraggableTextWidget(QFrame):
             clean_word = word.strip('.,!?;:"').lower()
             if clean_word.endswith(('are', 'ere', 'ire', 'are', 'ere', 'ire')):
                 verbs.append((clean_word, i))
-            elif i == 0 or (i > 0 and words[i-1].lower() in ['il', 'lo', 'la', 'i', 'gli', 'le', 'un', 'una', 'uno']):
+            elif i == 0 or (i > 0 and words[i - 1].lower() in ['il', 'lo', 'la', 'i', 'gli', 'le', 'un', 'una', 'uno']):
                 subjects.append((clean_word, i))
 
         # Struttura base
         if verbs:
-            analysis += f"🏃 Verbo principale: {verbs[0][0]}\n"
+            analysis += "🏃 Verbo principale: {verbs[0][0]}\n"
         if subjects:
-            analysis += f"👤 Soggetto: {subjects[0][0]}\n"
+            analysis += "👤 Soggetto: {subjects[0][0]}\n"
 
         # Tipo di frase
         if text.endswith('?'):
-            analysis += f"❓ Tipo: Frase interrogativa\n"
+            analysis += "❓ Tipo: Frase interrogativa\n"
         elif text.endswith('!'):
-            analysis += f"⚡ Tipo: Frase esclamativa\n"
+            analysis += "⚡ Tipo: Frase esclamativa\n"
         else:
-            analysis += f"📝 Tipo: Frase dichiarativa\n"
+            analysis += "📝 Tipo: Frase dichiarativa\n"
 
         # Complessi
         if len(words) > 3:
-            analysis += f"📋 Struttura: Frase complessa\n"
+            analysis += "📋 Struttura: Frase complessa\n"
         else:
-            analysis += f"📄 Struttura: Frase semplice\n"
+            analysis += "📄 Struttura: Frase semplice\n"
 
         return analysis
 
@@ -626,7 +625,7 @@ class DraggableTextWidget(QFrame):
             "fuoco": "Dal latino 'focus' = focolare",
         }
 
-        return etymologies.get(word.lower(), f"📖 Etimologia non disponibile per '{word}'\nOrigine: Probabilmente dal latino o da altre lingue indoeuropee")
+        return etymologies.get(word.lower(), "📖 Etimologia non disponibile per '{word}'\nOrigine: Probabilmente dal latino o da altre lingue indoeuropee")
 
     def eventFilter(self, obj, event):
         """Intercetta gli eventi del QLabel per gestire i click."""

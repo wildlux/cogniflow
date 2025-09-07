@@ -7,6 +7,7 @@ import math
 from PyQt6.QtCore import QThread, pyqtSignal, QSize, Qt
 from PyQt6.QtGui import QImage, QPixmap
 
+
 class VideoThread(QThread):
     """
     Thread per la cattura e l'elaborazione del flusso video dalla webcam.
@@ -31,8 +32,8 @@ class VideoThread(QThread):
             if self.face_cascade.empty():
                 logging.warning("File Haar cascade per il rilevamento facciale non trovato. Rilevamento facciale disabilitato.")
                 self.face_cascade = None
-        except Exception as e:
-            logging.error(f"Errore nel caricamento del cascade Haar: {e}")
+        except Exception:
+            logging.error("Errore nel caricamento del cascade Haar: {e}")
             self.face_cascade = None
 
         # Per le mani, usiamo un approccio alternativo basato sulla pelle
@@ -105,7 +106,7 @@ class VideoThread(QThread):
                     status_text += "Espressioni: OFF"
 
                 cv2.putText(frame, status_text, (10, frame.shape[0] - 20),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
                 # Applica i rilevamenti nell'ordine corretto
                 if self.face_detection_enabled:
@@ -144,7 +145,7 @@ class VideoThread(QThread):
         if self.face_cascade is None:
             # Se il cascade non è disponibile, mostra un messaggio
             cv2.putText(frame, 'Rilevamento faccia non disponibile', (10, 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             return frame
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -154,20 +155,20 @@ class VideoThread(QThread):
             scaleFactor=1.05,  # Ridotto per più precisione
             minNeighbors=3,    # Ridotto per più rilevamenti
             minSize=(30, 30),  # Dimensione minima più piccola
-            maxSize=(300, 300) # Dimensione massima
+            maxSize=(300, 300)  # Dimensione massima
         )
 
         # Mostra sempre lo stato del rilevamento
         if len(faces) > 0:
             cv2.putText(frame, f'Faccia rilevata: {len(faces)}', (10, 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         else:
             cv2.putText(frame, 'Nessuna faccia rilevata', (10, 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
 
         for (x, y, w, h) in faces:
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 3)  # Rettangolo più spesso
-            cv2.putText(frame, 'Faccia', (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 3)  # Rettangolo più spesso
+            cv2.putText(frame, 'Faccia', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
 
         return frame
 
@@ -208,15 +209,15 @@ class VideoThread(QThread):
                             color = (255, 0, 255)  # Magenta per sinistra
 
                         # Disegna rettangolo e informazioni
-                        cv2.rectangle(frame, (x, y), (x+w, y+h), color, 3)
+                        cv2.rectangle(frame, (x, y), (x + w, y + h), color, 3)
 
                         # Info sulla mano
-                        info_text = f"{hand_info['hand_type'].upper()}: {hand_info['fingers']} dita, {hand_info['gesture']}"
-                        cv2.putText(frame, info_text, (x, y-15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+                        info_text = "{hand_info['hand_type'].upper()}: {hand_info['fingers']} dita, {hand_info['gesture']}"
+                        cv2.putText(frame, info_text, (x, y - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
                         # Info sulle dita individuali
-                        finger_text = f"Pollice:{'ON' if hand_info['thumb'] else 'OFF'} Indice:{'ON' if hand_info['index'] else 'OFF'}"
-                        cv2.putText(frame, finger_text, (x, y+h+15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
+                        finger_text = "Pollice:{'ON' if hand_info['thumb'] else 'OFF'} Indice:{'ON' if hand_info['index'] else 'OFF'}"
+                        cv2.putText(frame, finger_text, (x, y + h + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
 
                         # Gestisci l'interazione con l'interfaccia
                         frame = self.handle_advanced_hand_interaction(frame, x, y, w, h, hand_info)
@@ -253,17 +254,17 @@ class VideoThread(QThread):
                 # Filtra per proporzioni ragionevoli (mani non troppo strette o larghe)
                 aspect_ratio = w / h if h > 0 else 0
                 if 0.5 < aspect_ratio < 2.0:
-                    cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)  # Verde per mani base
-                    cv2.putText(frame, 'Mano', (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 1)
+                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)  # Verde per mani base
+                    cv2.putText(frame, 'Mano', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 1)
                     hand_count += 1
 
         # Mostra lo stato del riconoscimento mani
         if hand_count > 0:
             cv2.putText(frame, f'Mani rilevate: {hand_count}', (10, 60),
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         else:
             cv2.putText(frame, 'Nessuna mano rilevata', (10, 60),
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
         return frame
 
@@ -305,7 +306,7 @@ class VideoThread(QThread):
                     defects = cv2.convexityDefects(contour, sorted_indices.reshape(-1, 1))
             except cv2.error as e:
                 # Se si verifica un errore, logga e continua senza difetti
-                print(f"Errore in convexityDefects (analyze_hand_shape): {e}")
+                print("Errore in convexityDefects (analyze_hand_shape): {e}")
                 defects = None
 
         finger_count = 0
@@ -381,23 +382,23 @@ class VideoThread(QThread):
         expression_count = 0
         for (x, y, w, h) in faces:
             # Estrai la regione del volto
-            face_roi = gray[y:y+h, x:x+w]
+            face_roi = gray[y:y + h, x:x + w]
 
             # Analizza l'espressione usando caratteristiche geometriche
             expression = self.analyze_facial_expression(face_roi, x, y, w, h)
 
             # Disegna il rettangolo e l'espressione rilevata
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 255), 3)  # Magenta per espressioni
-            cv2.putText(frame, f'Espressione: {expression}', (x, y+h+20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 255), 3)  # Magenta per espressioni
+            cv2.putText(frame, f'Espressione: {expression}', (x, y + h + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
             expression_count += 1
 
         # Mostra lo stato del riconoscimento espressioni
         if expression_count > 0:
             cv2.putText(frame, f'Espressioni rilevate: {expression_count}', (10, 120),
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
         else:
             cv2.putText(frame, 'Nessuna espressione rilevata', (10, 120),
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
 
         return frame
 
@@ -416,9 +417,9 @@ class VideoThread(QThread):
         face_roi = cv2.equalizeHist(face_roi)
 
         # Dividi il volto in regioni più precise
-        eye_region = face_roi[height//5:2*height//5, :]  # Regione occhi
-        nose_region = face_roi[2*height//5:3*height//5, :]  # Regione naso
-        mouth_region = face_roi[3*height//5:4*height//5, :]  # Regione bocca
+        eye_region = face_roi[height // 5:2 * height // 5, :]  # Regione occhi
+        nose_region = face_roi[2 * height // 5:3 * height // 5, :]  # Regione naso
+        mouth_region = face_roi[3 * height // 5:4 * height // 5, :]  # Regione bocca
 
         # Calcola statistiche per ogni regione
         eye_mean = np.mean(eye_region)
@@ -434,8 +435,8 @@ class VideoThread(QThread):
         gradient_magnitude = np.sqrt(sobelx**2 + sobely**2)
 
         # Analizza la regione della bocca (dove si concentrano le espressioni)
-        mouth_gradient = np.mean(gradient_magnitude[3*height//5:4*height//5, :])
-        mouth_gradient_std = np.std(gradient_magnitude[3*height//5:4*height//5, :])
+        mouth_gradient = np.mean(gradient_magnitude[3 * height // 5:4 * height // 5, :])
+        mouth_gradient_std = np.std(gradient_magnitude[3 * height // 5:4 * height // 5, :])
 
         # Calcola l'entropia per misurare la complessità della texture
         def calculate_entropy(region):
@@ -449,21 +450,21 @@ class VideoThread(QThread):
 
         # Algoritmo di classificazione migliorato
         # Sorriso: alta variazione nella regione bocca, luminosità aumentata
-        is_smile = (mouth_gradient > 30 and mouth_std > 25 and
-                   mouth_entropy > 6.5 and mouth_mean > eye_mean)
+        is_smile = (mouth_gradient > 30 and mouth_std > 25
+                    and mouth_entropy > 6.5 and mouth_mean > eye_mean)
 
         # Triste: bassa variazione, luminosità diminuita nella regione inferiore
-        is_sad = (mouth_gradient < 15 and mouth_std < 20 and
-                 mouth_mean < eye_mean and mouth_entropy < 6.0)
+        is_sad = (mouth_gradient < 15 and mouth_std < 20
+                  and mouth_mean < eye_mean and mouth_entropy < 6.0)
 
         # Sorpreso: alta entropia in regione occhi, variazione elevata
-        is_surprised = (eye_entropy > 7.0 and eye_std > 30 and
-                       mouth_gradient > 25 and mouth_std > 25)
+        is_surprised = (eye_entropy > 7.0 and eye_std > 30
+                        and mouth_gradient > 25 and mouth_std > 25)
 
         # Neutro: valori intermedi, bassa variazione
-        is_neutral = (15 <= mouth_gradient <= 30 and
-                     20 <= mouth_std <= 30 and
-                     6.0 <= mouth_entropy <= 7.0)
+        is_neutral = (15 <= mouth_gradient <= 30
+                      and 20 <= mouth_std <= 30
+                      and 6.0 <= mouth_entropy <= 7.0)
 
         # Decisione finale basata sui punteggi
         if is_smile:
@@ -493,25 +494,25 @@ class VideoThread(QThread):
         hand_center_x = hand_x + hand_w // 2
         hand_center_y = hand_y + hand_h // 2
 
-        is_in_column_a = (column_a_left < hand_center_x < column_a_right and
-                         column_a_top < hand_center_y < column_a_bottom)
+        is_in_column_a = (column_a_left < hand_center_x < column_a_right
+                          and column_a_top < hand_center_y < column_a_bottom)
 
         if is_in_column_a:
             # Disegna un'indicazione visiva che la mano è nella zona di interazione
             cv2.rectangle(frame, (column_a_left, column_a_top),
-                         (column_a_right, column_a_bottom), (0, 255, 255), 2)
+                          (column_a_right, column_a_bottom), (0, 255, 255), 2)
             cv2.putText(frame, 'ZONA INTERAZIONE', (column_a_left + 10, column_a_top + 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
             # Se la mano è chiusa, inizia il trascinamento
             if gesture == "Mano Chiusa" and not self.is_dragging:
                 self.start_dragging()
                 cv2.putText(frame, 'TRASCINAMENTO INIZIATO!', (hand_center_x - 100, hand_center_y - 20),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
             elif gesture == "Mano Aperta" and self.is_dragging:
                 self.stop_dragging()
                 cv2.putText(frame, 'TRASCINAMENTO COMPLETATO!', (hand_center_x - 120, hand_center_y - 20),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
         return frame
 
@@ -533,7 +534,7 @@ class VideoThread(QThread):
             # Simula il trascinamento nell'area centrale
             self.simulate_drag_to_center()
 
-            logging.info(f"Trascinamento completato in {drag_duration:.2f} secondi")
+            logging.info("Trascinamento completato in {drag_duration:.2f} secondi")
         else:
             self.is_dragging = False
             self.drag_start_time = 0.0
@@ -558,17 +559,17 @@ class VideoThread(QThread):
 
                     # Aggiungi il testo all'area centrale
                     current_text = self.main_window.work_area_main_text_edit.toPlainText()
-                    new_text = current_text + f"\n\n[TRASCINATO]: {text}"
+                    new_text = current_text + "\n\n[TRASCINATO]: {text}"
                     self.main_window.work_area_main_text_edit.setText(new_text)
 
                     # Rimuovi il widget dalla colonna A
                     last_widget.setParent(None)
                     last_widget.deleteLater()
 
-                    logging.info(f"Elemento trascinato con successo: {text}")
+                    logging.info("Elemento trascinato con successo: {text}")
 
-            except Exception as e:
-                logging.error(f"Errore durante il trascinamento: {e}")
+            except Exception:
+                logging.error("Errore durante il trascinamento: {e}")
 
     def analyze_hand_advanced(self, contour, x, y, w, h, frame_width):
         """Analisi avanzata della mano con riconoscimento destra/sinistra e dita individuali."""
@@ -607,7 +608,7 @@ class VideoThread(QThread):
                     defects = cv2.convexityDefects(contour, sorted_indices.reshape(-1, 1))
             except cv2.error as e:
                 # Se si verifica un errore, logga e continua senza difetti
-                print(f"Errore in convexityDefects: {e}")
+                print("Errore in convexityDefects: {e}")
                 defects = None
 
         finger_count = 0
@@ -679,7 +680,7 @@ class VideoThread(QThread):
         # Aggiorna con le mani rilevate
         for x, y, w, h, hand_info in detected_hands:
             hand_type = hand_info['hand_type']
-            self.hand_tracking[hand_type]['position'] = (x + w//2, y + h//2)
+            self.hand_tracking[hand_type]['position'] = (x + w // 2, y + h // 2)
             self.hand_tracking[hand_type]['fingers'] = hand_info['fingers']
             self.hand_tracking[hand_type]['gesture'] = hand_info['gesture']
             self.hand_tracking[hand_type]['confidence'] = hand_info['confidence']
@@ -690,12 +691,12 @@ class VideoThread(QThread):
             left_count = sum(1 for _, _, _, _, info in detected_hands if info['hand_type'] == 'left')
             right_count = sum(1 for _, _, _, _, info in detected_hands if info['hand_type'] == 'right')
 
-            stats_text = f"Mani rilevate: SX:{left_count} DX:{right_count}"
+            stats_text = "Mani rilevate: SX:{left_count} DX:{right_count}"
             cv2.putText(frame, stats_text, (10, 90),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 165, 0), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 165, 0), 2)
         else:
             cv2.putText(frame, 'Nessuna mano rilevata', (10, 90),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 165, 0), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 165, 0), 2)
 
     def handle_advanced_hand_interaction(self, frame, hand_x, hand_y, hand_w, hand_h, hand_info):
         """Gestisce l'interazione avanzata con l'interfaccia usando le mani."""
@@ -711,15 +712,15 @@ class VideoThread(QThread):
         hand_center_x = hand_x + hand_w // 2
         hand_center_y = hand_y + hand_h // 2
 
-        is_in_interaction_zone = (column_a_left < hand_center_x < column_a_right and
-                                column_a_top < hand_center_y < column_a_bottom)
+        is_in_interaction_zone = (column_a_left < hand_center_x < column_a_right
+                                  and column_a_top < hand_center_y < column_a_bottom)
 
         if is_in_interaction_zone:
             # Disegna la zona di interazione
             cv2.rectangle(frame, (column_a_left, column_a_top),
-                         (column_a_right, column_a_bottom), (0, 255, 255), 2)
+                          (column_a_right, column_a_bottom), (0, 255, 255), 2)
             cv2.putText(frame, 'ZONA INTERAZIONE', (column_a_left + 10, column_a_top + 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
             # Gestisci il trascinamento con timer
             if hand_info['gesture'] == "Mano Chiusa":
@@ -736,16 +737,16 @@ class VideoThread(QThread):
                     if self.drag_timer >= self.DRAG_THRESHOLD:
                         self.start_dragging()
                         cv2.putText(frame, 'TRASCINAMENTO INIZIATO!', (hand_center_x - 100, hand_center_y - 20),
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
                     else:
                         remaining = int(self.DRAG_THRESHOLD - self.drag_timer)
                         cv2.putText(frame, f'Mantieni chiusa per {remaining}s', (hand_center_x - 80, hand_center_y - 20),
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
             else:
                 if self.is_dragging:
                     self.stop_dragging()
                     cv2.putText(frame, 'TRASCINAMENTO COMPLETATO!', (hand_center_x - 120, hand_center_y - 20),
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
                 else:
                     self.drag_start_time = 0.0
                     self.drag_timer = 0

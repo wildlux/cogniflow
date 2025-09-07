@@ -2,10 +2,10 @@
 
 import logging
 import logging.handlers
-import os
 import json
 from datetime import datetime
 from typing import Dict, Any, Optional
+
 
 class StructuredLogger:
     """
@@ -57,8 +57,8 @@ class StructuredLogger:
 
         # Handler per file generale
         general_file_handler = logging.handlers.RotatingFileHandler(
-            os.path.join(self.log_dir, f"{self.app_name}.log"),
-            maxBytes=10*1024*1024,  # 10MB
+            os.path.join(self.log_dir, "{self.app_name}.log"),
+            maxBytes=10 * 1024 * 1024,  # 10MB
             backupCount=5
         )
         general_formatter = logging.Formatter(
@@ -70,8 +70,8 @@ class StructuredLogger:
 
         # Handler per errori
         error_file_handler = logging.handlers.RotatingFileHandler(
-            os.path.join(self.log_dir, f"{self.app_name}_error.log"),
-            maxBytes=5*1024*1024,  # 5MB
+            os.path.join(self.log_dir, "{self.app_name}_error.log"),
+            maxBytes=5 * 1024 * 1024,  # 5MB
             backupCount=3
         )
         error_formatter = logging.Formatter(
@@ -98,7 +98,7 @@ class StructuredLogger:
         if component in self.loggers:
             return self.loggers[component]
 
-        logger = logging.getLogger(f"{self.app_name}.{component}")
+        logger = logging.getLogger("{self.app_name}.{component}")
         self.loggers[component] = logger
         return logger
 
@@ -139,8 +139,8 @@ class StructuredLogger:
         log_method(json.dumps(log_data, indent=2, default=str))
 
     def log_performance(self, component: str, operation: str,
-                       duration: float, success: bool = True,
-                       details: Optional[Dict[str, Any]] = None):
+                        duration: float, success: bool = True,
+                        details: Optional[Dict[str, Any]] = None):
         """
         Logga informazioni sulle performance.
 
@@ -162,10 +162,10 @@ class StructuredLogger:
             data.update(details)
 
         level = 'INFO' if success else 'WARNING'
-        self.log_event(component, level, f"Performance: {operation}", data)
+        self.log_event(component, level, "Performance: {operation}", data)
 
     def log_user_action(self, action: str, user_id: Optional[str] = None,
-                       details: Optional[Dict[str, Any]] = None):
+                        details: Optional[Dict[str, Any]] = None):
         """
         Logga un'azione dell'utente.
 
@@ -180,10 +180,10 @@ class StructuredLogger:
         if details:
             data.update(details)
 
-        self.log_event('USER', 'INFO', f"User action: {action}", data)
+        self.log_event('USER', 'INFO', "User action: {action}", data)
 
     def log_system_event(self, event_type: str, message: str,
-                        details: Optional[Dict[str, Any]] = None):
+                         details: Optional[Dict[str, Any]] = None):
         """
         Logga un evento di sistema.
 
@@ -196,10 +196,10 @@ class StructuredLogger:
         if details:
             data.update(details)
 
-        self.log_event('SYSTEM', 'INFO', f"System event: {event_type} - {message}", data)
+        self.log_event('SYSTEM', 'INFO', "System event: {event_type} - {message}", data)
 
     def log_ai_interaction(self, model: str, prompt: str, response: str,
-                          duration: float, success: bool = True):
+                           duration: float, success: bool = True):
         """
         Logga un'interazione con l'AI.
 
@@ -219,11 +219,11 @@ class StructuredLogger:
         }
 
         level = 'INFO' if success else 'ERROR'
-        self.log_event('AI', level, f"AI interaction with {model}", data)
+        self.log_event('AI', level, "AI interaction with {model}", data)
 
     def log_video_processing(self, operation: str, frame_count: int,
-                           processing_time: float, success: bool = True,
-                           details: Optional[Dict[str, Any]] = None):
+                             processing_time: float, success: bool = True,
+                             details: Optional[Dict[str, Any]] = None):
         """
         Logga operazioni di processamento video.
 
@@ -246,10 +246,10 @@ class StructuredLogger:
             data.update(details)
 
         level = 'DEBUG' if success else 'WARNING'
-        self.log_event('VIDEO', level, f"Video processing: {operation}", data)
+        self.log_event('VIDEO', level, "Video processing: {operation}", data)
 
     def log_audio_event(self, event_type: str, duration: Optional[float] = None,
-                       text: Optional[str] = None, success: bool = True):
+                        text: Optional[str] = None, success: bool = True):
         """
         Logga eventi audio.
 
@@ -267,7 +267,7 @@ class StructuredLogger:
             data['text_length'] = len(text)
 
         level = 'INFO' if success else 'ERROR'
-        self.log_event('AUDIO', level, f"Audio event: {event_type}", data)
+        self.log_event('AUDIO', level, "Audio event: {event_type}", data)
 
     def create_session_log(self, session_id: str) -> logging.Logger:
         """
@@ -279,12 +279,12 @@ class StructuredLogger:
         Returns:
             logging.Logger: Logger per la sessione
         """
-        session_logger = logging.getLogger(f"{self.app_name}.SESSION.{session_id}")
+        session_logger = logging.getLogger("{self.app_name}.SESSION.{session_id}")
 
         # Handler specifico per la sessione
         session_handler = logging.handlers.RotatingFileHandler(
-            os.path.join(self.log_dir, f"session_{session_id}.log"),
-            maxBytes=5*1024*1024,  # 5MB
+            os.path.join(self.log_dir, "session_{session_id}.log"),
+            maxBytes=5 * 1024 * 1024,  # 5MB
             backupCount=2
         )
         session_formatter = logging.Formatter(
@@ -315,12 +315,14 @@ class StructuredLogger:
             if os.path.getmtime(log_file) < cutoff_time:
                 try:
                     os.remove(log_file)
-                    self.root_logger.info(f"Log file cleaned up: {log_file}")
+                    self.root_logger.info("Log file cleaned up: {log_file}")
                 except OSError as e:
-                    self.root_logger.error(f"Error cleaning up log file {log_file}: {e}")
+                    self.root_logger.error("Error cleaning up log file {log_file}: {e}")
+
 
 # Istanza globale del logger
 global_logger = StructuredLogger()
+
 
 def get_component_logger(component: str) -> logging.Logger:
     """
@@ -334,8 +336,9 @@ def get_component_logger(component: str) -> logging.Logger:
     """
     return global_logger.get_logger(component)
 
+
 def log_performance(component: str, operation: str, duration: float,
-                   success: bool = True, details: Optional[Dict[str, Any]] = None):
+                    success: bool = True, details: Optional[Dict[str, Any]] = None):
     """
     Funzione di utilità per loggare performance.
 
@@ -348,8 +351,9 @@ def log_performance(component: str, operation: str, duration: float,
     """
     global_logger.log_performance(component, operation, duration, success, details)
 
+
 def log_error(component: str, message: str, error: Optional[Exception] = None,
-             data: Optional[Dict[str, Any]] = None):
+              data: Optional[Dict[str, Any]] = None):
     """
     Funzione di utilità per loggare errori.
 

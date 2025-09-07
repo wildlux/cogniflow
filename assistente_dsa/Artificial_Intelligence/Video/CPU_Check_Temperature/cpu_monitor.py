@@ -1,6 +1,5 @@
 # cpu_monitor.py - Monitoraggio CPU e temperatura
 
-import os
 import time
 import signal
 import logging
@@ -43,8 +42,8 @@ class CPUMonitor(QThread):
                 self.process = psutil.Process(os.getpid())
             else:
                 self.process = None
-        except Exception as e:
-            logging.warning(f"Impossibile ottenere il processo per monitoraggio CPU: {e}")
+        except Exception:
+            logging.warning("Impossibile ottenere il processo per monitoraggio CPU: {e}")
             self.process = None
 
     def run(self):
@@ -100,8 +99,8 @@ class CPUMonitor(QThread):
 
                 time.sleep(check_interval)
 
-            except Exception as e:
-                logging.error(f"Errore nel monitoraggio CPU/temperatura: {e}")
+            except Exception:
+                logging.error("Errore nel monitoraggio CPU/temperatura: {e}")
                 time.sleep(5)  # Pausa più lunga in caso di errore
 
     def get_cpu_usage(self):
@@ -118,8 +117,8 @@ class CPUMonitor(QThread):
                     return psutil.cpu_percent(interval=1)
                 else:
                     return 0.0
-        except Exception as e:
-            logging.error(f"Errore nella lettura CPU: {e}")
+        except Exception:
+            logging.error("Errore nella lettura CPU: {e}")
             return 0.0
 
     def get_temperature(self):
@@ -150,8 +149,8 @@ class CPUMonitor(QThread):
                                 temp_celsius = temp_millidegree / 1000.0
                                 if temp_celsius > 0:  # Valore valido
                                     return temp_celsius
-                except Exception as e:
-                    logging.debug(f"Errore lettura temperatura Linux: {e}")
+                except Exception:
+                    logging.debug("Errore lettura temperatura Linux: {e}")
 
             # Fallback per Windows usando wmi (se disponibile)
             if HAS_WMI:
@@ -164,13 +163,13 @@ class CPUMonitor(QThread):
                             temp_celsius = (temp.CurrentTemperature - 2732) / 10.0  # Convert from tenths of Kelvin
                             if temp_celsius > 0:
                                 return temp_celsius
-                except Exception as e:
-                    logging.debug(f"Errore lettura temperatura Windows: {e}")
+                except Exception:
+                    logging.debug("Errore lettura temperatura Windows: {e}")
 
             return None
 
-        except Exception as e:
-            logging.error(f"Errore nella lettura della temperatura: {e}")
+        except Exception:
+            logging.error("Errore nella lettura della temperatura: {e}")
             return None
 
     def handle_high_cpu_duration(self, cpu_percent, duration):
@@ -185,8 +184,8 @@ class CPUMonitor(QThread):
             # Invia il segnale appropriato
             self.send_cpu_signal(signal_type)
 
-        except Exception as e:
-            logging.error(f"Errore nella gestione CPU alta: {e}")
+        except Exception:
+            logging.error("Errore nella gestione CPU alta: {e}")
 
     def handle_critical_temperature(self, temperature):
         """Gestisce temperature critiche che richiedono azione immediata."""
@@ -200,8 +199,8 @@ class CPUMonitor(QThread):
             # Invia segnale immediato per temperature critiche
             self.send_cpu_signal(signal_type)
 
-        except Exception as e:
-            logging.error(f"Errore nella gestione temperatura critica: {e}")
+        except Exception:
+            logging.error("Errore nella gestione temperatura critica: {e}")
 
     def handle_high_temperature_duration(self, temperature, duration):
         """Gestisce temperature alte per troppo tempo."""
@@ -211,8 +210,8 @@ class CPUMonitor(QThread):
             logging.warning(message)
             self.temperature_warning.emit(message)
 
-        except Exception as e:
-            logging.error(f"Errore nella gestione temperatura elevata: {e}")
+        except Exception:
+            logging.error("Errore nella gestione temperatura elevata: {e}")
 
     def send_cpu_signal(self, signal_type):
         """Invia un segnale al sistema operativo per alto utilizzo CPU."""
@@ -229,16 +228,16 @@ class CPUMonitor(QThread):
                 sig = signal.SIGUSR1
                 sig_name = 'SIGUSR1'
             else:
-                logging.error(f"Tipo di segnale non supportato: {signal_type}")
+                logging.error("Tipo di segnale non supportato: {signal_type}")
                 return
 
-            logging.critical(f"Invio segnale {sig_name} (PID: {current_pid}) per alto utilizzo CPU")
+            logging.critical("Invio segnale {sig_name} (PID: {current_pid}) per alto utilizzo CPU")
 
             # Invia il segnale al processo corrente
             os.kill(current_pid, sig)
 
-        except Exception as e:
-            logging.error(f"Errore nell'invio del segnale CPU: {e}")
+        except Exception:
+            logging.error("Errore nell'invio del segnale CPU: {e}")
 
     def stop(self):
         """Ferma il monitoraggio CPU."""

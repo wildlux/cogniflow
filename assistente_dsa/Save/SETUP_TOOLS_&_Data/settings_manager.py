@@ -5,8 +5,8 @@ Tutte le costanti e configurazioni vengono caricate dal file settings.json.
 """
 
 import json
-import os
 from typing import Dict, Any, Optional
+
 
 class SettingsManager:
     """Gestore centralizzato delle impostazioni dell'applicazione."""
@@ -18,8 +18,8 @@ class SettingsManager:
         "main_font_family": "OpenDyslexic",
         "main_font_size": 14,
         "main_font_weight": "Normale",
-        "pensierini_font_family": "Arial",
-        "pensierini_font_size": 10,
+        "pensierini_font_family": "OpenDyslexic",
+        "pensierini_font_size": 12,
         "pensierini_font_weight": "Normale",
         "hand_detection_system": "Auto (Migliore)",
         "face_detection_system": "Auto (Migliore)",
@@ -83,18 +83,18 @@ class SettingsManager:
                     loaded_settings = json.load(f)
                 # Unisci le impostazioni caricate con quelle di default
                 self._settings = {**self.DEFAULT_SETTINGS, **loaded_settings}
-                print(f"✓ Impostazioni caricate da: {self._settings_file}")
+                print("✓ Impostazioni caricate da: {self._settings_file}")
             else:
-                print(f"⚠️ File impostazioni non trovato: {self._settings_file}")
+                print("⚠️ File impostazioni non trovato: {self._settings_file}")
                 print("   Creazione impostazioni di default...")
                 self._settings = self.DEFAULT_SETTINGS.copy()
                 self._save_settings()
         except json.JSONDecodeError as e:
-            print(f"✗ Errore parsing settings.json: {e}")
+            print("✗ Errore parsing settings.json: {e}")
             print("   Utilizzo impostazioni di default...")
             self._settings = self.DEFAULT_SETTINGS.copy()
-        except Exception as e:
-            print(f"✗ Errore caricamento impostazioni: {e}")
+        except Exception:
+            print("✗ Errore caricamento impostazioni: {e}")
             print("   Utilizzo impostazioni di default...")
             self._settings = self.DEFAULT_SETTINGS.copy()
 
@@ -107,9 +107,9 @@ class SettingsManager:
             os.makedirs(os.path.dirname(self._settings_file), exist_ok=True)
             with open(self._settings_file, 'w', encoding='utf-8') as f:
                 json.dump(self._settings, f, indent=4, ensure_ascii=False)
-            print(f"✓ Impostazioni salvate in: {self._settings_file}")
-        except Exception as e:
-            print(f"✗ Errore salvataggio impostazioni: {e}")
+            print("✓ Impostazioni salvate in: {self._settings_file}")
+        except Exception:
+            print("✗ Errore salvataggio impostazioni: {e}")
 
     def get(self, key: str, default: Any = None) -> Any:
         """Ottiene il valore di una impostazione."""
@@ -182,6 +182,7 @@ class SettingsManager:
     @property
     def log_file(self) -> str:
         return self.get('log_file', "Save/LOG/app.log")
+
 
 # Istanza globale del gestore impostazioni
 settings_manager = SettingsManager()

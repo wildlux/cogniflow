@@ -1,7 +1,6 @@
 # AI/Ollama/ollama_manager.py
 # Gestione centralizzata di Ollama e dei suoi modelli
 
-import os
 import json
 import logging
 import subprocess
@@ -10,6 +9,7 @@ import time
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 from PyQt6.QtCore import QThread, pyqtSignal
+
 
 class OllamaManager:
     """Gestore centralizzato per Ollama e i suoi modelli."""
@@ -46,10 +46,10 @@ class OllamaManager:
     def check_ollama_running(self) -> bool:
         """Verifica se Ollama è in esecuzione."""
         try:
-            response = requests.get(f"{self.base_url}/api/version", timeout=5)
+            response = requests.get("{self.base_url}/api/version", timeout=5)
             return response.status_code == 200
-        except Exception as e:
-            self.logger.error(f"Ollama non è raggiungibile: {e}")
+        except Exception:
+            self.logger.error("Ollama non è raggiungibile: {e}")
             return False
 
     def start_ollama_service(self) -> bool:
@@ -79,20 +79,20 @@ class OllamaManager:
             self.logger.error("Timeout nell'avvio di Ollama")
             return False
 
-        except Exception as e:
-            self.logger.error(f"Errore nell'avvio di Ollama: {e}")
+        except Exception:
+            self.logger.error("Errore nell'avvio di Ollama: {e}")
             return False
 
     def get_available_models(self) -> List[Dict[str, Any]]:
         """Ottiene la lista dei modelli disponibili localmente."""
         try:
-            response = requests.get(f"{self.base_url}/api/tags", timeout=10)
+            response = requests.get("{self.base_url}/api/tags", timeout=10)
             if response.status_code == 200:
                 data = response.json()
                 return data.get("models", [])
             return []
-        except Exception as e:
-            self.logger.error(f"Errore nel recupero dei modelli: {e}")
+        except Exception:
+            self.logger.error("Errore nel recupero dei modelli: {e}")
             return []
 
     def list_models(self) -> List[Dict[str, Any]]:
@@ -102,7 +102,7 @@ class OllamaManager:
     def pull_model(self, model_name: str) -> bool:
         """Scarica un modello specifico."""
         try:
-            self.logger.info(f"Scaricamento del modello: {model_name}")
+            self.logger.info("Scaricamento del modello: {model_name}")
 
             # Usa subprocess per evitare blocchi
             result = subprocess.run(
@@ -113,17 +113,17 @@ class OllamaManager:
             )
 
             if result.returncode == 0:
-                self.logger.info(f"Modello {model_name} scaricato con successo")
+                self.logger.info("Modello {model_name} scaricato con successo")
                 return True
             else:
-                self.logger.error(f"Errore nel download di {model_name}: {result.stderr}")
+                self.logger.error("Errore nel download di {model_name}: {result.stderr}")
                 return False
 
         except subprocess.TimeoutExpired:
-            self.logger.error(f"Timeout nel download di {model_name}")
+            self.logger.error("Timeout nel download di {model_name}")
             return False
-        except Exception as e:
-            self.logger.error(f"Errore nel download di {model_name}: {e}")
+        except Exception:
+            self.logger.error("Errore nel download di {model_name}: {e}")
             return False
 
     def install_recommended_models(self) -> Dict[str, bool]:
@@ -139,19 +139,19 @@ class OllamaManager:
         results = {}
 
         for model_name, description in recommended_models.items():
-            self.logger.info(f"Installazione {model_name}: {description}")
+            self.logger.info("Installazione {model_name}: {description}")
             success = self.pull_model(model_name)
             results[model_name] = success
 
             if success:
-                self.logger.info(f"✅ {model_name} installato con successo")
+                self.logger.info("✅ {model_name} installato con successo")
             else:
-                self.logger.error(f"❌ Errore nell'installazione di {model_name}")
+                self.logger.error("❌ Errore nell'installazione di {model_name}")
 
         return results
 
     def generate_text(self, prompt: str, model: str = "llama2:7b",
-                     options: Optional[Dict[str, Any]] = None) -> Optional[str]:
+                      options: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """Genera testo usando un modello specifico."""
         try:
             payload = {
@@ -164,7 +164,7 @@ class OllamaManager:
                 payload["options"] = options
 
             response = requests.post(
-                f"{self.base_url}/api/generate",
+                "{self.base_url}/api/generate",
                 json=payload,
                 timeout=60
             )
@@ -173,40 +173,40 @@ class OllamaManager:
                 data = response.json()
                 return data.get("response", "")
             else:
-                self.logger.error(f"Errore nella generazione: {response.status_code}")
+                self.logger.error("Errore nella generazione: {response.status_code}")
                 return None
 
-        except Exception as e:
-            self.logger.error(f"Errore nella generazione di testo: {e}")
+        except Exception:
+            self.logger.error("Errore nella generazione di testo: {e}")
             return None
 
     def save_model_config(self, model_name: str, config: Dict[str, Any]) -> bool:
         """Salva la configurazione di un modello."""
         try:
-            config_file = os.path.join(self.configs_dir, f"{model_name.replace(':', '_')}.json")
+            config_file = os.path.join(self.configs_dir, "{model_name.replace(':', '_')}.json")
 
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
 
-            self.logger.info(f"Configurazione salvata per {model_name}")
+            self.logger.info("Configurazione salvata per {model_name}")
             return True
 
-        except Exception as e:
-            self.logger.error(f"Errore nel salvataggio della configurazione: {e}")
+        except Exception:
+            self.logger.error("Errore nel salvataggio della configurazione: {e}")
             return False
 
     def load_model_config(self, model_name: str) -> Optional[Dict[str, Any]]:
         """Carica la configurazione di un modello."""
         try:
-            config_file = os.path.join(self.configs_dir, f"{model_name.replace(':', '_')}.json")
+            config_file = os.path.join(self.configs_dir, "{model_name.replace(':', '_')}.json")
 
             if os.path.exists(config_file):
                 with open(config_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
             return None
 
-        except Exception as e:
-            self.logger.error(f"Errore nel caricamento della configurazione: {e}")
+        except Exception:
+            self.logger.error("Errore nel caricamento della configurazione: {e}")
             return None
 
     def get_system_info(self) -> Dict[str, Any]:
@@ -220,25 +220,29 @@ class OllamaManager:
 
         try:
             # Versione
-            response = requests.get(f"{self.base_url}/api/version", timeout=5)
+            response = requests.get("{self.base_url}/api/version", timeout=5)
             if response.status_code == 200:
                 info["version"] = response.json().get("version")
 
             # Modelli
             info["models"] = self.get_available_models()
 
-        except Exception as e:
-            self.logger.error(f"Errore nel recupero delle informazioni di sistema: {e}")
+        except Exception:
+            self.logger.error("Errore nel recupero delle informazioni di sistema: {e}")
 
         return info
+
 
 # Istanza globale per uso facile
 ollama_manager = OllamaManager()
 
 # Funzioni di utilità per retrocompatibilità
+
+
 def check_ollama_connection():
     """Funzione di compatibilità per controllare la connessione."""
     return ollama_manager.check_ollama_running()
+
 
 def get_ollama_models():
     """Funzione di compatibilità per ottenere i modelli."""
@@ -247,6 +251,7 @@ def get_ollama_models():
 # ==============================================================================
 # Classi Thread per PyQt6 (aggiunte per compatibilità)
 # ==============================================================================
+
 
 class OllamaModelsThread(QThread):
     """
@@ -259,7 +264,7 @@ class OllamaModelsThread(QThread):
         try:
             logging.info("Recupero modelli Ollama disponibili...")
             response = requests.get("http://localhost:11434/api/tags")
-            response.raise_for_status() # Lancia un'eccezione per risposte HTTP non riuscite
+            response.raise_for_status()  # Lancia un'eccezione per risposte HTTP non riuscite
             data = response.json()
             models = [m['name'] for m in data.get('models', [])]
 
@@ -267,12 +272,12 @@ class OllamaModelsThread(QThread):
                 self.error_occurred.emit("Nessun modello Ollama trovato. Assicurati di averne scaricato almeno uno con 'ollama pull <nome_modello>'.")
                 return
 
-            logging.info(f"Modelli Ollama trovati: {models}")
+            logging.info("Modelli Ollama trovati: {models}")
             self.models_list.emit(models)
         except requests.exceptions.ConnectionError:
             self.error_occurred.emit("Errore di connessione a Ollama. Assicurati che il servizio sia in esecuzione.")
         except requests.exceptions.RequestException as e:
-            self.error_occurred.emit(f"Errore nella richiesta a Ollama: {e}")
+            self.error_occurred.emit("Errore nella richiesta a Ollama: {e}")
         except json.JSONDecodeError:
             self.error_occurred.emit("Risposta non valida da Ollama.")
 
@@ -291,13 +296,13 @@ class OllamaThread(QThread):
 
     def run(self):
         try:
-            logging.info(f"Invio prompt a Ollama con il modello '{self.model}'...")
+            logging.info("Invio prompt a Ollama con il modello '{self.model}'...")
 
             headers = {"Content-Type": "application/json"}
             data = {
                 "model": self.model,
                 "prompt": self.prompt,
-                "stream": False # Semplifichiamo disabilitando lo streaming
+                "stream": False  # Semplifichiamo disabilitando lo streaming
             }
 
             response = requests.post(
@@ -322,7 +327,7 @@ class OllamaThread(QThread):
         except requests.exceptions.ConnectionError:
             self.ollama_error.emit("Errore di connessione. Assicurati che il servizio Ollama sia attivo.")
         except requests.exceptions.RequestException as e:
-            self.ollama_error.emit(f"Errore nella richiesta Ollama: {e}")
+            self.ollama_error.emit("Errore nella richiesta Ollama: {e}")
         except json.JSONDecodeError:
             self.ollama_error.emit("Risposta non valida da Ollama. Assicurati che il server sia configurato correttamente.")
 
@@ -335,10 +340,10 @@ if __name__ == "__main__":
         print("✅ Ollama è in esecuzione")
 
         models = ollama_manager.get_available_models()
-        print(f"📦 Modelli disponibili: {len(models)}")
+        print("📦 Modelli disponibili: {len(models)}")
 
         for model in models:
-            print(f"  - {model['name']} ({model.get('size', 'N/A')} bytes)")
+            print("  - {model['name']} ({model.get('size', 'N/A')} bytes)")
 
     else:
         print("❌ Ollama non è in esecuzione")

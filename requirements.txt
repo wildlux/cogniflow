@@ -1,0 +1,24 @@
+# DSA Assistant - Requirements
+# Core dependencies
+PyQt6>=6.5.0
+psutil>=5.9.0
+requests>=2.31.0
+
+# AI and ML
+# ollama (external service, not pip installable)
+
+# Image processing
+Pillow>=10.0.0
+# pytesseract (external, requires tesseract-ocr system package)
+
+# Audio processing
+# vosk (external model files required)
+# pyaudio (system dependencies required)
+
+# Development and testing
+pytest>=7.4.0
+flake8>=6.0.0
+mypy>=1.5.0
+
+# Optional but recommended
+typing-extensions>=4.7.0

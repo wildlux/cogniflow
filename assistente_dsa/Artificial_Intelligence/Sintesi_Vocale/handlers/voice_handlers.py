@@ -1,7 +1,6 @@
 # voice_handlers.py - Gestori per le funzioni TTS e riconoscimento vocale
 
 import logging
-import os
 from PyQt6.QtWidgets import QMessageBox
 
 from ...Riconoscimento_Vocale.managers.speech_recognition_manager import SpeechRecognitionThread
@@ -36,13 +35,13 @@ class VoiceHandlers:
         model_path = os.path.join("Audio", "vosk_models", vosk_model)
         if not os.path.exists(model_path):
             QMessageBox.warning(self.main_window, "Modello Vosk Mancante",
-                f"Il modello Vosk '{vosk_model}' non è stato trovato.\n\n"
-                f"Percorso cercato: {model_path}\n\n"
-                "Assicurati di aver scaricato il modello dalla sezione 'Controllo Librerie'.\n\n"
-                f"Modelli disponibili:\n"
-                f"• vosk-model-it-0.22 (Italiano completo)\n"
-                f"• vosk-model-small-it-0.22 (Italiano piccolo)\n"
-                f"• vosk-model-small-en-us-0.15 (Inglese)")
+                                "Il modello Vosk '{vosk_model}' non è stato trovato.\n\n"
+                                "Percorso cercato: {model_path}\n\n"
+                                "Assicurati di aver scaricato il modello dalla sezione 'Controllo Librerie'.\n\n"
+                                "Modelli disponibili:\n"
+                                "• vosk-model-it-0.22 (Italiano completo)\n"
+                                "• vosk-model-small-it-0.22 (Italiano piccolo)\n"
+                                "• vosk-model-small-en-us-0.15 (Inglese)")
             self.main_window.btn_voice.setEnabled(True)
             self.main_window.btn_voice.setText("🎤 Trascrivi")
             return
@@ -53,7 +52,7 @@ class VoiceHandlers:
         self.main_window.speech_rec_thread.finished.connect(lambda: self.main_window.btn_voice.setEnabled(True))
         self.main_window.speech_rec_thread.start()
 
-        logging.info(f"Riconoscimento vocale avviato con modello: {vosk_model}")
+        logging.info("Riconoscimento vocale avviato con modello: {vosk_model}")
 
     def on_voice_recognized(self, text):
         """Riceve il testo riconosciuto e lo inserisce nell'area di dettaglio."""

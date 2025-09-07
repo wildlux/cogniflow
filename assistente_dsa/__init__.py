@@ -253,5 +253,4 @@ python test_qml_integration.py  # 🧪 Test componenti QML
 
 ==================================================================================
 """
-#print ("ciao")
-
+# print ("ciao")

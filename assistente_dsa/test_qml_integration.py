@@ -3,13 +3,12 @@
 Test script per verificare l'integrazione QML con Ollama
 """
 
-import sys
-import os
 
 # Aggiungi il percorso per importare i moduli
 sys.path.append(os.path.dirname(__file__))
 sys.path.append(os.path.join(os.path.dirname(__file__), "UI"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "Artificial_Intelligence"))
+
 
 def test_ollama_bridge():
     """Test del bridge Ollama"""
@@ -26,8 +25,9 @@ def test_ollama_bridge():
 
         return True
     except ImportError as e:
-        print(f"❌ Errore nell'import del bridge: {e}")
+        print("❌ Errore nell'import del bridge: {e}")
         return False
+
 
 def test_qml_launch():
     """Test del lancio QML"""
@@ -38,8 +38,9 @@ def test_qml_launch():
         print("✅ PyQt6 QML importato con successo")
         return True
     except ImportError as e:
-        print(f"❌ Errore nell'import PyQt6 QML: {e}")
+        print("❌ Errore nell'import PyQt6 QML: {e}")
         return False
+
 
 if __name__ == "__main__":
     print("🔍 Test Integrazione QML-Ollama")

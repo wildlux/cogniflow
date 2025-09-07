@@ -1,4 +1,3 @@
-import os
 import logging
 import requests
 import zipfile
@@ -12,7 +11,7 @@ try:
     VOSK_AVAILABLE = True
     PYAUDIO_AVAILABLE = True
 except ImportError as e:
-    logging.error(f"Errore: Assicurati che le librerie 'vosk' e 'pyaudio' siano installate. {e}")
+    logging.error("Errore: Assicurati che le librerie 'vosk' e 'pyaudio' siano installate. {e}")
     VOSK_AVAILABLE = False
     PYAUDIO_AVAILABLE = False
     vosk = None
@@ -27,6 +26,7 @@ except ImportError:
     WAVE_AVAILABLE = False
     wave = None
     audioop = None
+
 
 class SpeechRecognitionThread(QThread):
     """
@@ -54,16 +54,16 @@ class SpeechRecognitionThread(QThread):
         if not VOSK_AVAILABLE or not PYAUDIO_AVAILABLE:
             error_msg = "Librerie vosk o pyaudio non disponibili"
             logging.error(error_msg)
-            self.model_status.emit(f"Errore: {error_msg}")
+            self.model_status.emit("Errore: {error_msg}")
             self.recognition_error.emit(error_msg)
             return
 
         vosk_model_path = os.path.join("Artificial_Intelligence", "Riconoscimento_Vocale", "models", "vosk_models", self.vosk_model_name)
 
         if not os.path.exists(vosk_model_path):
-            error_msg = f"Modello Vosk non trovato in {vosk_model_path}"
+            error_msg = "Modello Vosk non trovato in {vosk_model_path}"
             logging.error(error_msg)
-            self.model_status.emit(f"Errore: {error_msg}")
+            self.model_status.emit("Errore: {error_msg}")
             self.recognition_error.emit(error_msg)
             return
 
@@ -71,7 +71,7 @@ class SpeechRecognitionThread(QThread):
             if vosk is None or pyaudio is None:
                 raise ImportError("Librerie vosk o pyaudio non disponibili")
 
-            self.model_status.emit(f"Caricamento modello Vosk: {self.vosk_model_name}")
+            self.model_status.emit("Caricamento modello Vosk: {self.vosk_model_name}")
             model = vosk.Model(vosk_model_path)
 
             # Parametri per il flusso audio
@@ -80,10 +80,10 @@ class SpeechRecognitionThread(QThread):
 
             p = pyaudio.PyAudio()
             stream = p.open(format=pyaudio.paInt16,
-                              channels=1,
-                              rate=SAMPLE_RATE,
-                              input=True,
-                              frames_per_buffer=CHUNK_SIZE)
+                            channels=1,
+                            rate=SAMPLE_RATE,
+                            input=True,
+                            frames_per_buffer=CHUNK_SIZE)
 
             recognizer = vosk.KaldiRecognizer(model, SAMPLE_RATE)
 
@@ -103,34 +103,34 @@ class SpeechRecognitionThread(QThread):
                     result = json.loads(recognizer.Result())
                     text = result.get('text')
                     if text:
-                        logging.info(f"🎤 Testo riconosciuto nel thread: '{text}'")
+                        logging.info("🎤 Testo riconosciuto nel thread: '{text}'")
 
                         # Usa la callback se disponibile (più affidabile)
                         if self.text_callback:
                             try:
                                 self.text_callback(text)
-                                logging.info(f"📞 Callback chiamata per: '{text}'")
-                            except Exception as e:
-                                logging.error(f"❌ Errore callback: {e}")
+                                logging.info("📞 Callback chiamata per: '{text}'")
+                            except Exception:
+                                logging.error("❌ Errore callback: {e}")
 
                         # Emetti anche il segnale come fallback
                         self.recognized_text.emit(text)
-                        logging.info(f"📤 Segnale recognized_text emesso per: '{text}'")
-                        silent_chunks_count = 0 # Reimposta il contatore del silenzio
+                        logging.info("📤 Segnale recognized_text emesso per: '{text}'")
+                        silent_chunks_count = 0  # Reimposta il contatore del silenzio
 
-                else: # Il risultato non è un testo completo (probabilmente silenzio)
+                else:  # Il risultato non è un testo completo (probabilmente silenzio)
                     partial_result = json.loads(recognizer.PartialResult())
                     if not partial_result.get('partial', '').strip():
                         silent_chunks_count += 1
                         if silent_chunks_count > silent_chunks_threshold:
-                            self.running = False # Ferma il ciclo
-                            self.stopped_by_silence.emit() # Emette un segnale che il thread si è fermato per silenzio
+                            self.running = False  # Ferma il ciclo
+                            self.stopped_by_silence.emit()  # Emette un segnale che il thread si è fermato per silenzio
                             break
                     else:
-                        silent_chunks_count = 0 # Reimposta il contatore se c'è attività vocale
+                        silent_chunks_count = 0  # Reimposta il contatore se c'è attività vocale
 
-        except Exception as e:
-            error_msg = f"Errore fatale nel thread di riconoscimento vocale: {e}"
+        except Exception:
+            error_msg = "Errore fatale nel thread di riconoscimento vocale: {e}"
             logging.error(error_msg)
             self.recognition_error.emit(error_msg)
         finally:
@@ -146,7 +146,7 @@ class SpeechRecognitionThread(QThread):
 
     def stop(self):
         self.running = False
-        self.wait() # Attende la chiusura del thread
+        self.wait()  # Attende la chiusura del thread
 
 
 class AudioFileTranscriptionThread(QThread):
@@ -183,7 +183,7 @@ class AudioFileTranscriptionThread(QThread):
 
         # Verifica esistenza file audio
         if not os.path.exists(self.audio_file_path):
-            error_msg = f"File audio non trovato: {self.audio_file_path}"
+            error_msg = "File audio non trovato: {self.audio_file_path}"
             logging.error(error_msg)
             self.transcription_error.emit(error_msg)
             return
@@ -191,7 +191,7 @@ class AudioFileTranscriptionThread(QThread):
         vosk_model_path = os.path.join("Artificial_Intelligence", "Riconoscimento_Vocale", "models", "vosk_models", self.vosk_model_name)
 
         if not os.path.exists(vosk_model_path):
-            error_msg = f"Modello Vosk non trovato in {vosk_model_path}"
+            error_msg = "Modello Vosk non trovato in {vosk_model_path}"
             logging.error(error_msg)
             self.transcription_error.emit(error_msg)
             return
@@ -225,7 +225,7 @@ class AudioFileTranscriptionThread(QThread):
                 # Verifica sample rate
                 sample_rate = wf.getframerate()
                 if sample_rate != 16000:
-                    self.transcription_progress.emit(f"Conversione sample rate da {sample_rate}Hz a 16000Hz...")
+                    self.transcription_progress.emit("Conversione sample rate da {sample_rate}Hz a 16000Hz...")
                     # Per ora assumiamo che il file sia già a 16kHz
                     # Una implementazione completa richiederebbe resampling
                     pass
@@ -249,7 +249,7 @@ class AudioFileTranscriptionThread(QThread):
                         text = result.get('text', '').strip()
                         if text:
                             full_text.append(text)
-                            self.transcription_progress.emit(f"Testo riconosciuto: {text[:50]}...")
+                            self.transcription_progress.emit("Testo riconosciuto: {text[:50]}...")
 
                 # Ottieni il risultato finale
                 final_result = json.loads(recognizer.FinalResult())
@@ -268,13 +268,13 @@ class AudioFileTranscriptionThread(QThread):
                     if self.text_callback:
                         try:
                             self.text_callback(complete_text)
-                        except Exception as e:
-                            logging.error(f"Errore callback trascrizione: {e}")
+                        except Exception:
+                            logging.error("Errore callback trascrizione: {e}")
                 else:
                     self.transcription_error.emit("Nessun testo riconosciuto nel file audio")
 
-        except Exception as e:
-            error_msg = f"Errore durante la trascrizione: {str(e)}"
+        except Exception:
+            error_msg = "Errore durante la trascrizione: {str(e)}"
             logging.error(error_msg)
             self.transcription_error.emit(error_msg)
 
@@ -298,7 +298,7 @@ def download_vosk_model(model_name, progress_callback=None):
     try:
         # URL base per i modelli Vosk
         base_url = "https://alphacephei.com/vosk/models"
-        model_url = f"{base_url}/{model_name}.zip"
+        model_url = "{base_url}/{model_name}.zip"
 
         # Directory di destinazione
         models_dir = os.path.join("Artificial_Intelligence", "Riconoscimento_Vocale", "models", "vosk_models")
@@ -309,13 +309,13 @@ def download_vosk_model(model_name, progress_callback=None):
 
         # Verifica se il modello è già presente
         if os.path.exists(model_path):
-            logging.info(f"Modello {model_name} già presente in {model_path}")
+            logging.info("Modello {model_name} già presente in {model_path}")
             return True
 
-        logging.info(f"Scaricamento modello {model_name} da {model_url}")
+        logging.info("Scaricamento modello {model_name} da {model_url}")
 
         if progress_callback:
-            progress_callback(f"🔄 Scaricamento modello {model_name}...")
+            progress_callback("🔄 Scaricamento modello {model_name}...")
 
         # Scarica il file zip
         response = requests.get(model_url, stream=True)
@@ -337,10 +337,10 @@ def download_vosk_model(model_name, progress_callback=None):
                     # Aggiorna progresso se disponibile
                     if progress_callback and total_size > 0:
                         progress = int((downloaded_size / total_size) * 100)
-                        progress_callback(f"🔄 Scaricamento: {progress}%")
+                        progress_callback("🔄 Scaricamento: {progress}%")
 
         if progress_callback:
-            progress_callback(f"📦 Estrazione modello {model_name}...")
+            progress_callback("📦 Estrazione modello {model_name}...")
 
         # Estrai il file zip
         with zipfile.ZipFile(temp_zip_path, 'r') as zip_ref:
@@ -351,33 +351,33 @@ def download_vosk_model(model_name, progress_callback=None):
 
         # Verifica che l'estrazione sia riuscita
         if os.path.exists(model_path):
-            logging.info(f"Modello {model_name} scaricato e estratto con successo")
+            logging.info("Modello {model_name} scaricato e estratto con successo")
             if progress_callback:
-                progress_callback(f"✅ Modello {model_name} pronto!")
+                progress_callback("✅ Modello {model_name} pronto!")
             return True
         else:
-            logging.error(f"Estrazione fallita: directory {model_path} non trovata")
+            logging.error("Estrazione fallita: directory {model_path} non trovata")
             if progress_callback:
-                progress_callback(f"❌ Errore nell'estrazione del modello")
+                progress_callback("❌ Errore nell'estrazione del modello")
             return False
 
     except requests.exceptions.RequestException as e:
-        error_msg = f"Errore nel download del modello {model_name}: {e}"
+        error_msg = "Errore nel download del modello {model_name}: {e}"
         logging.error(error_msg)
         if progress_callback:
-            progress_callback(f"❌ Errore download: {str(e)}")
+            progress_callback("❌ Errore download: {str(e)}")
         return False
     except zipfile.BadZipFile as e:
-        error_msg = f"File zip corrotto per il modello {model_name}: {e}"
+        error_msg = "File zip corrotto per il modello {model_name}: {e}"
         logging.error(error_msg)
         if progress_callback:
-            progress_callback(f"❌ File zip corrotto")
+            progress_callback("❌ File zip corrotto")
         return False
-    except Exception as e:
-        error_msg = f"Errore imprevisto durante il download del modello {model_name}: {e}"
+    except Exception:
+        error_msg = "Errore imprevisto durante il download del modello {model_name}: {e}"
         logging.error(error_msg)
         if progress_callback:
-            progress_callback(f"❌ Errore imprevisto: {str(e)}")
+            progress_callback("❌ Errore imprevisto: {str(e)}")
         return False
 
 
@@ -395,8 +395,8 @@ def ensure_vosk_model_available(model_name, progress_callback=None):
     model_path = os.path.join("Artificial_Intelligence", "Riconoscimento_Vocale", "models", "vosk_models", model_name)
 
     if os.path.exists(model_path):
-        logging.info(f"Modello {model_name} già disponibile")
+        logging.info("Modello {model_name} già disponibile")
         return True
 
-    logging.info(f"Modello {model_name} mancante, tentativo di download...")
+    logging.info("Modello {model_name} mancante, tentativo di download...")
     return download_vosk_model(model_name, progress_callback)

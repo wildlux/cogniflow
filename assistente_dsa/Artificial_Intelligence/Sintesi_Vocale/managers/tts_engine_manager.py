@@ -1,11 +1,11 @@
 # TTS/tts_engine_manager.py
 # Gestore unificato per tutti i motori TTS
 
-import os
 import logging
 import json
 from typing import List, Dict, Optional, Any, Union
 from enum import Enum
+
 
 class TTSEngine(Enum):
     """Enumerazione dei motori TTS disponibili."""
@@ -14,6 +14,7 @@ class TTSEngine(Enum):
     EDGE_TTS = "edge_tts"
     PIPER = "piper"
     COQUI = "coqui"
+
 
 class TTSManager:
     """Gestore unificato per tutti i motori TTS."""
@@ -128,8 +129,8 @@ class TTSManager:
                     "languages": ["it", "en", "es", "fr", "de", "multi"]
                 }
 
-        except Exception as e:
-            self.logger.error(f"Errore nell'inizializzazione dei motori: {e}")
+        except Exception:
+            self.logger.error("Errore nell'inizializzazione dei motori: {e}")
 
     def _load_config(self) -> Dict[str, Any]:
         """Carica la configurazione TTS."""
@@ -151,8 +152,8 @@ class TTSManager:
                 with open(config_file, 'r', encoding='utf-8') as f:
                     loaded_config = json.load(f)
                     default_config.update(loaded_config)
-        except Exception as e:
-            self.logger.error(f"Errore nel caricamento della configurazione: {e}")
+        except Exception:
+            self.logger.error("Errore nel caricamento della configurazione: {e}")
 
         return default_config
 
@@ -164,8 +165,8 @@ class TTSManager:
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(self.config, f, indent=2, ensure_ascii=False)
             self.logger.info("Configurazione TTS salvata")
-        except Exception as e:
-            self.logger.error(f"Errore nel salvataggio della configurazione: {e}")
+        except Exception:
+            self.logger.error("Errore nel salvataggio della configurazione: {e}")
 
     def get_available_engines(self) -> List[Dict[str, Any]]:
         """Restituisce la lista dei motori disponibili."""
@@ -194,8 +195,8 @@ class TTSManager:
             engine_instance = self.engines[engine]["instance"]
             if engine_instance and hasattr(engine_instance, 'get_available_voices'):
                 return engine_instance.get_available_voices()
-        except Exception as e:
-            self.logger.error(f"Errore nel recupero delle voci per {engine}: {e}")
+        except Exception:
+            self.logger.error("Errore nel recupero delle voci per {engine}: {e}")
 
         return []
 
@@ -205,15 +206,15 @@ class TTSManager:
             self.current_engine = engine_name
             self.config["default_engine"] = engine_name
             self.save_config()
-            self.logger.info(f"Motore TTS cambiato a: {engine_name}")
+            self.logger.info("Motore TTS cambiato a: {engine_name}")
             return True
         else:
-            self.logger.error(f"Motore TTS non disponibile: {engine_name}")
+            self.logger.error("Motore TTS non disponibile: {engine_name}")
             return False
 
     def synthesize(self, text: str, engine: Optional[str] = None,
-                  voice: Optional[str] = None, speed: float = 1.0,
-                  pitch: float = 1.0, volume: float = 1.0) -> Optional[str]:
+                   voice: Optional[str] = None, speed: float = 1.0,
+                   pitch: float = 1.0, volume: float = 1.0) -> Optional[str]:
         """
         Sintetizza il testo in audio usando il motore specificato.
 
@@ -232,7 +233,7 @@ class TTSManager:
             engine = self.current_engine
 
         if engine not in self.engines or not self.engines[engine]["available"]:
-            self.logger.error(f"Motore TTS non disponibile: {engine}")
+            self.logger.error("Motore TTS non disponibile: {engine}")
             if self.config.get("auto_fallback", True):
                 return self._fallback_synthesis(text, voice, speed, pitch, volume)
             return None
@@ -245,29 +246,29 @@ class TTSManager:
                 return self._synthesize_with_builtin_engine(text, engine, voice, speed, pitch, volume)
             elif engine_instance:
                 return engine_instance.synthesize(text, voice or self.config["default_voice"],
-                                               speed, pitch, volume)
+                                                  speed, pitch, volume)
 
-        except Exception as e:
-            self.logger.error(f"Errore nella sintesi con {engine}: {e}")
+        except Exception:
+            self.logger.error("Errore nella sintesi con {engine}: {e}")
             if self.config.get("auto_fallback", True):
                 return self._fallback_synthesis(text, voice, speed, pitch, volume)
 
         return None
 
     def _synthesize_with_builtin_engine(self, text: str, engine: str, voice: str,
-                                      speed: float, pitch: float, volume: float) -> Optional[str]:
+                                        speed: float, pitch: float, volume: float) -> Optional[str]:
         """Sintetizza usando i motori built-in (pyttsx3, gTTS)."""
         try:
             if engine == TTSEngine.PYTTSX3.value:
                 return self._synthesize_pyttsx3(text, voice, speed, pitch, volume)
             elif engine == TTSEngine.GTTS.value:
                 return self._synthesize_gtts(text, voice, speed, pitch, volume)
-        except Exception as e:
-            self.logger.error(f"Errore nella sintesi built-in: {e}")
+        except Exception:
+            self.logger.error("Errore nella sintesi built-in: {e}")
         return None
 
     def _synthesize_pyttsx3(self, text: str, voice: str, speed: float,
-                           pitch: float, volume: float) -> Optional[str]:
+                            pitch: float, volume: float) -> Optional[str]:
         """Sintetizza usando pyttsx3."""
         try:
             import pyttsx3
@@ -283,7 +284,7 @@ class TTSManager:
             if voice:
                 try:
                     engine.setProperty('voice', voice)
-                except:
+                except BaseException:
                     pass
 
             # Crea file temporaneo
@@ -301,12 +302,12 @@ class TTSManager:
             # Per ora restituiamo None, ma in produzione si salverebbe il file
             return None
 
-        except Exception as e:
-            self.logger.error(f"Errore pyttsx3: {e}")
+        except Exception:
+            self.logger.error("Errore pyttsx3: {e}")
             return None
 
     def _synthesize_gtts(self, text: str, voice: str, speed: float,
-                        pitch: float, volume: float) -> Optional[str]:
+                         pitch: float, volume: float) -> Optional[str]:
         """Sintetizza usando gTTS."""
         try:
             import gtts
@@ -321,19 +322,19 @@ class TTSManager:
             import hashlib
             import time
 
-            hash_input = f"{text}_{voice}_{speed}_{time.time()}"
+            hash_input = "{text}_{voice}_{speed}_{time.time()}"
             file_hash = hashlib.md5(hash_input.encode()).hexdigest()[:8]
-            output_file = os.path.join(self.cache_dir, f"gtts_{file_hash}.mp3")
+            output_file = os.path.join(self.cache_dir, "gtts_{file_hash}.mp3")
 
             tts.save(output_file)
             return output_file
 
-        except Exception as e:
-            self.logger.error(f"Errore gTTS: {e}")
+        except Exception:
+            self.logger.error("Errore gTTS: {e}")
             return None
 
     def _fallback_synthesis(self, text: str, voice: str, speed: float,
-                           pitch: float, volume: float) -> Optional[str]:
+                            pitch: float, volume: float) -> Optional[str]:
         """Sintesi di fallback usando il motore più affidabile disponibile."""
         fallback_order = [
             TTSEngine.PYTTSX3.value,
@@ -344,10 +345,10 @@ class TTSManager:
         ]
 
         for engine_name in fallback_order:
-            if (engine_name in self.engines and
-                self.engines[engine_name]["available"] and
-                engine_name != self.current_engine):
-                self.logger.info(f"Tentativo fallback con: {engine_name}")
+            if (engine_name in self.engines
+                and self.engines[engine_name]["available"]
+                    and engine_name != self.current_engine):
+                self.logger.info("Tentativo fallback con: {engine_name}")
                 result = self.synthesize(text, engine_name, voice, speed, pitch, volume)
                 if result:
                     return result
@@ -375,8 +376,8 @@ class TTSManager:
             )
             return result.returncode == 0
 
-        except Exception as e:
-            self.logger.error(f"Errore nella riproduzione: {e}")
+        except Exception:
+            self.logger.error("Errore nella riproduzione: {e}")
             return False
 
     def cleanup_cache(self, max_age_days: Optional[int] = None):
@@ -402,10 +403,10 @@ class TTSManager:
                     engine_info["instance"].cleanup_cache(max_age_days)
 
             if cleaned_count > 0:
-                self.logger.info(f"Cache pulita: {cleaned_count} file rimossi")
+                self.logger.info("Cache pulita: {cleaned_count} file rimossi")
 
-        except Exception as e:
-            self.logger.error(f"Errore nella pulizia cache: {e}")
+        except Exception:
+            self.logger.error("Errore nella pulizia cache: {e}")
 
     def get_engine_info(self, engine_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Ottiene informazioni su un motore specifico."""
@@ -416,28 +417,33 @@ class TTSManager:
             return self.engines[engine_name]
         return None
 
+
 # Istanza globale
 tts_manager = TTSManager()
 
 # Funzioni di utilità per retrocompatibilità
+
+
 def get_available_engines():
     """Funzione di compatibilità."""
     return tts_manager.get_available_engines()
 
+
 def synthesize_text(text, engine=None, voice=None, speed=1.0, pitch=1.0, volume=1.0):
     """Funzione di compatibilità."""
     return tts_manager.synthesize(text, engine, voice, speed, pitch, volume)
+
 
 if __name__ == "__main__":
     print("🔊 Test TTS Manager...")
 
     # Mostra motori disponibili
     engines = tts_manager.get_available_engines()
-    print(f"📦 Motori TTS disponibili: {len(engines)}")
+    print("📦 Motori TTS disponibili: {len(engines)}")
 
     for engine in engines:
         status = "✅" if engine["available"] else "❌"
-        print(f"  {status} {engine['name']} - {engine['quality']} quality")
+        print("  {status} {engine['name']} - {engine['quality']} quality")
 
     # Test sintesi
     print("\n🎤 Test sintesi vocale...")
@@ -449,6 +455,6 @@ if __name__ == "__main__":
     )
 
     if audio_file:
-        print(f"✅ Audio generato: {audio_file}")
+        print("✅ Audio generato: {audio_file}")
     else:
         print("❌ Errore nella generazione audio")

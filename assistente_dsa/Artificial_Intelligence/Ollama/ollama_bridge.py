@@ -3,8 +3,6 @@
 Bridge per integrare Ollama con QML
 """
 
-import sys
-import os
 import logging
 from PyQt6.QtCore import QObject, pyqtSignal, QThread, pyqtSlot
 from PyQt6.QtQml import QQmlApplicationEngine
@@ -65,7 +63,7 @@ class OllamaBridge(QObject):
     @pyqtSlot(str, str)
     def sendPrompt(self, prompt, model="llama2:7b"):
         """Invia un prompt a Ollama"""
-        print(f"🔍 Bridge: sendPrompt chiamato con prompt '{prompt[:50]}...' e modello '{model}'")
+        print("🔍 Bridge: sendPrompt chiamato con prompt '{prompt[:50]}...' e modello '{model}'")
 
         if not self.checkConnection():
             print("🔍 Bridge: Ollama non connesso")
@@ -86,8 +84,8 @@ class OllamaBridge(QObject):
 
     def _onResponseReceived(self, prompt, response):
         """Callback quando arriva una risposta"""
-        print(f"🔍 Bridge: Risposta ricevuta per prompt '{prompt[:50]}...'")
-        print(f"🔍 Bridge: Lunghezza risposta: {len(response)} caratteri")
+        print("🔍 Bridge: Risposta ricevuta per prompt '{prompt[:50]}...'")
+        print("🔍 Bridge: Lunghezza risposta: {len(response)} caratteri")
         self.responseReceived.emit(prompt, response)
         self.statusChanged.emit("Risposta ricevuta")
 

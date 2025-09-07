@@ -4,9 +4,7 @@ Settings Dialog - Dialog delle impostazioni per DSA Assistant
 Interfaccia grafica completa per modificare tutte le configurazioni
 """
 
-import sys
 import subprocess
-import sys
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -18,6 +16,7 @@ from PyQt6.QtWidgets import (
 from main_03_configurazione_e_opzioni import (
     load_settings, save_settings, get_setting, set_setting
 )
+
 
 class SettingsDialog(QDialog):
     """Dialog completo per le impostazioni dell'applicazione DSA."""
@@ -39,7 +38,7 @@ class SettingsDialog(QDialog):
 
             QGroupBox {
                 font-weight: bold;
-                border: 2px solid #4a90e2;
+                border: 2px solid #000000;
                 border-radius: 8px;
                 margin-top: 6px;
                 padding-top: 10px;
@@ -57,14 +56,14 @@ class SettingsDialog(QDialog):
             }
 
             QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
-                border: 2px solid #4a90e2;
+                border: 2px solid #000000;
                 border-radius: 5px;
                 padding: 5px;
                 background: white;
             }
 
             QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
-                border-color: #357abd;
+                border-color: #000000;
                 background: #f8f9fa;
             }
 
@@ -73,8 +72,10 @@ class SettingsDialog(QDialog):
                 color: white;
                 border: none;
                 border-radius: 5px;
-                padding: 8px 16px;
+                padding: 10px 20px;
                 font-weight: bold;
+                min-width: 120px;
+                min-height: 35px;
             }
 
             QPushButton:hover {
@@ -82,7 +83,7 @@ class SettingsDialog(QDialog):
             }
 
             QTabWidget::pane {
-                border: 1px solid #4a90e2;
+                border: 1px solid #000000;
                 background: rgba(255, 255, 255, 0.9);
             }
 
@@ -133,11 +134,13 @@ class SettingsDialog(QDialog):
         buttons_layout = QHBoxLayout()
         buttons_layout.addStretch()
 
-        save_button = QPushButton("Salva Impostazioni")
+        save_button = QPushButton("💾 Salva Impostazioni")
+        save_button.setStyleSheet("QPushButton { background-color: #28a745; color: white; font-weight: bold; padding: 12px 24px; min-width: 180px; } QPushButton:hover { background-color: #218838; }")
         save_button.clicked.connect(self.save_settings)
         buttons_layout.addWidget(save_button)
 
-        cancel_button = QPushButton("Annulla")
+        cancel_button = QPushButton("❌ Annulla")
+        cancel_button.setStyleSheet("QPushButton { background-color: #dc3545; color: white; font-weight: bold; padding: 12px 24px; min-width: 120px; } QPushButton:hover { background-color: #c82333; }")
         cancel_button.clicked.connect(self.reject)
         buttons_layout.addWidget(cancel_button)
 
@@ -287,7 +290,8 @@ class SettingsDialog(QDialog):
         test_actions_layout = QVBoxLayout(test_actions_group)
 
         # Pulsante di test
-        test_button = QPushButton("Esegui Test")
+        test_button = QPushButton("🚀 Esegui Test")
+        test_button.setStyleSheet("QPushButton { background-color: #17a2b8; color: white; font-weight: bold; padding: 10px 20px; min-width: 140px; } QPushButton:hover { background-color: #138496; }")
         test_button.clicked.connect(lambda: QMessageBox.information(self, "Test", "Test eseguito con successo!"))
         test_actions_layout.addWidget(test_button)
 
@@ -351,17 +355,17 @@ class SettingsDialog(QDialog):
                         if "OpenDyslexic" not in system_fonts:
                             system_fonts.insert(0, "OpenDyslexic")  # Inserisci all'inizio
 
-                        print(f"✅ Caricati {len(system_fonts)} font dal sistema Linux (solo nomi)")
-                        print(f"🎨 Font per dislessia disponibile: {'OpenDyslexic' in system_fonts}")
+                        print("✅ Caricati {len(system_fonts)} font dal sistema Linux (solo nomi)")
+                        print("🎨 Font per dislessia disponibile: {'OpenDyslexic' in system_fonts}")
                     else:
                         raise Exception("Nessun output da fc-list")
                 else:
-                    raise Exception(f"fc-list fallito con codice {result.returncode}")
+                    raise Exception("fc-list fallito con codice {result.returncode}")
             else:
                 raise Exception("Sistema operativo non supportato per caricamento dinamico")
 
-        except Exception as e:
-            print(f"⚠️ Errore caricamento font di sistema: {e}")
+        except Exception:
+            print("⚠️ Errore caricamento font di sistema: {e}")
             # Fallback alla lista di font comuni (incluso OpenDyslexic per dislessia)
             system_fonts = [
                 "OpenDyslexic",  # Font per dislessia - PRIMA POSIZIONE
@@ -369,10 +373,10 @@ class SettingsDialog(QDialog):
                 "Verdana", "Georgia", "Palatino", "Garamond", "Bookman",
                 "Comic Sans MS", "Trebuchet MS", "Arial Black", "Calibri",
                 "Cambria", "Candara", "Consolas", "Constantia", "Corbel",
-                "DejaVu Sans", "DejaVu Serif", "FreeMono", "FreeSans", "FreeSerif",
+                "DejaVu Sans", "DejaVu Seri", "FreeMono", "FreeSans", "FreeSerif",
                 "Liberation Mono", "Liberation Sans", "Liberation Serif",
                 "Lucida Console", "Lucida Sans", "Lucida Sans Unicode",
-                "Microsoft Sans Serif", "Monaco", "Segoe UI", "Tahoma", "Ubuntu"
+                "Microsoft Sans Seri", "Monaco", "Segoe UI", "Tahoma", "Ubuntu"
             ]
         self.font_family_combo.addItems(system_fonts)
 
@@ -431,11 +435,11 @@ class SettingsDialog(QDialog):
         self.text_color_buttons = {}
         for category, default_color in text_categories:
             color_layout = QHBoxLayout()
-            color_layout.addWidget(QLabel(f"{category}:"))
+            color_layout.addWidget(QLabel("{category}:"))
 
             color_button = QPushButton()
-            color_button.setFixedSize(60, 30)
-            color_button.setStyleSheet(f"background-color: {default_color}; border: 1px solid #ccc;")
+            color_button.setFixedSize(80, 35)
+            color_button.setStyleSheet("background-color: {default_color}; border: 2px solid #000000; border-radius: 4px;")
             color_button.clicked.connect(lambda checked, cat=category, btn=color_button: self.choose_color(cat, btn))
             color_layout.addWidget(color_button)
 
@@ -469,19 +473,19 @@ class SettingsDialog(QDialog):
         self.button_bg_buttons = {}
         for category, default_bg, default_hover in button_categories:
             bg_layout = QHBoxLayout()
-            bg_layout.addWidget(QLabel(f"{category}:"))
+            bg_layout.addWidget(QLabel("{category}:"))
 
             # Pulsante per colore di sfondo normale
-            bg_button = QPushButton("Sfondo")
-            bg_button.setFixedSize(80, 30)
-            bg_button.setStyleSheet(f"background-color: {default_bg}; color: white; border: none; border-radius: 4px;")
+            bg_button = QPushButton("🎨 Sfondo")
+            bg_button.setFixedSize(100, 35)
+            bg_button.setStyleSheet("background-color: {default_bg}; color: white; border: 2px solid #000000; border-radius: 4px; font-weight: bold;")
             bg_button.clicked.connect(lambda checked, cat=category, btn=bg_button, typ="bg": self.choose_button_color(cat, btn, typ))
             bg_layout.addWidget(bg_button)
 
             # Pulsante per colore hover
-            hover_button = QPushButton("Hover")
-            hover_button.setFixedSize(80, 30)
-            hover_button.setStyleSheet(f"background-color: {default_hover}; color: white; border: none; border-radius: 4px;")
+            hover_button = QPushButton("👆 Hover")
+            hover_button.setFixedSize(100, 35)
+            hover_button.setStyleSheet("background-color: {default_hover}; color: white; border: 2px solid #000000; border-radius: 4px; font-weight: bold;")
             hover_button.clicked.connect(lambda checked, cat=category, btn=hover_button, typ="hover": self.choose_button_color(cat, btn, typ))
             bg_layout.addWidget(hover_button)
 
@@ -500,14 +504,19 @@ class SettingsDialog(QDialog):
         # Testo di anteprima
         self.preview_label = QLabel("Questo è un testo di anteprima per vedere come appariranno le tue personalizzazioni.")
         self.preview_label.setWordWrap(True)
-        self.preview_label.setStyleSheet("padding: 10px; border: 1px solid #ddd; border-radius: 4px;")
+        self.preview_label.setStyleSheet("padding: 10px; border: 1px solid #000000; border-radius: 4px;")
         preview_layout.addWidget(self.preview_label)
 
         # Pulsanti di anteprima
         preview_buttons_layout = QHBoxLayout()
-        self.preview_button1 = QPushButton("Pulsante Principale")
-        self.preview_button2 = QPushButton("Pulsante Secondario")
-        self.preview_button3 = QPushButton("Pulsante Speciale")
+        self.preview_button1 = QPushButton("🔵 Pulsante Principale")
+        self.preview_button1.setStyleSheet("QPushButton { background-color: #007bff; color: white; font-weight: bold; padding: 8px 16px; min-width: 160px; } QPushButton:hover { background-color: #0056b3; }")
+
+        self.preview_button2 = QPushButton("🟢 Pulsante Secondario")
+        self.preview_button2.setStyleSheet("QPushButton { background-color: #6c757d; color: white; font-weight: bold; padding: 8px 16px; min-width: 160px; } QPushButton:hover { background-color: #5a6268; }")
+
+        self.preview_button3 = QPushButton("🟣 Pulsante Speciale")
+        self.preview_button3.setStyleSheet("QPushButton { background-color: #6f42c1; color: white; font-weight: bold; padding: 8px 16px; min-width: 160px; } QPushButton:hover { background-color: #5a359a; }")
 
         preview_buttons_layout.addWidget(self.preview_button1)
         preview_buttons_layout.addWidget(self.preview_button2)
@@ -518,6 +527,7 @@ class SettingsDialog(QDialog):
 
         # Pulsante per applicare anteprima
         apply_preview_button = QPushButton("🔄 Aggiorna Anteprima")
+        apply_preview_button.setStyleSheet("QPushButton { background-color: #ffc107; color: black; font-weight: bold; padding: 10px 20px; min-width: 180px; } QPushButton:hover { background-color: #e0a800; }")
         apply_preview_button.clicked.connect(self.update_preview)
         preview_layout.addWidget(apply_preview_button)
 
@@ -528,13 +538,13 @@ class SettingsDialog(QDialog):
 
         # Pulsante per applicare le modifiche
         apply_button = QPushButton("✅ Applica Modifiche")
-        apply_button.setStyleSheet("QPushButton { background-color: #28a745; color: white; font-weight: bold; padding: 10px; }")
+        apply_button.setStyleSheet("QPushButton { background-color: #28a745; color: white; font-weight: bold; padding: 12px 24px; min-width: 200px; min-height: 45px; } QPushButton:hover { background-color: #218838; }")
         apply_button.clicked.connect(self.apply_personalizations)
         actions_layout.addWidget(apply_button)
 
         # Pulsante per ripristinare i valori predefiniti
         reset_button = QPushButton("🔄 Ripristina Predefiniti")
-        reset_button.setStyleSheet("QPushButton { background-color: #ffc107; color: black; font-weight: bold; padding: 10px; }")
+        reset_button.setStyleSheet("QPushButton { background-color: #fd7e14; color: white; font-weight: bold; padding: 12px 24px; min-width: 200px; min-height: 45px; } QPushButton:hover { background-color: #e8680f; }")
         reset_button.clicked.connect(self.reset_personalizations)
         actions_layout.addWidget(reset_button)
 
@@ -553,11 +563,11 @@ class SettingsDialog(QDialog):
         from PyQt6.QtWidgets import QColorDialog
 
         current_color = button.palette().color(button.backgroundRole())
-        color = QColorDialog.getColor(current_color, self, f"Scegli colore per {category}")
+        color = QColorDialog.getColor(current_color, self, "Scegli colore per {category}")
 
         if color.isValid():
             color_hex = color.name()
-            button.setStyleSheet(f"background-color: {color_hex}; border: 1px solid #ccc;")
+            button.setStyleSheet("background-color: {color_hex}; border: 1px solid #ccc;")
             # Trova la label corrispondente e aggiorna il testo
             for cat, (btn, label) in self.text_color_buttons.items():
                 if cat == category:
@@ -569,11 +579,11 @@ class SettingsDialog(QDialog):
         from PyQt6.QtWidgets import QColorDialog
 
         current_color = button.palette().color(button.backgroundRole())
-        color = QColorDialog.getColor(current_color, self, f"Scegli colore {color_type} per {category}")
+        color = QColorDialog.getColor(current_color, self, "Scegli colore {color_type} per {category}")
 
         if color.isValid():
             color_hex = color.name()
-            button.setStyleSheet(f"background-color: {color_hex}; color: white; border: none; border-radius: 4px;")
+            button.setStyleSheet("background-color: {color_hex}; color: white; border: none; border-radius: 4px;")
 
     def update_preview(self):
         """Aggiorna l'anteprima con le impostazioni correnti."""
@@ -590,14 +600,14 @@ class SettingsDialog(QDialog):
                 "Grassetto Corsivo": "bold italic"
             }
 
-            font_style = f"font-family: '{font_family}'; font-size: {font_size}pt; font-weight: {weight_map.get(font_weight, 'normal')};"
-            self.preview_label.setStyleSheet(f"padding: 10px; border: 1px solid #ddd; border-radius: 4px; {font_style}")
+            font_style = "font-family: '{font_family}'; font-size: {font_size}pt; font-weight: {weight_map.get(font_weight, 'normal')};"
+            self.preview_label.setStyleSheet("padding: 10px; border: 1px solid #000000; border-radius: 4px; {font_style}")
 
             # Aggiorna i pulsanti di anteprima (implementazione futura)
             QMessageBox.information(self, "Anteprima", "Anteprima aggiornata con le impostazioni correnti!")
 
-        except Exception as e:
-            QMessageBox.warning(self, "Errore Anteprima", f"Errore nell'aggiornamento dell'anteprima:\n{str(e)}")
+        except Exception:
+            QMessageBox.warning(self, "Errore Anteprima", "Errore nell'aggiornamento dell'anteprima:\n{str(e)}")
 
     def apply_personalizations(self):
         """Applica le personalizzazioni all'interfaccia principale e salva nel file settings.json."""
@@ -612,21 +622,21 @@ class SettingsDialog(QDialog):
             set_setting('main_font_size', font_size)
             set_setting('main_font_weight', font_weight)
 
-            print(f"✅ Impostazioni font salvate:")
-            print(f"   - Font: {font_family}")
-            print(f"   - Dimensione: {font_size}pt")
-            print(f"   - Peso: {font_weight}")
+            print("✅ Impostazioni font salvate:")
+            print("   - Font: {font_family}")
+            print("   - Dimensione: {font_size}pt")
+            print("   - Peso: {font_weight}")
 
             # Qui implementeremo la logica per applicare le modifiche all'interfaccia principale
             QMessageBox.information(self, "Personalizzazioni Salvate",
-                                  f"✅ Le personalizzazioni sono state salvate con successo!\n\n"
-                                  f"🎨 Font: {font_family}\n"
-                                  f"📏 Dimensione: {font_size}pt\n"
-                                  f"💪 Peso: {font_weight}\n\n"
-                                  f"Le impostazioni sono state salvate nel file settings.json.")
+                                    "✅ Le personalizzazioni sono state salvate con successo!\n\n"
+                                    "🎨 Font: {font_family}\n"
+                                    "📏 Dimensione: {font_size}pt\n"
+                                    "💪 Peso: {font_weight}\n\n"
+                                    "Le impostazioni sono state salvate nel file settings.json.")
 
-        except Exception as e:
-            QMessageBox.critical(self, "Errore", f"Errore nell'applicazione delle personalizzazioni:\n{str(e)}")
+        except Exception:
+            QMessageBox.critical(self, "Errore", "Errore nell'applicazione delle personalizzazioni:\n{str(e)}")
 
     def reset_personalizations(self):
         """Ripristina tutte le personalizzazioni ai valori predefiniti dal settings_manager."""
@@ -647,16 +657,16 @@ class SettingsDialog(QDialog):
             self.font_size_spin.setValue(default_font_size)
             self.font_weight_combo.setCurrentText(default_font_weight)
 
-            print(f"🔄 Impostazioni font ripristinate ai valori predefiniti:")
-            print(f"   - Font: {default_font_family}")
-            print(f"   - Dimensione: {default_font_size}pt")
-            print(f"   - Peso: {default_font_weight}")
+            print("🔄 Impostazioni font ripristinate ai valori predefiniti:")
+            print("   - Font: {default_font_family}")
+            print("   - Dimensione: {default_font_size}pt")
+            print("   - Peso: {default_font_weight}")
 
             QMessageBox.information(self, "Ripristino Completato",
-                                  f"✅ Le personalizzazioni sono state ripristinate ai valori predefiniti!\n\n"
-                                  f"🎨 Font: {default_font_family}\n"
-                                  f"📏 Dimensione: {default_font_size}pt\n"
-                                  f"💪 Peso: {default_font_weight}")
+                                    "✅ Le personalizzazioni sono state ripristinate ai valori predefiniti!\n\n"
+                                    "🎨 Font: {default_font_family}\n"
+                                    "📏 Dimensione: {default_font_size}pt\n"
+                                    "💪 Peso: {default_font_weight}")
 
             # Ripristina colori testo
             default_text_colors = {
@@ -671,7 +681,8 @@ class SettingsDialog(QDialog):
             for category, color in default_text_colors.items():
                 if category in self.text_color_buttons:
                     button, label = self.text_color_buttons[category]
-                    button.setStyleSheet(f"background-color: {color}; border: 1px solid #ccc;")
+                    button.setStyleSheet("background-color: {color}; border: 2px solid #000000; border-radius: 4px;")
+                    button.setFixedSize(80, 35)
                     label.setText(color)
 
             # Ripristina sfondi pulsanti
@@ -687,13 +698,15 @@ class SettingsDialog(QDialog):
             for category, (bg_color, hover_color) in default_button_colors.items():
                 if category in self.button_bg_buttons:
                     bg_button, hover_button = self.button_bg_buttons[category]
-                    bg_button.setStyleSheet(f"background-color: {bg_color}; color: white; border: none; border-radius: 4px;")
-                    hover_button.setStyleSheet(f"background-color: {hover_color}; color: white; border: none; border-radius: 4px;")
+                    bg_button.setStyleSheet("background-color: {bg_color}; color: white; border: 2px solid #000000; border-radius: 4px; font-weight: bold;")
+                    bg_button.setFixedSize(100, 35)
+                    hover_button.setStyleSheet("background-color: {hover_color}; color: white; border: 2px solid #000000; border-radius: 4px; font-weight: bold;")
+                    hover_button.setFixedSize(100, 35)
 
             QMessageBox.information(self, "Ripristino", "Tutte le personalizzazioni sono state ripristinate ai valori predefiniti!")
 
-        except Exception as e:
-            QMessageBox.critical(self, "Errore", f"Errore nel ripristino delle personalizzazioni:\n{str(e)}")
+        except Exception:
+            QMessageBox.critical(self, "Errore", "Errore nel ripristino delle personalizzazioni:\n{str(e)}")
 
     def load_current_settings(self):
         """Carica le impostazioni attuali nei controlli."""
@@ -716,8 +729,8 @@ class SettingsDialog(QDialog):
             self.test_combo.setCurrentText(get_setting('test.test_option', 'Opzione 1'))
             self.test_checkbox.setChecked(get_setting('test.test_enabled', True))
 
-        except Exception as e:
-            QMessageBox.warning(self, "Errore", f"Errore nel caricamento delle impostazioni: {e}")
+        except Exception:
+            QMessageBox.warning(self, "Errore", "Errore nel caricamento delle impostazioni: {e}")
 
     def save_settings(self):
         """Salva le impostazioni modificate."""
@@ -752,5 +765,5 @@ class SettingsDialog(QDialog):
             QMessageBox.information(self, "Successo", "Impostazioni salvate con successo!")
             self.accept()
 
-        except Exception as e:
-            QMessageBox.critical(self, "Errore", f"Errore nel salvataggio delle impostazioni: {e}")
+        except Exception:
+            QMessageBox.critical(self, "Errore", "Errore nel salvataggio delle impostazioni: {e}")

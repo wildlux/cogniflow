@@ -6,7 +6,6 @@ import logging
 import simpleaudio as sa
 import gtts
 import subprocess
-import os
 from io import BytesIO
 
 from PyQt6.QtCore import QThread, pyqtSignal
@@ -14,6 +13,7 @@ from PyQt6.QtCore import QThread, pyqtSignal
 # ==============================================================================
 # Configurazione Voci e Motori TTS
 # ==============================================================================
+
 
 def _get_pyttsx3_voices():
     """Restituisce un dizionario di voci pyttsx3 disponibili con nome e sesso."""
@@ -58,10 +58,11 @@ def _get_pyttsx3_voices():
         if not voices_info:
             voices_info.append({'name': "Voce Sistema (Default)", 'gender': 'Sconosciuto', 'id': 'default'})
 
-    except Exception as e:
-        logging.error(f"Errore nel caricamento delle voci pyttsx3: {e}")
+    except Exception:
+        logging.error("Errore nel caricamento delle voci pyttsx3: {e}")
         voices_info.append({'name': "Zephyr (Fallback)", 'gender': 'Sconosciuto', 'id': 'fallback'})
     return voices_info
+
 
 VOCI_DI_SISTEMA = _get_pyttsx3_voices()
 
@@ -81,6 +82,7 @@ GTTS_LANGUAGES = {
 # ==============================================================================
 # Thread per la Sintesi Vocale
 # ==============================================================================
+
 
 class TTSThread(QThread):
     """
@@ -110,10 +112,10 @@ class TTSThread(QThread):
             elif self.engine_name == 'Piper (WIP)':
                 self.error_occurred.emit("Il sintetizzatore Piper non è ancora stato integrato.")
             else:
-                self.error_occurred.emit(f"Motore TTS non supportato: {self.engine_name}")
-        except Exception as e:
-            logging.error(f"Errore nella sintesi vocale: {e}")
-            self.error_occurred.emit(f"Errore: {str(e)}")
+                self.error_occurred.emit("Motore TTS non supportato: {self.engine_name}")
+        except Exception:
+            logging.error("Errore nella sintesi vocale: {e}")
+            self.error_occurred.emit("Errore: {str(e)}")
         finally:
             if self._is_running:
                 self.finished_reading.emit()
@@ -141,15 +143,15 @@ class TTSThread(QThread):
             # Imposta la voce usando l'ID
             try:
                 engine.setProperty('voice', self.voice_or_lang)
-            except Exception as e:
-                logging.warning(f"Impossibile impostare la voce '{self.voice_or_lang}': {e}. Verrà usata la voce di default.")
+            except Exception:
+                logging.warning("Impossibile impostare la voce '{self.voice_or_lang}': {e}. Verrà usata la voce di default.")
 
             engine.say(self.text_to_speak)
             engine.runAndWait()
 
-        except Exception as e:
-            self.error_occurred.emit(f"Errore con pyttsx3: {str(e)}")
-            logging.error(f"Errore pyttsx3: {e}")
+        except Exception:
+            self.error_occurred.emit("Errore con pyttsx3: {str(e)}")
+            logging.error("Errore pyttsx3: {e}")
         finally:
             # Pulisci il riferimento dopo l'uso
             if hasattr(self, '_tts_engine'):
@@ -169,7 +171,6 @@ class TTSThread(QThread):
             mp3_fp.seek(0)
 
             # Usa un processo esterno per riprodurre il file mp3.
-            import os
             os.makedirs("Audio", exist_ok=True)
             file_name = "Audio/temp_gtts.mp3"
             tts.save(file_name)
@@ -179,6 +180,6 @@ class TTSThread(QThread):
             if os.path.exists(file_name):
                 os.remove(file_name)
 
-        except Exception as e:
-            self.error_occurred.emit(f"Errore con gTTS: {str(e)}")
-            logging.error(f"Errore gTTS: {e}")
+        except Exception:
+            self.error_occurred.emit("Errore con gTTS: {str(e)}")
+            logging.error("Errore gTTS: {e}")

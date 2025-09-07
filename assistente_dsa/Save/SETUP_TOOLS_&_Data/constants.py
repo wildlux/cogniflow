@@ -4,12 +4,12 @@ from typing import Dict, Any
 
 # Impostazioni di default dell'applicazione
 DEFAULT_SETTINGS: Dict[str, Any] = {
-        'app_name': 'CogniFlow',
-        'theme': 'Chiaro',
-    'main_font_family': 'Arial',
-    'main_font_size': 20,
-    'pensierini_font_family': 'Arial',
-    'pensierini_font_size': 20,
+    'app_name': 'CogniFlow',
+    'theme': 'Chiaro',
+    'main_font_family': 'OpenDyslexic',
+    'main_font_size': 14,
+    'pensierini_font_family': 'OpenDyslexic',
+    'pensierini_font_size': 12,
     'hand_detection_system': 'Auto (Migliore)',
     'face_detection_system': 'Auto (Migliore)',
     'gesture_system': 'Auto (Migliore)',
@@ -53,8 +53,8 @@ WINDOW_HEIGHT = 800
 CONFIG_DIALOG_WIDTH = 1000
 CONFIG_DIALOG_HEIGHT = 700
 WIDGET_MIN_HEIGHT = 60
-DEFAULT_FONT_SIZE = 20
-DEFAULT_PENSIERINI_FONT_SIZE = 20
+DEFAULT_FONT_SIZE = 14
+DEFAULT_PENSIERINI_FONT_SIZE = 12
 
 # File di configurazione
 SETTINGS_FILE = "Save/SETUP_TOOLS_&_Data/settings.json"

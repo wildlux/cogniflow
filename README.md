@@ -1,22 +1,51 @@
-This software i call cogniflow for use "cogni" cognition and "flow" like arrow means like direction.
+# CogniFlow - Assistente DSA
 
-I am dyslessic and i want to create this software for help other person for : 
-1) reading text
-2) input text from voice
-3) ask to some Ai local ( 100% privacy)
-4) arrange from camera [ To do ] [ open CV + webcam + face-recognition + hand gesture]
-5) customize setup for each user
-6) save and load documents
-7) Creating a menù for help other sections like snipped code or help things with math and more [ To do ]
-8) OCR Optical character recognition from documents [ to do ]  
+Questo software si chiama CogniFlow perché usa "cogni" (cognizione) e "flow" (come una freccia che indica direzione).
 
+Sono dislessico e ho creato questo software per aiutare altre persone con:
 
-number 7 it's for improve outside dyslessic person but for improve and automatize some workflow.
-i think this osftware like...without touch mouse or keyboard like "minority report movie" or "iroman with jarvis movie marvel"
+## 🎯 Funzionalità Principali
 
+1. ✅ **Lettura testo** - Sintesi vocale per testi
+2. ✅ **Input vocale** - Riconoscimento vocale per input testo
+3. ✅ **AI locale** - Chat con AI (100% privacy, nessun cloud)
+4. 🔄 **Visione artificiale** - [In sviluppo] OpenCV + webcam + riconoscimento facciale + gesti mano
+5. ✅ **Setup personalizzato** - Configurazione adattata per ogni utente
+6. ✅ **Salvataggio/caricamento** - Gestione documenti e progetti
+7. 🔄 **Menu aiuto** - [In sviluppo] Snippet codice, aiuto matematica, workflow automatizzati
+8. 🔄 **OCR** - [In sviluppo] Riconoscimento ottico caratteri
 
-Please if you whant to improve please to do and please quote my name in your branch please.
+Il punto 7 serve per migliorare workflow anche per persone non dislessiche, automatizzando processi comuni.
 
-Thanks for try and read this readme and soon this code.
+## 🏗️ Architettura
 
-Happy coding!
+Il software è ispirato a interfacce futuristiche come "Minority Report" o "Iron Man con Jarvis" - senza mouse o tastiera.
+
+## 🚀 Installazione
+
+```bash
+# Clona il repository
+git clone <repository-url>
+cd CogniFlow
+
+# Installa dipendenze
+pip install -r requirements.txt
+
+# Avvia l'applicazione
+python assistente_dsa/main_00_launcher.py
+```
+
+## 📋 Prerequisiti
+
+- Python 3.8+
+- PyQt6
+- Ollama (per funzionalità AI)
+- Tesseract OCR (opzionale, per OCR)
+
+## 🛠️ Sviluppo
+
+Se vuoi contribuire, sentiti libero di migliorare il codice! Cita il mio nome nel tuo branch.
+
+Grazie per aver provato e letto questo README. Presto il codice sarà ancora più completo.
+
+Happy coding! 🚀

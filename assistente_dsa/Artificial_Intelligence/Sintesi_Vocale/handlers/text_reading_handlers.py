@@ -75,5 +75,5 @@ class TextReadingHandlers:
         self.main_window.is_reading = False
         self.main_window.read_button.setText("🔊")
         self.main_window.read_button.setStyleSheet("")
-        logging.error(f"Errore durante la lettura vocale: {message}")
+        logging.error("Errore durante la lettura vocale: {message}")
         self.main_window.tts_thread = None
