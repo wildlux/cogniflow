@@ -2,6 +2,7 @@
 # Gestore unificato per tutti i motori TTS
 
 import logging
+import os
 import json
 from typing import List, Dict, Optional, Any, Union
 from enum import Enum
@@ -292,7 +293,7 @@ class TTSManager:
             import time
 
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
-                temp_path = temp_file.name
+                pass
 
             # Questo è un workaround - pyttsx3 non salva facilmente su file
             # In una implementazione reale, si potrebbe usare un sistema di registrazione audio
@@ -322,9 +323,9 @@ class TTSManager:
             import hashlib
             import time
 
-            hash_input = "{text}_{voice}_{speed}_{time.time()}"
+            hash_input = f"{text}_{voice}_{speed}_{time.time()}"
             file_hash = hashlib.md5(hash_input.encode()).hexdigest()[:8]
-            output_file = os.path.join(self.cache_dir, "gtts_{file_hash}.mp3")
+            output_file = os.path.join(self.cache_dir, f"gtts_{file_hash}.mp3")
 
             tts.save(output_file)
             return output_file

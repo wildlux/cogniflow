@@ -4,6 +4,7 @@ import cv2
 import logging
 import numpy as np
 import math
+import os
 from PyQt6.QtCore import QThread, pyqtSignal, QSize, Qt
 from PyQt6.QtGui import QImage, QPixmap
 
@@ -306,7 +307,7 @@ class VideoThread(QThread):
                     defects = cv2.convexityDefects(contour, sorted_indices.reshape(-1, 1))
             except cv2.error as e:
                 # Se si verifica un errore, logga e continua senza difetti
-                print("Errore in convexityDefects (analyze_hand_shape): {e}")
+                print(f"Errore in convexityDefects (analyze_hand_shape): {e}")
                 defects = None
 
         finger_count = 0
@@ -424,8 +425,6 @@ class VideoThread(QThread):
         # Calcola statistiche per ogni regione
         eye_mean = np.mean(eye_region)
         eye_std = np.std(eye_region)
-        nose_mean = np.mean(nose_region)
-        nose_std = np.std(nose_region)
         mouth_mean = np.mean(mouth_region)
         mouth_std = np.std(mouth_region)
 
@@ -436,7 +435,6 @@ class VideoThread(QThread):
 
         # Analizza la regione della bocca (dove si concentrano le espressioni)
         mouth_gradient = np.mean(gradient_magnitude[3 * height // 5:4 * height // 5, :])
-        mouth_gradient_std = np.std(gradient_magnitude[3 * height // 5:4 * height // 5, :])
 
         # Calcola l'entropia per misurare la complessità della texture
         def calculate_entropy(region):
@@ -534,7 +532,7 @@ class VideoThread(QThread):
             # Simula il trascinamento nell'area centrale
             self.simulate_drag_to_center()
 
-            logging.info("Trascinamento completato in {drag_duration:.2f} secondi")
+            logging.info(f"Trascinamento completato in {drag_duration:.2f} secondi")
         else:
             self.is_dragging = False
             self.drag_start_time = 0.0
@@ -559,7 +557,7 @@ class VideoThread(QThread):
 
                     # Aggiungi il testo all'area centrale
                     current_text = self.main_window.work_area_main_text_edit.toPlainText()
-                    new_text = current_text + "\n\n[TRASCINATO]: {text}"
+                    new_text = current_text + f"\n\n[TRASCINATO]: {text}"
                     self.main_window.work_area_main_text_edit.setText(new_text)
 
                     # Rimuovi il widget dalla colonna A
@@ -608,7 +606,7 @@ class VideoThread(QThread):
                     defects = cv2.convexityDefects(contour, sorted_indices.reshape(-1, 1))
             except cv2.error as e:
                 # Se si verifica un errore, logga e continua senza difetti
-                print("Errore in convexityDefects: {e}")
+                print(f"Errore in convexityDefects: {e}")
                 defects = None
 
         finger_count = 0
@@ -691,7 +689,7 @@ class VideoThread(QThread):
             left_count = sum(1 for _, _, _, _, info in detected_hands if info['hand_type'] == 'left')
             right_count = sum(1 for _, _, _, _, info in detected_hands if info['hand_type'] == 'right')
 
-            stats_text = "Mani rilevate: SX:{left_count} DX:{right_count}"
+            stats_text = f"Mani rilevate: SX:{left_count} DX:{right_count}"
             cv2.putText(frame, stats_text, (10, 90),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 165, 0), 2)
         else:

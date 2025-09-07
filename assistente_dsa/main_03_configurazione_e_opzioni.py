@@ -6,6 +6,7 @@ Modulo centralizzato per la gestione delle impostazioni dell'applicazione
 
 import json
 import logging
+import os
 from typing import Any
 
 # Import del cache manager per ottimizzazioni
@@ -33,12 +34,14 @@ class ConfigManager:
             self.config_dir = config_dir
         self.settings_file: str = os.path.join(self.config_dir, "settings.json")
         self.ensure_config_dir()
+        self._cached_settings: dict[str, Any] | None = None
+        self._settings_loaded = False
 
     def ensure_config_dir(self):
         """Assicura che la directory di configurazione esista."""
         if not os.path.exists(self.config_dir):
             os.makedirs(self.config_dir, exist_ok=True)
-            logger.info("Directory configurazione creata: {self.config_dir}")
+            logger.info(f"Directory configurazione creata: {self.config_dir}")
 
     def get_default_settings(self) -> dict[str, Any]:
         """Restituisce le impostazioni di default."""
@@ -132,27 +135,41 @@ class ConfigManager:
 
     def load_settings(self) -> dict[str, Any]:
         """Carica le impostazioni dal file JSON."""
+        if self._settings_loaded and self._cached_settings is not None:
+            return self._cached_settings
+
         try:
             if os.path.exists(self.settings_file):
                 with open(self.settings_file, 'r', encoding='utf-8') as f:
                     settings = json.load(f)
-                logger.info("✓ Impostazioni caricate da: {self.settings_file}")
+                logger.info(f"✓ Impostazioni caricate da: {self.settings_file}")
+                self._cached_settings = settings
+                self._settings_loaded = True
                 return settings
             else:
-                logger.warning("File impostazioni non trovato: {self.settings_file}")
-                return self.create_default_settings()
+                logger.warning(f"File impostazioni non trovato: {self.settings_file}")
+                default_settings = self.create_default_settings()
+                self._cached_settings = default_settings
+                self._settings_loaded = True
+                return default_settings
         except json.JSONDecodeError as e:
-            logger.error("Errore parsing JSON: {e}")
-            return self.create_default_settings()
-        except Exception:
-            logger.error("Errore caricamento impostazioni: {e}")
-            return self.create_default_settings()
+            logger.error(f"Errore parsing JSON: {e}")
+            default_settings = self.create_default_settings()
+            self._cached_settings = default_settings
+            self._settings_loaded = True
+            return default_settings
+        except Exception as e:
+            logger.error(f"Errore caricamento impostazioni: {e}")
+            default_settings = self.create_default_settings()
+            self._cached_settings = default_settings
+            self._settings_loaded = True
+            return default_settings
 
     def create_default_settings(self) -> dict[str, Any]:
         """Crea e salva le impostazioni di default."""
         default_settings = self.get_default_settings()
         self.save_settings(default_settings)
-        logger.info("✓ Impostazioni di default create: {self.settings_file}")
+        logger.info(f"✓ Impostazioni di default create: {self.settings_file}")
         return default_settings
 
     def save_settings(self, settings: dict[str, Any]) -> bool:
@@ -161,21 +178,24 @@ class ConfigManager:
             with open(self.settings_file, 'w', encoding='utf-8') as f:
                 json.dump(settings, f, indent=4, ensure_ascii=False)
             logger.info("✓ Impostazioni salvate con successo")
+            # Clear cache so next load_settings() will reload from disk
+            self._cached_settings = None
+            self._settings_loaded = False
             return True
-        except Exception:
-            logger.error("Errore salvataggio impostazioni: {e}")
+        except Exception as e:
+            logger.error(f"Errore salvataggio impostazioni: {e}")
             return False
 
     def get_setting(self, key_path: str, default: Any = None) -> Any:
         """Ottiene un'impostazione specifica usando la notazione con punti."""
         # Input validation
         if not key_path or not isinstance(key_path, str):
-            logger.warning("Invalid key_path: {key_path}")
+            logger.warning(f"Invalid key_path: {key_path}")
             return default
 
         # Prevent path traversal attacks
         if '..' in key_path or key_path.startswith('/') or '\\' in key_path:
-            logger.error("Security violation: Suspicious key_path: {key_path}")
+            logger.error(f"Security violation: Suspicious key_path: {key_path}")
             return default
 
         settings = self.load_settings()
@@ -185,24 +205,24 @@ class ConfigManager:
         try:
             for key in keys:
                 if not isinstance(value, dict):
-                    logger.warning("Invalid path structure at key '{key}' in path '{key_path}'")
+                    logger.warning(f"Invalid path structure at key '{key}' in path '{key_path}'")
                     return default
                 value = value[key]
             return value
         except (KeyError, TypeError) as e:
-            logger.debug("Setting not found: {key_path}, returning default: {default}")
+            logger.debug(f"Setting not found: {key_path}, returning default: {default}")
             return default
 
     def set_setting(self, key_path: str, value: Any) -> bool:
         """Imposta un'impostazione specifica usando la notazione con punti."""
         # Input validation
         if not key_path or not isinstance(key_path, str):
-            logger.error("Invalid key_path for set_setting: {key_path}")
+            logger.error(f"Invalid key_path for set_setting: {key_path}")
             return False
 
         # Prevent path traversal attacks
         if '..' in key_path or key_path.startswith('/') or '\\' in key_path:
-            logger.error("Security violation: Suspicious key_path for set_setting: {key_path}")
+            logger.error(f"Security violation: Suspicious key_path for set_setting: {key_path}")
             return False
 
         settings = self.load_settings()
@@ -213,7 +233,7 @@ class ConfigManager:
             # Naviga fino all'ultimo livello
             for key in keys[:-1]:
                 if not isinstance(target, dict):
-                    logger.error("Invalid path structure at key '{key}' in path '{key_path}'")
+                    logger.error(f"Invalid path structure at key '{key}' in path '{key_path}'")
                     return False
                 if key not in target:
                     target[key] = {}
@@ -222,8 +242,8 @@ class ConfigManager:
             # Imposta il valore
             target[keys[-1]] = value
             return self.save_settings(settings)
-        except Exception:
-            logger.error("Errore impostazione {key_path}: {e}")
+        except Exception as e:
+            logger.error(f"Errore impostazione {key_path}: {e}")
             return False
 
     def validate_settings(self, settings: dict[str, Any]) -> dict[str, Any]:
@@ -261,10 +281,10 @@ class ConfigManager:
             settings = self.load_settings()
             with open(export_path, 'w', encoding='utf-8') as f:
                 json.dump(settings, f, indent=4, ensure_ascii=False)
-            logger.info("✓ Impostazioni esportate in: {export_path}")
+            logger.info(f"✓ Impostazioni esportate in: {export_path}")
             return True
-        except Exception:
-            logger.error("Errore esportazione impostazioni: {e}")
+        except Exception as e:
+            logger.error(f"Errore esportazione impostazioni: {e}")
             return False
 
     def import_settings(self, import_path: str) -> bool:
@@ -274,8 +294,8 @@ class ConfigManager:
                 settings = json.load(f)
             validated_settings = self.validate_settings(settings)
             return self.save_settings(validated_settings)
-        except Exception:
-            logger.error("Errore importazione impostazioni: {e}")
+        except Exception as e:
+            logger.error(f"Errore importazione impostazioni: {e}")
             return False
 
 
@@ -309,21 +329,12 @@ def set_setting(key_path: str, value: Any) -> bool:
 
 
 # Costanti derivate dalle impostazioni (per retrocompatibilità)
-try:
-    settings = load_settings()
-    window_width = settings['ui']['window_width']
-    window_height = settings['ui']['window_height']
-    config_dialog_width = settings['ui']['config_dialog_width']
-    config_dialog_height = settings['ui']['config_dialog_height']
-    widget_min_height = settings['ui']['widget_min_height']
-    default_font_size = settings['fonts']['default_font_size']
-    default_pensierini_font_size = settings['fonts']['default_pensierini_font_size']
-except Exception:
-    logger.warning("Errore caricamento costanti: {e}, uso valori di default")
-    window_width = 1200
-    window_height = 800
-    config_dialog_width = 1000
-    config_dialog_height = 700
-    widget_min_height = 60
-    default_font_size = 12
-    default_pensierini_font_size = 10
+# Nota: Queste costanti sono mantenute per compatibilità ma si raccomanda
+# di usare get_setting() per ottenere i valori aggiornati
+window_width = 1200
+window_height = 800
+config_dialog_width = 1000
+config_dialog_height = 700
+widget_min_height = 60
+default_font_size = 12
+default_pensierini_font_size = 10

@@ -1,4 +1,5 @@
 import logging
+import os
 import pyttsx3
 from PyQt6.QtCore import Qt, QMimeData, QTimer
 from PyQt6.QtGui import QDrag
@@ -68,25 +69,29 @@ class DraggableTextWidget(QFrame):
 
         button_layout = QVBoxLayout()
 
-        # Read button
+        # Read button (now visible with orange color)
         self.read_button = QPushButton("📖")
         self.read_button.setFixedSize(*BUTTON_DEFAULT_SIZE)
         self.read_button.setToolTip("Leggi")
         self.read_button.clicked.connect(self.start_reading)
+        self.read_button.setStyleSheet("background-color: #ff6600; color: white; border: 2px solid #ffaa00;")
+        self.read_button.show()
 
-        # Pause button (initially hidden)
+        # Pause button (now visible with orange color)
         self.pause_button = QPushButton("⏸️")
         self.pause_button.setFixedSize(*BUTTON_DEFAULT_SIZE)
         self.pause_button.setToolTip("Pausa")
         self.pause_button.clicked.connect(self.pause_reading)
-        self.pause_button.hide()
+        self.pause_button.setStyleSheet("background-color: #ff6600; color: white; border: 2px solid #ffaa00;")
+        self.pause_button.show()
 
-        # Stop button (initially hidden)
+        # Stop button (now visible with orange color)
         self.stop_button = QPushButton("⏹️")
         self.stop_button.setFixedSize(*BUTTON_DEFAULT_SIZE)
         self.stop_button.setToolTip("Ferma")
         self.stop_button.clicked.connect(self.stop_reading)
-        self.stop_button.hide()
+        self.stop_button.setStyleSheet("background-color: #ff6600; color: white; border: 2px solid #ffaa00;")
+        self.stop_button.show()
 
         self.edit_button = QPushButton("✏️")
         self.edit_button.setFixedSize(*BUTTON_DEFAULT_SIZE)
@@ -196,10 +201,16 @@ class DraggableTextWidget(QFrame):
             self.is_reading = True
             self.is_paused = False
 
-            # Hide read button, show pause and stop buttons
-            self.read_button.hide()
+            # Keep all buttons visible with orange color and enable pause/stop when reading
+            self.read_button.show()
             self.pause_button.show()
             self.stop_button.show()
+
+            # Abilita i pulsanti di pausa e stop durante la lettura
+            self.pause_button.setEnabled(True)
+            self.stop_button.setEnabled(True)
+            self.pause_button.setStyleSheet("background-color: #ff6600; color: white; border: 2px solid #ffaa00;")
+            self.stop_button.setStyleSheet("background-color: #ff6600; color: white; border: 2px solid #ffaa00;")
 
             # Start reading
             text_to_read = self.text_label.text()
@@ -242,12 +253,21 @@ class DraggableTextWidget(QFrame):
         self.is_reading = False
         self.is_paused = False
 
+        # Mantieni tutti i pulsanti sempre visibili con colore arancione
         self.read_button.show()
-        self.pause_button.hide()
-        self.stop_button.hide()
+        self.pause_button.show()
+        self.stop_button.show()
 
+        # Disabilita i pulsanti di pausa e stop quando non si sta leggendo
+        self.pause_button.setEnabled(False)
+        self.stop_button.setEnabled(False)
         self.pause_button.setText("⏸️")
-        self.pause_button.setToolTip("Pausa")
+        self.pause_button.setToolTip("Pausa (disabilitato)")
+
+        # Aggiorna lo stile per mostrare lo stato disabilitato
+        disabled_style = "background-color: #ffaa00; color: #666; border: 2px solid #ffcc00;"
+        self.pause_button.setStyleSheet(disabled_style)
+        self.stop_button.setStyleSheet(disabled_style)
 
     def toggle_selection(self):
         """Alterna lo stato di selezione del widget."""

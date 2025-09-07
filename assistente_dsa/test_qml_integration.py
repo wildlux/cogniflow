@@ -3,6 +3,8 @@
 Test script per verificare l'integrazione QML con Ollama
 """
 
+import os
+import sys
 
 # Aggiungi il percorso per importare i moduli
 sys.path.append(os.path.dirname(__file__))

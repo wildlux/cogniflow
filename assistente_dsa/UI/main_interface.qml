@@ -21,7 +21,7 @@ ApplicationWindow {
     property bool useShiftEnterForNewline: true  // Configurable setting
     property string selectedModel: "llama2:7b"  // Selected AI model
     property var availableModels: ["llama2:7b", "codellama:7b", "llava:7b"]  // Available models
-    property bool showLogMessages: false  // Toggle per visualizzare messaggi log
+    property bool showLogMessages: true  // Toggle per visualizzare messaggi log (ora visibile per default)
     property var workspacePensierini: []  // Pensierini nell'area di lavoro
 
     // FileDialog per esportare pensierini
@@ -1280,12 +1280,12 @@ ApplicationWindow {
     // Area log scorrevole
     Rectangle {
         id: systemLogArea
-        visible: false
+        visible: true
         width: 400
         height: 300
-        color: "#2d2d2d"
-        border.color: "#555"
-        border.width: 1
+        color: "#ff6600"
+        border.color: "#ffaa00"
+        border.width: 2
         radius: 8
 
         anchors {

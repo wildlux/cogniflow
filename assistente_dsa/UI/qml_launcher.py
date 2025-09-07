@@ -3,6 +3,8 @@
 Launcher per l'interfaccia QML con integrazione Ollama
 """
 
+import os
+import sys
 from PyQt6.QtCore import QUrl
 from PyQt6.QtQml import QQmlApplicationEngine
 from PyQt6.QtWidgets import QApplication

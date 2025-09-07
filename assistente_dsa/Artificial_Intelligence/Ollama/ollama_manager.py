@@ -3,6 +3,7 @@
 
 import json
 import logging
+import os
 import subprocess
 import requests
 import time
@@ -277,7 +278,7 @@ class OllamaModelsThread(QThread):
         except requests.exceptions.ConnectionError:
             self.error_occurred.emit("Errore di connessione a Ollama. Assicurati che il servizio sia in esecuzione.")
         except requests.exceptions.RequestException as e:
-            self.error_occurred.emit("Errore nella richiesta a Ollama: {e}")
+            self.error_occurred.emit(f"Errore nella richiesta a Ollama: {e}")
         except json.JSONDecodeError:
             self.error_occurred.emit("Risposta non valida da Ollama.")
 
@@ -327,7 +328,7 @@ class OllamaThread(QThread):
         except requests.exceptions.ConnectionError:
             self.ollama_error.emit("Errore di connessione. Assicurati che il servizio Ollama sia attivo.")
         except requests.exceptions.RequestException as e:
-            self.ollama_error.emit("Errore nella richiesta Ollama: {e}")
+            self.ollama_error.emit(f"Errore nella richiesta Ollama: {e}")
         except json.JSONDecodeError:
             self.ollama_error.emit("Risposta non valida da Ollama. Assicurati che il server sia configurato correttamente.")
 

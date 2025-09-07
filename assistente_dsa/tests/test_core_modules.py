@@ -4,6 +4,7 @@ Test Suite per Moduli Core - DSA Assistant
 Test per cache_manager, performance_monitor, circuit_breaker, health_monitor, security_monitor
 """
 
+import os
 import pytest
 import time
 import json

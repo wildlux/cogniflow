@@ -35,10 +35,10 @@ class PerformanceMonitor:
                     execution_time = time.time() - start_time
                     self.record_metric("{func_name}.execution_time", execution_time)
                     return result
-                except Exception:
+                except Exception as e:
                     execution_time = time.time() - start_time
-                    self.record_metric("{func_name}.execution_time", execution_time)
-                    self.record_metric("{func_name}.error_count", 1)
+                    self.record_metric(f"{func_name}.execution_time", execution_time)
+                    self.record_metric(f"{func_name}.error_count", 1)
                     raise e
             return wrapper
         return decorator
@@ -182,7 +182,7 @@ class PerformanceMonitor:
         with open(filepath, 'w') as f:
             json.dump(data, f, indent=2, default=str)
 
-        logger.info("Performance metrics exported to {filepath}")
+        logger.info(f"Performance metrics exported to {filepath}")
 
 
 # Istanza globale del monitor prestazioni

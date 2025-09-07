@@ -112,7 +112,7 @@ class TestSecurity:
                     self.config.set_setting(key, "value_{i}")
                     value = self.config.get_setting(key)
                     results.append((worker_id, i, value))
-            except Exception:
+            except Exception as e:
                 errors.append((worker_id, str(e)))
 
         # Avvia 5 thread concorrenti

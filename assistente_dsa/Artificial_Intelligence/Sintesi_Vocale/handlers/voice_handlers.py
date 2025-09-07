@@ -1,6 +1,7 @@
 # voice_handlers.py - Gestori per le funzioni TTS e riconoscimento vocale
 
 import logging
+import os
 from PyQt6.QtWidgets import QMessageBox
 
 from ...Riconoscimento_Vocale.managers.speech_recognition_manager import SpeechRecognitionThread

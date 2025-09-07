@@ -59,7 +59,7 @@ class HealthCheck:
                 "timestamp": datetime.now()
             }
 
-        except Exception:
+        except Exception as e:
             self.consecutive_failures += 1
             self.last_error = str(e)
 
@@ -290,7 +290,7 @@ class HealthMonitor:
                 "ollama_running": is_running,
                 "connection_status": "connected" if is_running else "disconnected"
             }
-        except Exception:
+        except Exception as e:
             return {
                 "ollama_running": False,
                 "connection_status": "error",
@@ -307,7 +307,7 @@ class HealthMonitor:
                 "settings_accessible": True,
                 "settings_keys": len(settings) if isinstance(settings, dict) else 0
             }
-        except Exception:
+        except Exception as e:
             return {
                 "settings_accessible": False,
                 "error": str(e)
@@ -337,7 +337,7 @@ class HealthMonitor:
                 "test_message": test_message[:50] + "...",
                 "file_created": True
             }
-        except Exception:
+        except Exception as e:
             return {
                 "log_writing": False,
                 "error": str(e)

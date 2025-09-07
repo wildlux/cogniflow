@@ -3,6 +3,7 @@
 import time
 import signal
 import logging
+import os
 from PyQt6.QtCore import QThread, pyqtSignal
 
 # Import per monitoraggio CPU e temperatura
@@ -38,7 +39,6 @@ class CPUMonitor(QThread):
         # Ottieni il PID del processo corrente
         try:
             if HAS_PSUTIL:
-                import psutil
                 self.process = psutil.Process(os.getpid())
             else:
                 self.process = None
@@ -108,7 +108,6 @@ class CPUMonitor(QThread):
         try:
             if HAS_PSUTIL and self.process:
                 # Utilizzo CPU del processo specifico
-                import psutil
                 return self.process.cpu_percent(interval=1)
             else:
                 # Fallback: utilizzo CPU totale del sistema
@@ -125,7 +124,6 @@ class CPUMonitor(QThread):
         """Ottiene la temperatura del processore."""
         try:
             if HAS_PSUTIL:
-                import psutil
                 # Prova a ottenere la temperatura usando psutil
                 if hasattr(psutil, 'sensors_temperatures'):
                     temps = psutil.sensors_temperatures()
@@ -155,7 +153,6 @@ class CPUMonitor(QThread):
             # Fallback per Windows usando wmi (se disponibile)
             if HAS_WMI:
                 try:
-                    import wmi
                     w = wmi.WMI(namespace="root\\wmi")
                     temperature_info = w.MSAcpi_ThermalZoneTemperature()
                     for temp in temperature_info:
@@ -231,7 +228,7 @@ class CPUMonitor(QThread):
                 logging.error("Tipo di segnale non supportato: {signal_type}")
                 return
 
-            logging.critical("Invio segnale {sig_name} (PID: {current_pid}) per alto utilizzo CPU")
+            logging.critical(f"Invio segnale {sig_name} (PID: {current_pid}) per alto utilizzo CPU")
 
             # Invia il segnale al processo corrente
             os.kill(current_pid, sig)

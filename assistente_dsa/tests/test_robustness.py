@@ -78,8 +78,6 @@ class TestRobustness:
 
     def test_concurrent_file_access(self):
         """Test accessi concorrenti al file delle impostazioni."""
-        import threading
-
         results = []
         errors = []
 
@@ -255,7 +253,6 @@ class TestRobustness:
             assert cb.get_state().value == "OPEN"
 
             # Aspetta recovery timeout
-            import time
             time.sleep(1.1)
 
             # Dovrebbe provare recovery

@@ -139,7 +139,6 @@ class CircuitBreaker:
         except ImportError:
             # Su Windows, signal non è disponibile, usa un approccio alternativo
             import threading
-            from typing import Optional
 
             result: Optional[Any] = None
             exception: Optional[Exception] = None
@@ -149,7 +148,7 @@ class CircuitBreaker:
                 nonlocal result, exception, completed
                 try:
                     result = func(*args, **kwargs)
-                except Exception:
+                except Exception as e:
                     exception = e
                 finally:
                     completed = True

@@ -3,6 +3,7 @@
 import pyttsx3
 import threading
 import logging
+import os
 import simpleaudio as sa
 import gtts
 import subprocess

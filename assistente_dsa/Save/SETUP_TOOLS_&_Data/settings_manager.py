@@ -5,6 +5,7 @@ Tutte le costanti e configurazioni vengono caricate dal file settings.json.
 """
 
 import json
+import os
 from typing import Dict, Any, Optional
 
 

@@ -5,6 +5,7 @@ Interfaccia grafica completa per modificare tutte le configurazioni
 """
 
 import subprocess
+import sys
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -729,8 +730,8 @@ class SettingsDialog(QDialog):
             self.test_combo.setCurrentText(get_setting('test.test_option', 'Opzione 1'))
             self.test_checkbox.setChecked(get_setting('test.test_enabled', True))
 
-        except Exception:
-            QMessageBox.warning(self, "Errore", "Errore nel caricamento delle impostazioni: {e}")
+        except Exception as e:
+            QMessageBox.warning(self, "Errore", f"Errore nel caricamento delle impostazioni: {e}")
 
     def save_settings(self):
         """Salva le impostazioni modificate."""

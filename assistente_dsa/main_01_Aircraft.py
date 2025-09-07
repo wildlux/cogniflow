@@ -6,6 +6,8 @@ Richiama la porta aerei per avviare l'interfaccia principale
 
 import json
 import logging
+import os
+import sys
 from datetime import datetime
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFontDatabase, QFont
@@ -354,8 +356,8 @@ class MainWindow(QMainWindow):
                                         "Richiesta: {len(prompt)} caratteri\n"
                                         "Risposta: {len(response)} caratteri")
 
-        except Exception:
-            logging.error("Errore nella gestione della risposta AI: {e}")
+        except Exception as e:
+            logging.error(f"Errore nella gestione della risposta AI: {e}")
             show_user_friendly_error(self, e, "risposta AI")
             # Riabilita il pulsante in caso di errore
             if hasattr(self, 'rephrase_button'):
@@ -1991,7 +1993,7 @@ class MainWindow(QMainWindow):
                                     "Il testo riconosciuto verrà aggiunto direttamente ai pensierini.\n"
                                     "Il riconoscimento si fermerà automaticamente dopo 3 secondi di silenzio.")
 
-        except Exception:
+        except Exception as e:
             show_user_friendly_error(self, e, "riconoscimento vocale")
             self.voice_button.setEnabled(True)
             self.voice_button.setText("🎤 Trascrivi la mia voce")
@@ -2883,7 +2885,6 @@ Riformulazione intensa:"""
 
             if reply == QMessageBox.StandardButton.Yes:
                 from main_03_configurazione_e_opzioni import get_config
-                from datetime import datetime
                 log_config = get_config()
                 log_file = log_config.get_setting('files.log_file', 'Save/LOG/app.log')
 

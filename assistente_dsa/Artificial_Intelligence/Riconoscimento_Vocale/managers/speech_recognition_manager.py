@@ -1,4 +1,5 @@
 import logging
+import os
 import requests
 import zipfile
 import tempfile
@@ -11,7 +12,7 @@ try:
     VOSK_AVAILABLE = True
     PYAUDIO_AVAILABLE = True
 except ImportError as e:
-    logging.error("Errore: Assicurati che le librerie 'vosk' e 'pyaudio' siano installate. {e}")
+    logging.error(f"Errore: Assicurati che le librerie 'vosk' e 'pyaudio' siano installate. {e}")
     VOSK_AVAILABLE = False
     PYAUDIO_AVAILABLE = False
     vosk = None
@@ -298,7 +299,7 @@ def download_vosk_model(model_name, progress_callback=None):
     try:
         # URL base per i modelli Vosk
         base_url = "https://alphacephei.com/vosk/models"
-        model_url = "{base_url}/{model_name}.zip"
+        model_url = f"{base_url}/{model_name}.zip"
 
         # Directory di destinazione
         models_dir = os.path.join("Artificial_Intelligence", "Riconoscimento_Vocale", "models", "vosk_models")
@@ -337,7 +338,7 @@ def download_vosk_model(model_name, progress_callback=None):
                     # Aggiorna progresso se disponibile
                     if progress_callback and total_size > 0:
                         progress = int((downloaded_size / total_size) * 100)
-                        progress_callback("🔄 Scaricamento: {progress}%")
+                        progress_callback(f"🔄 Scaricamento: {progress}%")
 
         if progress_callback:
             progress_callback("📦 Estrazione modello {model_name}...")
@@ -362,19 +363,19 @@ def download_vosk_model(model_name, progress_callback=None):
             return False
 
     except requests.exceptions.RequestException as e:
-        error_msg = "Errore nel download del modello {model_name}: {e}"
+        error_msg = f"Errore nel download del modello {model_name}: {e}"
         logging.error(error_msg)
         if progress_callback:
-            progress_callback("❌ Errore download: {str(e)}")
+            progress_callback(f"❌ Errore download: {str(e)}")
         return False
     except zipfile.BadZipFile as e:
-        error_msg = "File zip corrotto per il modello {model_name}: {e}"
+        error_msg = f"File zip corrotto per il modello {model_name}: {e}"
         logging.error(error_msg)
         if progress_callback:
             progress_callback("❌ File zip corrotto")
         return False
-    except Exception:
-        error_msg = "Errore imprevisto durante il download del modello {model_name}: {e}"
+    except Exception as e:
+        error_msg = f"Errore imprevisto durante il download del modello {model_name}: {e}"
         logging.error(error_msg)
         if progress_callback:
             progress_callback("❌ Errore imprevisto: {str(e)}")

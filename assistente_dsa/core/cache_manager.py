@@ -4,6 +4,7 @@ Cache Manager - Sistema di cache intelligente
 Gestisce cache per impostazioni, risultati AI, e altri dati
 """
 
+import os
 import time
 import threading
 import hashlib

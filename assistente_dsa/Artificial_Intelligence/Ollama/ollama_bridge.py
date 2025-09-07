@@ -4,6 +4,8 @@ Bridge per integrare Ollama con QML
 """
 
 import logging
+import os
+import sys
 from PyQt6.QtCore import QObject, pyqtSignal, QThread, pyqtSlot
 from PyQt6.QtQml import QQmlApplicationEngine
 
