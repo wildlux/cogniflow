@@ -9,12 +9,12 @@ import logging
 import os
 import sys
 from datetime import datetime
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFontDatabase, QFont
+from PyQt6.QtCore import Qt, QTimer, QEvent, QPropertyAnimation, QEasingCurve
+from PyQt6.QtGui import QFontDatabase, QFont, QColor, QShortcut, QKeySequence
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel,
     QPushButton, QHBoxLayout, QLineEdit, QTextEdit, QGroupBox,
-    QScrollArea, QMessageBox, QFileDialog, QSlider, QDialog, QSplitter, QGridLayout, QFrame
+    QScrollArea, QMessageBox, QFileDialog, QSlider, QDialog, QSplitter, QGridLayout, QFrame, QToolBox
 )
 
 # Import TTS per la pronuncia IPA
@@ -264,11 +264,169 @@ class MainWindow(QMainWindow):
 
         logging.info("Applicazione avviata")
 
-    def set_safe_font(self):
-        """Imposta un font sicuro e standard per evitare artefatti di rendering."""
+        # Log delle metriche iniziali dopo che l'UI è stata configurata
+        QTimer.singleShot(1000, lambda: self.log_ui_metrics("INITIAL_SETUP"))
+
+    def log_ui_metrics(self, context=""):
+        """Registra le metriche dell'interfaccia per il debug."""
         try:
+            # Dimensioni finestra principale
+            window_size = self.size()
+            window_pos = self.pos()
+
+            # Posizioni e dimensioni dei pulsanti nella top bar
+            buttons_info = {}
+            try:
+                if hasattr(self, 'options_button') and self.options_button is not None:
+                    pos = self.options_button.pos()
+                    size = self.options_button.size()
+                    buttons_info['options_button'] = {
+                        'pos': (pos.x(), pos.y()),
+                        'size': (size.width(), size.height())
+                    }
+            except Exception as e:
+                print(f"Error getting options_button metrics: {e}")
+
+            try:
+                if hasattr(self, 'toggle_tools_button') and self.toggle_tools_button is not None:
+                    pos = self.toggle_tools_button.pos()
+                    size = self.toggle_tools_button.size()
+                    buttons_info['toggle_tools_button'] = {
+                        'pos': (pos.x(), pos.y()),
+                        'size': (size.width(), size.height())
+                    }
+            except Exception as e:
+                print(f"Error getting toggle_tools_button metrics: {e}")
+
+            try:
+                if hasattr(self, 'save_button') and self.save_button is not None:
+                    pos = self.save_button.pos()
+                    size = self.save_button.size()
+                    buttons_info['save_button'] = {
+                        'pos': (pos.x(), pos.y()),
+                        'size': (size.width(), size.height())
+                    }
+            except Exception as e:
+                print(f"Error getting save_button metrics: {e}")
+
+            try:
+                if hasattr(self, 'load_button') and self.load_button is not None:
+                    pos = self.load_button.pos()
+                    size = self.load_button.size()
+                    buttons_info['load_button'] = {
+                        'pos': (pos.x(), pos.y()),
+                        'size': (size.width(), size.height())
+                    }
+            except Exception as e:
+                print(f"Error getting load_button metrics: {e}")
+
+            # Dimensioni del layout principale
+            main_layout_geometry = None
+            try:
+                if hasattr(self, 'centralWidget') and self.centralWidget():
+                    cw = self.centralWidget()
+                    if cw:
+                        geom = cw.geometry()
+                        main_layout_geometry = (geom.x(), geom.y(), geom.width(), geom.height())
+            except Exception as e:
+                print(f"Error getting central widget geometry: {e}")
+
+            # Dimensioni dello splitter verticale
+            splitter_sizes = None
+            if hasattr(self, 'vertical_splitter'):
+                splitter_sizes = self.vertical_splitter.sizes()
+
+            metrics = {
+                'context': context,
+                'timestamp': datetime.now().isoformat(),
+                'window': {
+                    'size': (window_size.width(), window_size.height()),
+                    'pos': (window_pos.x(), window_pos.y())
+                },
+                'buttons': buttons_info,
+                'main_layout': main_layout_geometry,
+                'splitter_sizes': splitter_sizes
+            }
+
+            # Salva in un file di log per analisi
+            import json
+            import os
+            log_dir = os.path.join(os.path.dirname(__file__), "debug_logs")
+            os.makedirs(log_dir, exist_ok=True)
+            log_file = os.path.join(log_dir, "ui_metrics.jsonl")
+
+            with open(log_file, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(metrics, ensure_ascii=False) + '\n')
+
+            print(f"📊 UI Metrics logged - Context: {context}")
+            print(f"   Window size: {window_size.width()}x{window_size.height()}")
+            print(f"   Window pos: {window_pos.x()}, {window_pos.y()}")
+
+            for btn_name, btn_data in buttons_info.items():
+                print(f"   {btn_name}: pos={btn_data['pos']}, size={btn_data['size']}")
+
+            if splitter_sizes:
+                print(f"   Splitter sizes: {splitter_sizes}")
+
+        except Exception as e:
+            print(f"❌ Error logging UI metrics: {e}")
+
+    def toggle_tools_panel(self):
+        """Mostra/nasconde il pannello degli strumenti (Ingranaggi) nel nuovo layout a 3 sezioni."""
+        # Log metriche PRIMA del toggle
+        self.log_ui_metrics("BEFORE_TOGGLE")
+
+        if self.tools_toolbox.isVisible():
+            # Nasconde il pannello strumenti
+            self.tools_toolbox.setVisible(False)
+            # Ricalcola le proporzioni per dare più spazio alle altre sezioni
+            current_sizes = self.vertical_splitter.sizes()
+            columns_size = current_sizes[0]  # Colonne (primo elemento)
+            input_size = current_sizes[1]    # Input pensierini (secondo elemento)
+            total_current = columns_size + input_size
+            # Ridistribuisci lo spazio tra colonne e input
+            columns_new = total_current * 3 // 4  # 3/4 per colonne
+            input_new = total_current - columns_new  # Il resto per input
+            self.vertical_splitter.setSizes([columns_new, input_new, 0])
+
+            # Salva nelle preferenze
+            self.settings['ui'] = self.settings.get('ui', {})
+            self.settings['ui']['tools_panel_visible'] = False
+        else:
+            # Mostra il pannello strumenti
+            self.tools_toolbox.setVisible(True)
+            # Ripristina proporzioni bilanciate
+            current_sizes = self.vertical_splitter.sizes()
+            columns_size = current_sizes[0]  # Colonne esistenti
+            input_size = current_sizes[1]    # Input esistenti
+            total_current = columns_size + input_size
+            tools_size = total_current // 3  # Un terzo per strumenti
+            remaining = total_current - tools_size
+            columns_new = remaining * 2 // 3  # 2/3 del rimanente per colonne
+            input_new = remaining - columns_new  # Il resto per input
+            self.vertical_splitter.setSizes([columns_new, input_new, tools_size])
+
+            # Salva nelle preferenze
+            self.settings['ui'] = self.settings.get('ui', {})
+            self.settings['ui']['tools_panel_visible'] = True
+
+        # Log metriche DOPO il toggle
+        QTimer.singleShot(100, lambda: self.log_ui_metrics("AFTER_TOGGLE"))
+
+        # Salva le impostazioni
+        from main_03_configurazione_e_opzioni import save_settings
+        save_settings(self.settings)
+
+    def set_safe_font(self):
+        """Imposta un font sicuro e standard per evitare artefatti di rendering, usando le preferenze utente."""
+        try:
+            # Ottieni le preferenze font dalle impostazioni utente
+            user_font_family = self.settings.get('fonts', {}).get('main_font_family', 'Arial')
+            user_font_size = self.settings.get('fonts', {}).get('main_font_size', 12)
+
             # Lista di font sicuri e standard, ordinati per priorità
             safe_fonts = [
+                user_font_family,  # Prima priorità: font scelto dall'utente
                 'Segoe UI',      # Windows moderno
                 'SF Pro Display',  # macOS moderno
                 'Ubuntu',        # Linux moderno
@@ -290,21 +448,21 @@ class MainWindow(QMainWindow):
                     break
 
             if selected_font:
-                # Imposta il font sicuro con dimensione ottimale
-                safe_font = QFont(selected_font, 13)  # Dimensione bilanciata
+                # Imposta il font sicuro con dimensione dalle preferenze utente
+                safe_font = QFont(selected_font, user_font_size)
                 safe_font.setWeight(QFont.Weight.Normal)
                 safe_font.setStyleHint(QFont.StyleHint.System)  # Hint per sistema
                 QApplication.setFont(safe_font)
-                logging.info("✅ Font sicuro impostato: {selected_font} (13pt)")
+                logging.info(f"✅ Font sicuro impostato: {selected_font} ({user_font_size}pt)")
             else:
-                # Fallback al font di sistema
+                # Fallback al font di sistema con dimensione utente
                 system_font = QApplication.font()
-                system_font.setPointSize(13)
+                system_font.setPointSize(user_font_size)
                 QApplication.setFont(system_font)
-                logging.info("✅ Font di sistema impostato come fallback")
+                logging.info(f"✅ Font di sistema impostato come fallback ({user_font_size}pt)")
 
-        except Exception:
-            logging.error("❌ Errore impostazione font sicuro: {e}")
+        except Exception as e:
+            logging.error(f"❌ Errore impostazione font sicuro: {e}")
             # Assicurati che ci sia sempre un font valido
             try:
                 system_font = QApplication.font()
@@ -326,7 +484,6 @@ class MainWindow(QMainWindow):
             # Riabilita il pulsante di riformulazione se era disabilitato
             if hasattr(self, 'rephrase_button'):
                 self.rephrase_button.setEnabled(True)
-                self.rephrase_button.setText("🧠 Riformula intensamente")
 
             # Controlla se è una risposta di riformulazione
             if "Riformula intensamente" in prompt or "Riformulazione intensa" in prompt:
@@ -362,7 +519,6 @@ class MainWindow(QMainWindow):
             # Riabilita il pulsante in caso di errore
             if hasattr(self, 'rephrase_button'):
                 self.rephrase_button.setEnabled(True)
-                self.rephrase_button.setText("🧠 Riformula intensamente")
 
     def _on_ai_error_occurred(self, error_msg):
         """Gestisce gli errori da Ollama."""
@@ -377,73 +533,33 @@ class MainWindow(QMainWindow):
             from datetime import datetime
             current_time = datetime.now().strftime("%H:%M:%S")
             status_text = "🕐 {current_time} | 👤 Sessione attiva | 📊 Sistema operativo"
-            self.status_footer_label.setText(status_text)
         except Exception:
             logging.error("Errore nell'aggiornamento del footer: {e}")
-            self.status_footer_label.setText("📊 Stato: Sistema attivo")
 
     def setup_ui(self):
-        self.setWindowTitle("CogniFlow")
+
         # Usa le dimensioni dalla configurazione globale
         window_width = self.settings.get('ui', {}).get('window_width', 1200)
         window_height = self.settings.get('ui', {}).get('window_height', 800)
-        self.setGeometry(100, 100, window_width, window_height)
+
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
         # Applica stile globale con font sicuro
-        # Carica colori dalle impostazioni
-        button_border_color = self.settings.get('button_border_color', '#357abd')
-        general_button_color = self.settings.get('general_button_color', '#4a90e2')
-        hover_button_color = self.settings.get('hover_button_color', '#357abd')
-        pressed_button_color = self.settings.get('pressed_button_color', '#2e5f8f')
-        options_button_color = self.settings.get('options_button_color', '#6c757d')
-        save_button_color = self.settings.get('save_button_color', '#28a745')
-        load_button_color = self.settings.get('load_button_color', '#ffc107')
-        add_pensierino_button_color = self.settings.get('add_pensierino_button_color', '#17a2b8')
+        # Carica colori dalle impostazioni centralizzate
+        colors = self.settings.get('colors', {})
+        button_text_colors = colors.get('button_text_colors', {})
+        button_border_colors = colors.get('button_border_colors', {})
+        button_background_colors = colors.get('button_background_colors', {})
+        button_hover_colors = colors.get('button_hover_colors', {})
+        button_pressed_colors = colors.get('button_pressed_colors', {})
 
-        # Simplified CSS to avoid parsing issues
-        self.setStyleSheet("""
-            QMainWindow {
-                background: #f8f9fa;
-                font-size: 13px;
-            }
+        # Carica preferenze font dalle impostazioni
+        main_font_size = self.settings.get('fonts', {}).get('main_font_size', 13)
+        pensierini_font_size = self.settings.get('fonts', {}).get('pensierini_font_size', 12)
 
-            QPushButton {
-                background-color: #4a90e2;
-                color: white;
-                border: 2px solid #357abd;
-                border-radius: 10px;
-                padding: 12px 16px;
-                font-weight: bold;
-                min-width: 140px;
-                min-height: 40px;
-                font-size: 14px;
-            }
-
-            QPushButton:hover {
-                background-color: #357abd;
-            }
-
-            QLabel {
-                font-size: 13px;
-            }
-
-            QTextEdit {
-                font-size: 13px;
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                padding: 8px;
-            }
-
-            QLineEdit {
-                border: 2px solid #4a90e2;
-                border-radius: 10px;
-                padding: 12px 16px;
-                font-size: 16px;
-            }
-        """)
+        # CSS dinamico basato sulle impostazioni colori - REMOVED
 
         main_layout = QVBoxLayout(central_widget)
 
@@ -453,6 +569,14 @@ class MainWindow(QMainWindow):
         self.options_button.setObjectName("options_button")  # ID per CSS
         self.options_button.clicked.connect(self.open_settings)
         top_layout.addWidget(self.options_button)
+
+        # Pulsante per mostrare/nascondere il pannello strumenti
+        self.toggle_tools_button = QPushButton("🔧 Ingranaggi")
+        self.toggle_tools_button.setObjectName("toggle_tools_button")
+        self.toggle_tools_button.setCheckable(True)
+        self.toggle_tools_button.setMinimumHeight(40)  # Assicura altezza consistente
+        self.toggle_tools_button.clicked.connect(self.toggle_tools_panel)
+        top_layout.addWidget(self.toggle_tools_button)
 
         top_layout.addStretch()
         self.project_name_input = QLineEdit()
@@ -477,18 +601,20 @@ class MainWindow(QMainWindow):
 
         # Create splitter for resizable columns
         self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.main_splitter.setHandleWidth(0)  # Remove divider line
+        self.main_splitter.setHandleWidth(8)  # Increased divider width for better visibility
         self.main_splitter.setStyleSheet("""
             QSplitter::handle {
-                background: transparent;
-                border: none;
-                border-radius: 0px;
+                background: rgba(108, 117, 125, 0.4);
+                border: 1px solid rgba(108, 117, 125, 0.6);
+                border-radius: 2px;
             }
             QSplitter::handle:hover {
-                background: rgba(74, 144, 226, 0.3);
+                background: rgba(74, 144, 226, 0.6);
+                border-color: rgba(74, 144, 226, 0.8);
             }
             QSplitter::handle:pressed {
-                background: rgba(74, 144, 226, 0.5);
+                background: rgba(74, 144, 226, 0.8);
+                border-color: rgba(74, 144, 226, 1.0);
             }
         """)
 
@@ -520,7 +646,6 @@ class MainWindow(QMainWindow):
         self.column_c_group = QGroupBox("Lavagna risposta Interattiva & AI")
         self.column_c_group.setObjectName("details")  # ID per CSS
         self.column_c_group.setMinimumWidth(300)  # Minimum width for details
-        self.column_c_group.setMinimumHeight(600)  # Altezza minima aumentata significativamente
         column_c_layout = QVBoxLayout(self.column_c_group)
         self.details_scroll = QScrollArea()
         self.details_scroll.setWidgetResizable(True)
@@ -538,13 +663,52 @@ class MainWindow(QMainWindow):
 
         # main_splitter will be added to vertical_splitter later
 
-        # Top input group for pensierini creation
-        pensierini_input_group = QGroupBox("✏️ Creazione Pensierini")
-        pensierini_input_group.setObjectName("pensierini_input")  # ID per CSS
-        pensierini_input_group.setMinimumHeight(80)  # Compact height for input area
-        pensierini_input_group.setMaximumHeight(100)  # Limit maximum height
-        pensierini_layout = QVBoxLayout(pensierini_input_group)
-        pensierini_layout.setContentsMargins(10, 20, 10, 10)  # Add top margin for title space
+        # Accordion per la creazione pensierini
+        self.pensierini_toolbox = QToolBox()
+        self.pensierini_toolbox.setObjectName("pensierini_toolbox")
+        self.pensierini_toolbox.setMinimumHeight(120)  # Ottimizzato per compattezza
+        self.pensierini_toolbox.setMaximumHeight(160)  # Limite ragionevole per evitare spreco
+        self.pensierini_toolbox.setStyleSheet("""
+            QToolBox {
+                background: rgba(255, 255, 255, 0.95);
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                font-weight: bold;
+                font-size: 12px;
+            }
+
+            QToolBox::tab {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #ffffff, stop:1 #f8f9fa);
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                padding: 6px 12px;
+                margin: 1px;
+                color: #495057;
+                font-weight: bold;
+                min-height: 16px;
+                font-size: 12px;
+            }
+
+            QToolBox::tab:selected {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #e8f5e8, stop:1 #c8e6c9);
+                border-color: #4caf50;
+                color: #2e7d32;
+            }
+
+            QToolBox::tab:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #f8fff8, stop:1 #e8f5e8);
+                border-color: #81c784;
+            }
+        """)
+
+        # Crea la pagina per l'input dei pensierini
+        pensierini_page = QWidget()
+        pensierini_page.setObjectName("pensierini_page")
+        pensierini_layout = QVBoxLayout(pensierini_page)
+        pensierini_layout.setContentsMargins(10, 15, 10, 10)
 
         # Riga input testo + pulsante aggiungi pensierino
         input_row_layout = QHBoxLayout()
@@ -566,45 +730,70 @@ class MainWindow(QMainWindow):
 
         pensierini_layout.addLayout(input_row_layout)
 
-        # ===========================================
-        # === SEZIONE INGRANAGGI - BARRA STRUMENTI ===
-        # ===========================================
-        # Inizio creazione sezione strumenti/ingranaggi
-        # Contiene: Trascrizione, AI&Media, Conoscenza, Utilità, IOT
+        # Aggiungi la pagina al QToolBox
+        self.pensierini_toolbox.addItem(pensierini_page, "✏️ Crea Pensierini")
+        self.pensierini_toolbox.setCurrentIndex(0)  # Espandi per default
 
-        tools_group = QGroupBox("⚙️ Ingranaggi")
-        tools_group.setObjectName("tools")  # ID per CSS
-        tools_group.setMinimumHeight(250)  # Increased minimum height for better button spacing
-        tools_group.setAlignment(Qt.AlignmentFlag.AlignTop)  # Ensure title stays at top
-        tools_layout = QVBoxLayout(tools_group)
-        tools_layout.setContentsMargins(10, 25, 10, 10)  # Add top margin for title space
+        # ===========================================
+        # === SEZIONE STRUMENTI AVANZATI ===
+        # ===========================================
+        # Sezione migliorata con accordion per migliore usabilità
 
-        # Crea un widget contenitore per gli strumenti
-        self.tools_container = QWidget()
-        self.tools_container.setObjectName("tools_container")
-        self.tools_container.setStyleSheet("""
-            QWidget {
+        # Crea QToolBox (Accordion) per gli strumenti
+        self.tools_toolbox = QToolBox()
+        self.tools_toolbox.setObjectName("tools_toolbox")
+        self.tools_toolbox.setMinimumHeight(320)  # Ottimizzato per compattezza ma funzionale
+        self.tools_toolbox.setStyleSheet("""
+            QToolBox {
+                background: rgba(255, 255, 255, 0.95);
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                font-weight: bold;
+                font-size: 13px;
+            }
+
+            QToolBox::tab {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #ffffff, stop:1 #f8f9fa);
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                padding: 8px 16px;
+                margin: 1px;
+                color: #495057;
+                font-weight: bold;
+                min-height: 18px;
+                font-size: 13px;
+            }
+
+            QToolBox::tab:selected {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #e3f2fd, stop:1 #bbdefb);
+                border-color: #2196f3;
+                color: #1976d2;
+            }
+
+            QToolBox::tab:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #f8f9ff, stop:1 #e8f4fd);
+                border-color: #64b5f6;
+            }
+
+            QToolBox QScrollArea {
                 border: none;
                 background: transparent;
             }
         """)
 
-        # Layout per il contenitore degli strumenti
-        tools_container_layout = QVBoxLayout(self.tools_container)
-        tools_container_layout.setContentsMargins(10, 10, 10, 10)
+        # Crea le pagine per il QToolBox (Accordion)
+        # Ogni categoria avrà la sua pagina espandibile
 
-        # Contenitore principale per i sottogruppi
-        subgroups_container = QHBoxLayout()
-        subgroups_container.setSpacing(15)
-
-        # === SOTTOGRUPPO 1: TRASCRIZIONE ===
+        # === PAGINA 1: TRASCRIZIONE ===
         # Contiene: Voce→Testo, Audio→Testo, OCR→Testo, Tavoletta Grafica
-        self.transcription_group = QGroupBox("🎤 Trascrizione")
-        self.transcription_group.setObjectName("transcription_subgroup")
-        # Removed maximumWidth to allow buttons to fit their text
-        transcription_layout = QVBoxLayout(self.transcription_group)  # Changed to vertical layout
-        transcription_layout.setSpacing(8)
-        transcription_layout.setContentsMargins(10, 15, 10, 15)
+        transcription_page = QWidget()
+        transcription_page.setObjectName("transcription_page")
+        transcription_layout = QVBoxLayout(transcription_page)
+        transcription_layout.setSpacing(10)
+        transcription_layout.setContentsMargins(12, 20, 12, 15)
 
         # Add buttons directly to vertical layout
         self.voice_button = QPushButton("🎤 Voce → Testo")
@@ -630,16 +819,14 @@ class MainWindow(QMainWindow):
         self.graphics_tablet_button.setMinimumWidth(140)
         self.graphics_tablet_button.clicked.connect(self.handle_graphics_tablet_button)
         transcription_layout.addWidget(self.graphics_tablet_button)
-        subgroups_container.addWidget(self.transcription_group)
 
-        # === SOTTOGRUPPO 2: AI E MEDIA ===
+        # === PAGINA 2: AI E MEDIA ===
         # Contiene: AI, Riconoscimento (Faccia, Gesti)
-        self.ai_media_group = QGroupBox("🤖 AI & Media")
-        self.ai_media_group.setObjectName("ai_media_subgroup")
-        # Removed maximumWidth to allow natural button sizing
-        ai_media_layout = QVBoxLayout(self.ai_media_group)
-        ai_media_layout.setSpacing(8)
-        ai_media_layout.setContentsMargins(8, 10, 8, 10)
+        ai_media_page = QWidget()
+        ai_media_page.setObjectName("ai_media_page")
+        ai_media_layout = QVBoxLayout(ai_media_page)
+        ai_media_layout.setSpacing(10)
+        ai_media_layout.setContentsMargins(12, 20, 12, 15)
 
         self.ai_button = QPushButton("🧠 Chiedi ad A.I.")
         self.ai_button.setObjectName("ai_button")
@@ -650,9 +837,32 @@ class MainWindow(QMainWindow):
         # Sottogruppo riconoscimento
         recognition_group = QGroupBox("👁️ Riconoscimento")
         recognition_group.setObjectName("recognition_subgroup")
+        recognition_group.setStyleSheet("""
+            QGroupBox#recognition_subgroup {
+                font-weight: bold;
+                font-size: 12px;
+                color: #495057;
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                margin-top: 8px;
+                padding-top: 15px;
+                background: rgba(255, 255, 255, 0.7);
+                min-height: 80px;
+            }
+
+            QGroupBox#recognition_subgroup::title {
+                subcontrol-origin: margin;
+                left: 8px;
+                padding: 2px 6px;
+                color: #6c757d;
+                font-weight: bold;
+                background: rgba(248, 249, 250, 0.8);
+                border-radius: 3px;
+            }
+        """)
         recognition_layout = QVBoxLayout(recognition_group)
-        recognition_layout.setSpacing(6)
-        recognition_layout.setContentsMargins(5, 8, 5, 8)
+        recognition_layout.setSpacing(8)
+        recognition_layout.setContentsMargins(8, 20, 8, 8)
 
         self.face_button = QPushButton("❌ Faccia/e")
         self.face_button.setObjectName("face_button")
@@ -669,16 +879,14 @@ class MainWindow(QMainWindow):
         recognition_layout.addWidget(self.hand_button)
 
         ai_media_layout.addWidget(recognition_group)
-        subgroups_container.addWidget(self.ai_media_group)
 
-        # === SOTTOGRUPPO 3: CONOSCENZA ===
-        # Contiene: Griglia 4x5 con 20 materie scolastiche (IPA, Matematica, Chimica, Fisica, Biologia, Italiano, Storia, Informatica, Sistemi, Astronomia, Matematica Avanzata, Diritto, Statistica, Inglese, Tedesco, Spagnolo, Siciliano, Giapponese, Cinese, Russo)
-        self.knowledge_group = QGroupBox("🌍 Esplora il Mondo della Conoscenza")
-        self.knowledge_group.setObjectName("knowledge_subgroup")
-        # Removed maximumWidth to allow natural sizing for the 4x5 grid
-        knowledge_layout = QGridLayout(self.knowledge_group)
-        knowledge_layout.setSpacing(12)
-        knowledge_layout.setContentsMargins(12, 12, 12, 12)
+        # === PAGINA 3: CONOSCENZA ===
+        # Contiene: Griglia 4x5 con 20 materie scolastiche
+        knowledge_page = QWidget()
+        knowledge_page.setObjectName("knowledge_page")
+        knowledge_layout = QGridLayout(knowledge_page)
+        knowledge_layout.setSpacing(8)
+        knowledge_layout.setContentsMargins(15, 25, 15, 15)
 
         # Griglia 4x5 per i pulsanti delle materie
         buttons_data = [
@@ -711,14 +919,13 @@ class MainWindow(QMainWindow):
             row, col = divmod(i, 5)
             knowledge_layout.addWidget(button, row, col)
 
-        subgroups_container.addWidget(self.knowledge_group)
-
-        # === SOTTOGRUPPO 4: UTILITÀ ===
+        # === PAGINA 4: UTILITÀ ===
         # Contiene: Carica Media, Pulisci, Log
-        self.utilities_group = QGroupBox("⚙️ Utilità")
-        self.utilities_group.setObjectName("utilities_subgroup")
-        # Removed maximumWidth to allow natural button sizing
-        utilities_layout = QVBoxLayout(self.utilities_group)
+        utilities_page = QWidget()
+        utilities_page.setObjectName("utilities_page")
+        utilities_layout = QVBoxLayout(utilities_page)
+        utilities_layout.setSpacing(10)
+        utilities_layout.setContentsMargins(12, 20, 12, 15)
 
         self.media_button = QPushButton("📁 Carica Media")
         self.media_button.setObjectName("media_button")
@@ -739,16 +946,13 @@ class MainWindow(QMainWindow):
         self.log_button.clicked.connect(self.handle_log_toggle)
         utilities_layout.addWidget(self.log_button)
 
-        subgroups_container.addWidget(self.utilities_group)
-
-        # === SOTTOGRUPPO 5: IOT ===
+        # === PAGINA 5: IOT ===
         # Contiene: Arduino, Circuito, Condividi Schermo, Collabora
-        self.iot_group = QGroupBox("🔗 Periferiche esterne IOT")
-        self.iot_group.setObjectName("iot_subgroup")
-        # Removed maximumWidth to allow natural button sizing
-        iot_layout = QVBoxLayout(self.iot_group)
-        iot_layout.setSpacing(8)
-        iot_layout.setContentsMargins(8, 10, 8, 10)
+        iot_page = QWidget()
+        iot_page.setObjectName("iot_page")
+        iot_layout = QVBoxLayout(iot_page)
+        iot_layout.setSpacing(10)
+        iot_layout.setContentsMargins(12, 20, 12, 15)
 
         self.arduino_button = QPushButton("🔌 Arduino")
         self.arduino_button.setObjectName("arduino_button")
@@ -774,41 +978,22 @@ class MainWindow(QMainWindow):
         self.collab_button.clicked.connect(self.handle_collab_button)
         iot_layout.addWidget(self.collab_button)
 
-        # Aggiungi stili CSS per i pulsanti IoT con testo nero
-        self.setStyleSheet(self.styleSheet() + """
-            QPushButton#arduino_button,
-            QPushButton#circuit_button,
-            QPushButton#screen_share_button,
-            QPushButton#collab_button {
-                color: black;
-            }
-        """)
-
-        # Aggiungi stili per tutti i pulsanti in Ingranaggi
-        self.setStyleSheet(self.styleSheet() + """
-            QGroupBox#tools QPushButton {
-                background: transparent;
-                color: black;
-                border: 2px solid #357abd;
-            }
-            QGroupBox#tools QPushButton:hover {
-                background: rgba(0,0,0,0.05);
-            }
-        """)
-
-        subgroups_container.addWidget(self.iot_group)
-
         # ===========================================
-        # === FINE SEZIONE INGRANAGGI ===
+        # === AGGIUNGI PAGINE AL QTOOLBOX ===
         # ===========================================
 
-        # Aggiungi il contenitore dei sottogruppi al layout del contenitore
-        tools_container_layout.addLayout(subgroups_container)
+        # Aggiungi tutte le pagine al QToolBox con i titoli appropriati
+        self.tools_toolbox.addItem(transcription_page, "🎤 Trascrizione")
+        self.tools_toolbox.addItem(ai_media_page, "🧠 AI & Media")
+        self.tools_toolbox.addItem(knowledge_page, "📚 Materie")
+        self.tools_toolbox.addItem(utilities_page, "🛠️ Utilità")
+        self.tools_toolbox.addItem(iot_page, "🔌 IoT")
 
-        # Aggiungi il contenitore degli strumenti al layout principale
-        tools_layout.addWidget(self.tools_container)
+        # Imposta la pagina iniziale espansa (Trascrizione)
+        self.tools_toolbox.setCurrentIndex(0)
 
-        # Create vertical splitter for adjustable tools panel height
+        # Create vertical splitter for adjustable sections height
+        # NEW ORDER: 1) Columns (main content), 2) Pensierini input, 3) Tools (Ingranaggi)
         from PyQt6.QtWidgets import QSplitter
         vertical_splitter = QSplitter(Qt.Orientation.Vertical)
         vertical_splitter.setHandleWidth(5)  # Add divider
@@ -826,26 +1011,67 @@ class MainWindow(QMainWindow):
             }
         """)
 
-        vertical_splitter.addWidget(self.main_splitter)
-        vertical_splitter.addWidget(tools_group)
-        vertical_splitter.setSizes([400, 400])  # Main content and tools balanced
+        # CORRETTO ORDINE FINALE: 1) Colonne, 2) Input pensierini, 3) Strumenti
+        vertical_splitter.addWidget(self.main_splitter)  # 1) Contenuto principale (colonne A,B,C)
+        vertical_splitter.addWidget(self.pensierini_toolbox)  # 2) Creazione pensierini (accordion)
+        vertical_splitter.addWidget(self.tools_toolbox)  # 3) Strumenti (accordion)
 
+        # Salva riferimento al vertical_splitter e tools_toolbox per il toggle
+        self.vertical_splitter = vertical_splitter
+        self.tools_group = self.tools_toolbox  # Mantiene compatibilità con il toggle esistente
+
+        # Imposta dimensione minima della finestra per evitare ridimensionamenti automatici
+        self.setMinimumSize(1000, 700)
+
+        # Controlla le preferenze per lo stato iniziale del pannello strumenti
+        # NUOVO: Ora abbiamo 3 elementi - Colonne(0), Input(1), Ingranaggi(2)
+        tools_visible = self.settings.get('ui', {}).get('tools_panel_visible', True)
+        if tools_visible:
+            vertical_splitter.setSizes([380, 140, 320])  # Colonne, Input (ottimizzato), Ingranaggi compatti
+            self.toggle_tools_button.setChecked(True)
+        else:
+            vertical_splitter.setSizes([480, 140, 0])  # Nasconde ingranaggi (terzo elemento = 0)
+            self.tools_group.setVisible(False)
+            self.toggle_tools_button.setChecked(False)
+
+        # Input pensierini ora è nel vertical_splitter (posizione centrale)
         main_layout.addWidget(vertical_splitter, 1)
-
-        # Add pensierini input group UNDER the columns
-        main_layout.addWidget(pensierini_input_group)
 
         # Footer con informazioni di stato
         footer_layout = QHBoxLayout()
-        footer_layout.addStretch()  # Spazio a sinistra
+
+        # Mouse click tracking label in bottom left
+        self.click_status_label = QLabel("Clicca su un elemento...")
+        self.click_status_label.setObjectName("click_status_label")
+        click_font_size = self.settings.get('fonts', {}).get('main_font_size', 13) - 1
+        self.click_status_label.setStyleSheet(f"""
+            QLabel#click_status_label {{
+                color: #666;
+                font-size: {click_font_size}px;
+                padding: 5px 10px;
+                background: rgba(255, 255, 255, 0.8);
+                border-radius: 5px;
+                border: 1px solid #ddd;
+                font-weight: normal;
+                text-align: left;
+                min-height: 20px;
+                max-width: 200px;
+            }}
+        """)
+        footer_layout.addWidget(self.click_status_label)
+
+        footer_layout.addStretch()  # Spazio centrale
 
         # Label per informazioni di stato in basso a destra
         self.status_footer_label = QLabel()
         self.status_footer_label.setObjectName("status_footer_label")
-        self.status_footer_label.setStyleSheet("""
-            QLabel#status_footer_label {
+
+        # Usa dimensione font dalle preferenze per il footer (un po' più piccola)
+        footer_font_size = self.settings.get('fonts', {}).get('main_font_size', 13) - 2
+        self.status_footer_label.setStyleSheet(f"""
+            QLabel#status_footer_label {{
                 color: #495057;
-                font-size: 11px;
+                font-size: {footer_font_size}px;
                 padding: 6px 12px;
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                     stop:0 rgba(255, 255, 255, 0.95), stop:1 rgba(248, 249, 250, 0.95));
@@ -854,12 +1080,547 @@ class MainWindow(QMainWindow):
                 font-weight: bold;
                 text-align: center;
                 min-height: 20px;
-            }
+            }}
         """)
         self.update_footer_status()  # Aggiorna le informazioni di stato
         footer_layout.addWidget(self.status_footer_label)
 
         main_layout.addLayout(footer_layout)
+
+        # Install event filter to capture mouse clicks
+        QTimer.singleShot(100, self._install_event_filters)
+
+        # Apply modern UI improvements
+        QTimer.singleShot(200, self._apply_modern_ui_styles)
+
+    def _apply_modern_ui_styles(self):
+        """Applica stili moderni e miglioramenti all'interfaccia utente."""
+        try:
+            # Stili moderni per l'intera applicazione
+            modern_css = """
+                /* Stili base moderni */
+                QWidget {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #f8f9fa, stop:1 #e9ecef);
+                    color: #212529;
+                }
+
+                /* Miglioramenti per i GroupBox */
+                QGroupBox {
+                    font-weight: bold;
+                    font-size: 14px;
+                    color: #495057;
+                    border: 2px solid #dee2e6;
+                    border-radius: 8px;
+                    margin-top: 12px;
+                    padding-top: 20px;
+                    background: rgba(255, 255, 255, 0.8);
+                }
+
+                QGroupBox::title {
+                    subcontrol-origin: margin;
+                    left: 12px;
+                    padding: 4px 8px;
+                    color: #495057;
+                    font-weight: bold;
+                    background: rgba(255, 255, 255, 0.9);
+                    border-radius: 4px;
+                }
+
+                /* Stili moderni per tutti i pulsanti */
+                QPushButton {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #ffffff, stop:1 #f8f9fa);
+                    border: 2px solid #dee2e6;
+                    border-radius: 6px;
+                    padding: 8px 16px;
+                    font-weight: 500;
+                    font-size: 13px;
+                    color: #495057;
+                    min-height: 32px;
+                    transition: all 0.3s ease;
+                }
+
+                QPushButton:hover {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #e3f2fd, stop:1 #bbdefb);
+                    border-color: #2196f3;
+                    color: #1976d2;
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 8px rgba(33, 150, 243, 0.2);
+                }
+
+                QPushButton:pressed {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #bbdefb, stop:1 #90caf9);
+                    transform: translateY(0px);
+                    box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+                }
+
+                QPushButton:disabled {
+                    background: #f5f5f5;
+                    color: #9e9e9e;
+                    border-color: #e0e0e0;
+                    opacity: 0.6;
+                }
+
+                /* Pulsanti speciali nella top bar */
+                QPushButton#options_button, QPushButton#toggle_tools_button,
+                QPushButton#save_button, QPushButton#load_button {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #ffffff, stop:1 #f8f9fa);
+                    border: 2px solid #6c757d;
+                    font-weight: bold;
+                    min-width: 100px;
+                }
+
+                QPushButton#options_button:hover {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #fff3cd, stop:1 #ffeaa7);
+                    border-color: #ffc107;
+                    color: #856404;
+                }
+
+                QPushButton#toggle_tools_button:hover {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #d1ecf1, stop:1 #bee5eb);
+                    border-color: #17a2b8;
+                    color: #0c5460;
+                }
+
+                QPushButton#save_button:hover {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #d4edda, stop:1 #c3e6cb);
+                    border-color: #28a745;
+                    color: #155724;
+                }
+
+                QPushButton#load_button:hover {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #f8d7da, stop:1 #f5c6cb);
+                    border-color: #dc3545;
+                    color: #721c24;
+                }
+
+                /* Miglioramenti per le aree di testo */
+                QTextEdit, QLineEdit {
+                    border: 2px solid #ced4da;
+                    border-radius: 6px;
+                    padding: 8px 12px;
+                    background: #ffffff;
+                    font-size: 13px;
+                    selection-background-color: #007bff;
+                    transition: border-color 0.3s ease;
+                }
+
+                QTextEdit:focus, QLineEdit:focus {
+                    border-color: #007bff;
+                    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+                }
+
+                /* Miglioramenti per gli scroll area */
+                QScrollArea {
+                    border: 1px solid #dee2e6;
+                    border-radius: 6px;
+                    background: rgba(255, 255, 255, 0.8);
+                }
+
+                QScrollBar:vertical {
+                    background: #f8f9fa;
+                    width: 12px;
+                    border-radius: 6px;
+                    margin: 2px;
+                }
+
+                QScrollBar::handle:vertical {
+                    background: #dee2e6;
+                    border-radius: 6px;
+                    min-height: 30px;
+                    transition: background 0.3s ease;
+                }
+
+                QScrollBar::handle:vertical:hover {
+                    background: #adb5bd;
+                }
+
+                QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                    border: none;
+                    background: none;
+                }
+
+                /* Miglioramenti per i splitter */
+                QSplitter::handle {
+                    background: rgba(108, 117, 125, 0.3);
+                    border-radius: 3px;
+                    transition: background 0.3s ease;
+                }
+
+                QSplitter::handle:hover {
+                    background: rgba(108, 117, 125, 0.6);
+                }
+
+                /* Stili per il footer */
+                QLabel#status_footer_label {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 rgba(255, 255, 255, 0.95), stop:1 rgba(248, 249, 250, 0.95));
+                    border: 1px solid #dee2e6;
+                    border-radius: 8px;
+                    font-weight: 500;
+                    color: #495057;
+                }
+
+                QLabel#click_status_label {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 rgba(255, 255, 255, 0.9), stop:1 rgba(248, 249, 250, 0.9));
+                    border: 1px solid #dee2e6;
+                    border-radius: 6px;
+                    font-weight: 500;
+                    color: #495057;
+                    transition: all 0.3s ease;
+                }
+
+                QLabel#click_status_label:hover {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 rgba(220, 237, 255, 0.9), stop:1 rgba(187, 222, 251, 0.9));
+                    border-color: #2196f3;
+                }
+            """
+
+                # Applica gli stili moderni
+            self.setStyleSheet(self.styleSheet() + modern_css)
+
+            # Aggiungi animazioni per alcuni elementi
+            self._add_animations()
+
+            # Aggiungi tooltip informativi
+            self._add_tooltips()
+
+            # Aggiungi scorciatoie da tastiera
+            self._add_keyboard_shortcuts()
+
+            logging.info("✅ Stili moderni applicati con successo")
+
+        except Exception as e:
+            logging.error(f"❌ Errore nell'applicazione degli stili moderni: {e}")
+
+    def _add_animations(self):
+        """Aggiunge animazioni fluide per migliorare l'esperienza utente."""
+        try:
+            # Animazione per il pulsante toggle tools
+            if hasattr(self, 'toggle_tools_button'):
+                self.toggle_animation = QPropertyAnimation(self.toggle_tools_button, b"geometry")
+                self.toggle_animation.setDuration(300)
+                self.toggle_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+            # Animazione per il click status label
+            if hasattr(self, 'click_status_label'):
+                self.click_label_animation = QPropertyAnimation(self.click_status_label, b"windowOpacity")
+                self.click_label_animation.setDuration(200)
+                self.click_label_animation.setStartValue(0.7)
+                self.click_label_animation.setEndValue(1.0)
+                self.click_label_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
+        except Exception as e:
+            logging.error(f"❌ Errore nell'aggiunta delle animazioni: {e}")
+
+    def _add_tooltips(self):
+        """Aggiunge tooltip informativi per migliorare l'usabilità."""
+        try:
+            # Tooltip per i pulsanti della top bar
+            if hasattr(self, 'options_button'):
+                self.options_button.setToolTip("⚙️ Configura le impostazioni dell'applicazione\n"
+                                             "Personalizza colori, font e preferenze")
+
+            if hasattr(self, 'toggle_tools_button'):
+                self.toggle_tools_button.setToolTip("🔧 Mostra/Nasconde il pannello degli strumenti\n"
+                                                  "Contiene tutte le funzionalità avanzate")
+
+            if hasattr(self, 'save_button'):
+                self.save_button.setToolTip("💾 Salva il progetto corrente\n"
+                                          "Salva tutti i pensierini e le impostazioni")
+
+            if hasattr(self, 'load_button'):
+                self.load_button.setToolTip("📂 Carica un progetto salvato\n"
+                                          "Ripristina pensierini e impostazioni precedenti")
+
+            # Tooltip per i pulsanti di input
+            if hasattr(self, 'add_pensierino_button'):
+                self.add_pensierino_button.setToolTip("➕ Aggiungi un nuovo pensierino\n"
+                                                    "Crea un elemento trascinabile con il testo inserito")
+
+            # Tooltip per i pulsanti degli strumenti
+            if hasattr(self, 'voice_button'):
+                self.voice_button.setToolTip("🎤 Riconoscimento vocale\n"
+                                           "Converte la voce in testo usando Vosk\n"
+                                           "Premi e parla chiaramente nel microfono")
+
+            if hasattr(self, 'audio_transcription_button'):
+                self.audio_transcription_button.setToolTip("🎵 Trascrizione file audio\n"
+                                                         "Converte file audio in testo\n"
+                                                         "Supporta vari formati audio")
+
+            if hasattr(self, 'ocr_button'):
+                self.ocr_button.setToolTip("📄 Riconoscimento ottico caratteri\n"
+                                         "Estrae testo dalle immagini\n"
+                                         "Supporta screenshot e file immagine")
+
+            if hasattr(self, 'ai_button'):
+                self.ai_button.setToolTip("🧠 Chiedi all'Intelligenza Artificiale\n"
+                                        "Invia richieste a Ollama AI\n"
+                                        "Ottieni risposte intelligenti e riformulazioni")
+
+            if hasattr(self, 'face_button'):
+                self.face_button.setToolTip("❌ Riconoscimento facciale\n"
+                                          "Attiva/disattiva il riconoscimento facce\n"
+                                          "Funzionalità in sviluppo")
+
+            if hasattr(self, 'hand_button'):
+                self.hand_button.setToolTip("❌ Riconoscimento gesti\n"
+                                          "Attiva/disattiva il riconoscimento gesti\n"
+                                          "Funzionalità in sviluppo")
+
+            # Tooltip per i pulsanti delle materie
+            subject_tooltips = {
+                'ipa_button': "📝 Fonetica Internazionale\nPronuncia e simboli IPA",
+                'math_button': "🔢 Matematica\nCalcoli e formule matematiche",
+                'chemistry_button': "⚗️ Chimica\nReazioni e composti chimici",
+                'physics_button': "⚛️ Fisica\nLeggi fisiche e meccanica",
+                'biology_button': "🧬 Biologia\nScienze della vita e organismi",
+                'italian_button': "🇮🇹 Italiano\nGrammatica e letteratura italiana",
+                'history_button': "📚 Storia\nEventi storici e civiltà",
+                'computer_science_button': "💻 Informatica\nProgrammazione e algoritmi",
+                'astronomy_button': "🌌 Astronomia\nStelle, pianeti e universo",
+                'advanced_math_button': "📐 Matematica Avanzata\nAnalisi e geometria",
+                'law_button': "⚖️ Diritto\nLeggi e giurisprudenza",
+                'english_button': "🇺🇸 Inglese\nLingua e letteratura inglese",
+                'spanish_button': "🇪🇸 Spagnolo\nLingua e cultura ispanica",
+                'german_button': "🇩🇪 Tedesco\nLingua e letteratura tedesca",
+                'japanese_button': "🇯🇵 Giapponese\nLingua e cultura giapponese",
+                'chinese_button': "🇨🇳 Cinese\nLingua e cultura cinese",
+                'russian_button': "🇷🇺 Russo\nLingua e letteratura russa"
+            }
+
+            # Applica i tooltip alle materie
+            for button_name, tooltip in subject_tooltips.items():
+                if hasattr(self, button_name):
+                    button = getattr(self, button_name)
+                    button.setToolTip(f"{tooltip}\nFunzionalità in sviluppo")
+
+            # Tooltip per gli altri pulsanti
+            if hasattr(self, 'media_button'):
+                self.media_button.setToolTip("📁 Carica file multimediali\n"
+                                           "Immagini, audio, video e documenti")
+
+            if hasattr(self, 'clean_button'):
+                self.clean_button.setToolTip("🧹 Pulisci tutto\n"
+                                           "Rimuovi tutti i pensierini e resetta l'area di lavoro")
+
+            if hasattr(self, 'log_button'):
+                self.log_button.setToolTip("📋 Mostra/Nasconde il pannello log\n"
+                                         "Visualizza i messaggi di sistema e debug")
+
+            # Tooltip per i controlli di navigazione
+            if hasattr(self, 'back_button'):
+                self.back_button.setToolTip("⬅️ Pagina precedente\n"
+                                          "Torna alla pagina precedente del testo")
+
+            if hasattr(self, 'forward_button'):
+                self.forward_button.setToolTip("➡️ Pagina successiva\n"
+                                             "Vai alla pagina successiva del testo")
+
+            if hasattr(self, 'copy_button'):
+                self.copy_button.setToolTip("📋 Copia tutto il testo\n"
+                                          "Copia il contenuto completo negli appunti")
+
+            if hasattr(self, 'rephrase_button'):
+                self.rephrase_button.setToolTip("🧠 Riformula intensamente\n"
+                                              "Usa AI per migliorare e riformulare il testo")
+
+            # Tooltip per le aree di input
+            if hasattr(self, 'input_text_area'):
+                self.input_text_area.setToolTip("Scrivi qui il testo per creare pensierini\n"
+                                              "Premi INVIO per creare un pensierino\n"
+                                              "Premi Shift+INVIO per andare a capo")
+
+            if hasattr(self, 'project_name_input'):
+                self.project_name_input.setToolTip("Nome del progetto corrente\n"
+                                                "Viene usato per salvare/caricare progetti")
+
+            logging.info("✅ Tooltip informativi aggiunti con successo")
+
+        except Exception as e:
+            logging.error(f"❌ Errore nell'aggiunta dei tooltip: {e}")
+
+    def _add_keyboard_shortcuts(self):
+        """Aggiunge scorciatoie da tastiera per migliorare l'usabilità."""
+        try:
+            # Scorciatoie principali
+            QShortcut(QKeySequence("Ctrl+S"), self).activated.connect(self.save_project)
+            QShortcut(QKeySequence("Ctrl+O"), self).activated.connect(self.load_project)
+            QShortcut(QKeySequence("Ctrl+N"), self).activated.connect(self._new_project)
+            QShortcut(QKeySequence("F1"), self).activated.connect(self._show_help)
+            QShortcut(QKeySequence("Ctrl+T"), self).activated.connect(self.toggle_tools_panel)
+            QShortcut(QKeySequence("Ctrl+L"), self).activated.connect(self._toggle_log_panel)
+
+            # Scorciatoie per funzioni comuni
+            QShortcut(QKeySequence("F2"), self).activated.connect(self._focus_input_area)
+            QShortcut(QKeySequence("F3"), self).activated.connect(self._focus_search)
+            QShortcut(QKeySequence("Ctrl+Return"), self).activated.connect(self.add_text_from_input_area)
+
+            # Scorciatoie per navigazione
+            QShortcut(QKeySequence("Ctrl+1"), self).activated.connect(lambda: self._focus_column(0))
+            QShortcut(QKeySequence("Ctrl+2"), self).activated.connect(lambda: self._focus_column(1))
+            QShortcut(QKeySequence("Ctrl+3"), self).activated.connect(lambda: self._focus_column(2))
+
+            # Scorciatoie per funzioni AI e media
+            QShortcut(QKeySequence("Ctrl+A"), self).activated.connect(self.handle_ai_button)
+            QShortcut(QKeySequence("Ctrl+V"), self).activated.connect(self.handle_voice_button)
+            QShortcut(QKeySequence("Ctrl+M"), self).activated.connect(self.handle_media_button)
+
+            logging.info("✅ Scorciatoie da tastiera aggiunte con successo")
+
+        except Exception as e:
+            logging.error(f"❌ Errore nell'aggiunta delle scorciatoie: {e}")
+
+    def _new_project(self):
+        """Crea un nuovo progetto (resetta tutto)."""
+        try:
+            reply = QMessageBox.question(self, "Nuovo Progetto",
+                                       "Vuoi creare un nuovo progetto?\n"
+                                       "Tutti i pensierini non salvati andranno persi.",
+                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+
+            if reply == QMessageBox.StandardButton.Yes:
+                # Pulisci tutti i pensierini
+                self._clear_all_pensierini()
+                # Reset nome progetto
+                if hasattr(self, 'project_name_input'):
+                    self.project_name_input.clear()
+                # Reset area di lavoro
+                self._clear_work_area()
+                # Reset dettagli
+                self._clear_details()
+
+                QMessageBox.information(self, "Nuovo Progetto",
+                                      "✅ Nuovo progetto creato con successo!")
+
+        except Exception as e:
+            logging.error(f"Errore nella creazione del nuovo progetto: {e}")
+
+    def _show_help(self):
+        """Mostra la finestra di aiuto con tutte le scorciatoie."""
+        help_text = """
+        <h2>🎯 Guida Rapida - CogniFlow</h2>
+
+        <h3>🔥 Scorciatoie Principali</h3>
+        <ul>
+        <li><b>Ctrl+S</b> - Salva progetto</li>
+        <li><b>Ctrl+O</b> - Carica progetto</li>
+        <li><b>Ctrl+N</b> - Nuovo progetto</li>
+        <li><b>F1</b> - Mostra questa guida</li>
+        <li><b>Ctrl+T</b> - Mostra/Nasconde strumenti</li>
+        </ul>
+
+        <h3>⚡ Scorciatoie di Input</h3>
+        <ul>
+        <li><b>F2</b> - Focus sull'area di input</li>
+        <li><b>Ctrl+Return</b> - Aggiungi pensierino</li>
+        <li><b>Ctrl+A</b> - Chiedi all'AI</li>
+        <li><b>Ctrl+V</b> - Riconoscimento vocale</li>
+        </ul>
+
+        <h3>🎨 Navigazione</h3>
+        <ul>
+        <li><b>Ctrl+1</b> - Focus colonna pensierini</li>
+        <li><b>Ctrl+2</b> - Focus area di lavoro</li>
+        <li><b>Ctrl+3</b> - Focus colonna dettagli</li>
+        </ul>
+
+        <h3>🎯 Mouse Tracking</h3>
+        <p>Il sistema traccia tutti gli eventi del mouse in basso a sinistra:</p>
+        <ul>
+        <li>👆 SINISTRO/DESTRO/CENTRALE - Click dei pulsanti</li>
+        <li>👇 RELEASE - Rilascio pulsanti</li>
+        <li>👆👆 DOUBLE_CLICK - Doppio click</li>
+        <li>🌀 SU/GIÙ - Rotella del mouse</li>
+        </ul>
+
+        <h3>💡 Suggerimenti</h3>
+        <ul>
+        <li>Passa il mouse sui pulsanti per vedere i tooltip</li>
+        <li>Usa Invio nell'area di input per creare pensierini</li>
+        <li>Trascina i pensierini nell'area di lavoro</li>
+        <li>Usa Ctrl+T per nascondere/mostrare gli strumenti</li>
+        </ul>
+        """
+
+        QMessageBox.information(self, "🎯 Guida CogniFlow", help_text)
+
+    def _toggle_log_panel(self):
+        """Mostra/Nasconde il pannello log."""
+        if hasattr(self, 'log_button'):
+            self.log_button.click()
+
+    def _focus_input_area(self):
+        """Imposta il focus sull'area di input."""
+        if hasattr(self, 'input_text_area'):
+            self.input_text_area.setFocus()
+
+    def _focus_search(self):
+        """Imposta il focus sulla barra di ricerca (se presente)."""
+        # Placeholder per futura implementazione
+        pass
+
+    def _focus_column(self, column_index):
+        """Imposta il focus su una colonna specifica."""
+        try:
+            if column_index == 0 and hasattr(self, 'pensierini_scroll'):
+                self.pensierini_scroll.setFocus()
+            elif column_index == 1 and hasattr(self, 'work_area_scroll'):
+                self.work_area_scroll.setFocus()
+            elif column_index == 2 and hasattr(self, 'details_scroll'):
+                self.details_scroll.setFocus()
+        except Exception as e:
+            logging.error(f"Errore nel focus della colonna {column_index}: {e}")
+
+    def _clear_all_pensierini(self):
+        """Pulisce tutti i pensierini dalla colonna A."""
+        try:
+            if hasattr(self, 'pensierini_layout') and self.pensierini_layout:
+                while self.pensierini_layout.count():
+                    item = self.pensierini_layout.takeAt(0)
+                    if item:
+                        widget = item.widget()
+                        if widget and hasattr(widget, 'deleteLater'):
+                            widget.deleteLater()
+        except Exception as e:
+            logging.error(f"Errore nella pulizia dei pensierini: {e}")
+
+    def _clear_work_area(self):
+        """Pulisce l'area di lavoro."""
+        try:
+            if hasattr(self, 'work_area_layout') and self.work_area_layout:
+                while self.work_area_layout.count():
+                    item = self.work_area_layout.takeAt(0)
+                    if item:
+                        widget = item.widget()
+                        if widget and hasattr(widget, 'deleteLater'):
+                            widget.deleteLater()
+        except Exception as e:
+            logging.error(f"Errore nella pulizia dell'area di lavoro: {e}")
+
+    def _install_event_filters(self):
+        """Install event filters for mouse click tracking."""
+        try:
+            # Install on central widget if available
+            central = self.centralWidget()
+            if central is not None:
+                central.installEventFilter(self)
+            else:
+                # Fallback: install on main window
+                self.installEventFilter(self)
+        except Exception as e:
+            logging.error(f"Errore installazione event filter: {e}")
 
     def setup_work_area(self, layout):
         self.work_area_scroll = QScrollArea()
@@ -1092,8 +1853,39 @@ class MainWindow(QMainWindow):
                                 "⚠️ Funzionalità attualmente in fase di implementazione")
 
     def eventFilter(self, a0, a1):
-        """Event filter per intercettare eventi della tastiera."""
+        """Event filter per intercettare eventi della tastiera e del mouse."""
         from PyQt6.QtCore import Qt, QEvent
+
+        # Handle all mouse events for tracking
+        try:
+            if a1 and hasattr(a1, 'type'):
+                event_type = getattr(a1, 'type', lambda: None)()
+
+                # Handle mouse button press events
+                if event_type == QEvent.Type.MouseButtonPress:
+                    event_button = getattr(a1, 'button', lambda: None)()
+                    self._handle_mouse_event(a0, "PRESS", event_button)
+
+                # Handle mouse button release events
+                elif event_type == QEvent.Type.MouseButtonRelease:
+                    event_button = getattr(a1, 'button', lambda: None)()
+                    self._handle_mouse_event(a0, "RELEASE", event_button)
+
+                # Handle mouse double click events
+                elif event_type == QEvent.Type.MouseButtonDblClick:
+                    event_button = getattr(a1, 'button', lambda: None)()
+                    self._handle_mouse_event(a0, "DOUBLE_CLICK", event_button)
+
+                # Handle mouse wheel events
+                elif event_type == QEvent.Type.Wheel:
+                    delta = getattr(a1, 'angleDelta', lambda: None)()
+                    if delta:
+                        if hasattr(delta, 'y'):
+                            direction = "SU" if delta.y() > 0 else "GIÙ"
+                            self._handle_mouse_wheel(a0, direction)
+
+        except Exception:
+            logging.error("Errore in eventFilter mouse handling: {e}")
 
         # Gestisci solo eventi della tastiera per l'area di testo
         try:
@@ -1124,10 +1916,143 @@ class MainWindow(QMainWindow):
                             self.add_text_from_input_area()
                     return True  # Consuma l'evento (non propagarlo)
         except Exception:
-            logging.error("Errore in eventFilter: {e}")
+            logging.error("Errore in eventFilter keyboard handling: {e}")
 
         # Per tutti gli altri casi, lascia che l'evento venga gestito normalmente
         return super().eventFilter(a0, a1)
+
+    def _handle_mouse_event(self, widget, event_type, button):
+        """Gestisce tutti gli eventi del mouse per identificare l'elemento e il tipo di evento."""
+        try:
+            if not hasattr(self, 'click_status_label'):
+                return
+
+            # Get widget information
+            widget_name = ""
+            widget_type = ""
+
+            if hasattr(widget, 'objectName') and widget.objectName():
+                widget_name = widget.objectName()
+
+            widget_type = type(widget).__name__
+
+            # Identify the mouse button
+            button_name = self._get_button_name(button)
+
+            # Identify the type of widget
+            widget_icon = self._get_widget_icon(widget_name, widget_type)
+
+            # Create event description
+            event_icon = self._get_event_icon(event_type)
+
+            # Format the display text
+            if widget_name:
+                info = f"{event_icon} {button_name} su {widget_icon} {widget_name}"
+            else:
+                info = f"{event_icon} {button_name} su {widget_icon} {widget_type}"
+
+            # Update the status label with animation
+            self.click_status_label.setText(info)
+
+            # Trigger animation if available
+            if hasattr(self, 'click_label_animation'):
+                self.click_label_animation.start()
+
+        except Exception as e:
+            logging.error(f"Errore in _handle_mouse_event: {e}")
+            if hasattr(self, 'click_status_label'):
+                self.click_status_label.setText("❌ Errore evento mouse")
+
+    def _handle_mouse_wheel(self, widget, direction):
+        """Gestisce gli eventi della rotella del mouse."""
+        try:
+            if not hasattr(self, 'click_status_label'):
+                return
+
+            # Get widget information
+            widget_name = ""
+            if hasattr(widget, 'objectName') and widget.objectName():
+                widget_name = widget.objectName()
+
+            widget_type = type(widget).__name__
+            widget_icon = self._get_widget_icon(widget_name, widget_type)
+
+            # Create wheel event description
+            if widget_name:
+                info = f"🌀 Rotella {direction} su {widget_icon} {widget_name}"
+            else:
+                info = f"🌀 Rotella {direction} su {widget_icon} {widget_type}"
+
+            # Update the status label
+            self.click_status_label.setText(info)
+
+        except Exception as e:
+            logging.error(f"Errore in _handle_mouse_wheel: {e}")
+            if hasattr(self, 'click_status_label'):
+                self.click_status_label.setText("❌ Errore rotella mouse")
+
+    def _get_button_name(self, button):
+        """Restituisce il nome del pulsante del mouse."""
+        try:
+            if button == Qt.MouseButton.LeftButton:
+                return "SINISTRO"
+            elif button == Qt.MouseButton.RightButton:
+                return "DESTRO"
+            elif button == Qt.MouseButton.MiddleButton:
+                return "CENTRALE"
+            elif button == Qt.MouseButton.BackButton:
+                return "INDIETRO"
+            elif button == Qt.MouseButton.ForwardButton:
+                return "AVANTI"
+            elif button == Qt.MouseButton.TaskButton:
+                return "TASK"
+            elif button == Qt.MouseButton.ExtraButton4:
+                return "EXTRA4"
+            elif button == Qt.MouseButton.ExtraButton5:
+                return "EXTRA5"
+            else:
+                return f"PULSANTE_{button}"
+        except:
+            return "SCONOSCIUTO"
+
+    def _get_event_icon(self, event_type):
+        """Restituisce l'icona per il tipo di evento."""
+        if event_type == "PRESS":
+            return "👆"
+        elif event_type == "RELEASE":
+            return "👇"
+        elif event_type == "DOUBLE_CLICK":
+            return "👆👆"
+        else:
+            return "❓"
+
+    def _get_widget_icon(self, widget_name, widget_type):
+        """Restituisce l'icona per il tipo di widget."""
+        if 'button' in widget_name.lower() or widget_type == 'QPushButton':
+            return "🔘"
+        elif 'checkbox' in widget_name.lower() or widget_type == 'QCheckBox':
+            return "☑️"
+        elif 'lineedit' in widget_name.lower() or widget_type == 'QLineEdit':
+            return "📝"
+        elif 'textedit' in widget_name.lower() or widget_type == 'QTextEdit':
+            return "📄"
+        elif 'combobox' in widget_name.lower() or widget_type == 'QComboBox':
+            return "📋"
+        elif 'slider' in widget_name.lower() or widget_type == 'QSlider':
+            return "🎚️"
+        elif 'groupbox' in widget_name.lower() or widget_type == 'QGroupBox':
+            return "📁"
+        elif 'scrollarea' in widget_name.lower() or widget_type == 'QScrollArea':
+            return "📜"
+        elif 'splitter' in widget_name.lower() or widget_type == 'QSplitter':
+            return "📏"
+        else:
+            return "📦"
+
+    def _handle_mouse_click(self, widget):
+        """Gestisce i click del mouse per identificare l'elemento cliccato (legacy method)."""
+        # This method is kept for backward compatibility but now uses the new system
+        self._handle_mouse_event(widget, "PRESS", Qt.MouseButton.LeftButton)
 
     def add_text_from_input_area(self):
         text = self.input_text_area.toPlainText().strip()
@@ -1197,6 +2122,10 @@ class MainWindow(QMainWindow):
         """Crea un widget con testo paginato per i dettagli."""
         from PyQt6.QtWidgets import QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QWidget
 
+        # Carica preferenze font dalle impostazioni
+        main_font_size = self.settings.get('fonts', {}).get('main_font_size', 13)
+        page_button_font_size = main_font_size - 1  # Un po' più piccolo per il pulsante pagina
+
         # Widget contenitore
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -1211,15 +2140,18 @@ class MainWindow(QMainWindow):
         self.details_text_label = QTextEdit()
         self.details_text_label.setReadOnly(True)
         # Imposta altezza minima per mostrare circa 10 righe
-        self.details_text_label.setMinimumHeight(300)  # Circa 10 righe con font 16px
+        self.details_text_label.setMinimumHeight(300)  # Circa 10 righe con font personalizzato
         # Imposta size policy per espansione massima
         from PyQt6.QtWidgets import QSizePolicy
         self.details_text_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         # Rimuovi entrambe le scrollbar per massimizzare lo spazio
         self.details_text_label.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.details_text_label.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.details_text_label.setStyleSheet("""
-            QTextEdit {
+
+        # Usa dimensione font dalle preferenze per i dettagli
+        details_font_size = main_font_size + 3  # Un po' più grande per i dettagli
+        self.details_text_label.setStyleSheet(f"""
+            QTextEdit {{
                 background: rgba(221, 160, 221, 0.9); /* Viola chiaro per il testo */
                 border: 2px solid #6f42c1;
                 border-radius: 8px;
@@ -1227,13 +2159,13 @@ class MainWindow(QMainWindow):
                 padding-bottom: 20px;
                 padding-left: 15px;
                 padding-right: 15px;
-                font-size: 16px;
+                font-size: {details_font_size}px;
                 line-height: 1.4;
                 color: #333;
-            }
+            }}
 
             /* Pulsante Riformula - Verde */
-            QPushButton#rephrase_button {
+            QPushButton#rephrase_button {{
                 background-color: #28a745;
                 color: white;
                 border: 2px solid #1e7e34;
@@ -1242,15 +2174,16 @@ class MainWindow(QMainWindow):
                 font-weight: bold;
                 min-height: 30px;
                 min-width: 160px;
-            }
+                font-size: {main_font_size}px;
+            }}
 
-            QPushButton#rephrase_button:hover {
+            QPushButton#rephrase_button:hover {{
                 background-color: #218838;
                 border-color: #1c7430;
-            }
+            }}
 
             /* Pulsanti navigazione - Blu */
-            QPushButton#back_button, QPushButton#forward_button {
+            QPushButton#back_button, QPushButton#forward_button {{
                 background-color: #007bff;
                 color: white;
                 border: 2px solid #0056b3;
@@ -1258,30 +2191,31 @@ class MainWindow(QMainWindow):
                 padding: 8px 16px;
                 font-weight: bold;
                 min-height: 35px;
-            }
+                font-size: {main_font_size}px;
+            }}
 
-            QPushButton#back_button:hover, QPushButton#forward_button:hover {
+            QPushButton#back_button:hover, QPushButton#forward_button:hover {{
                 background-color: #0056b3;
                 border-color: #004085;
-            }
+            }}
 
             /* Etichetta pagina - Arancione */
-            QPushButton#page_info_label {
+            QPushButton#page_info_label {{
                 background-color: #fd7e14;
                 color: white;
                 border: 2px solid #e8590c;
                 border-radius: 4px;
                 padding: 2px 8px;
                 font-weight: bold;
-                font-size: 12px;
+                font-size: {page_button_font_size}px;
                 min-width: 50px;
                 max-width: 60px;
-            }
+            }}
 
-            QPushButton#page_info_label:hover {
+            QPushButton#page_info_label:hover {{
                 background-color: #e8590c;
                 border-color: #d0390c;
-            }
+            }}
 
 
         """)
@@ -1299,8 +2233,11 @@ class MainWindow(QMainWindow):
         # Pulsante per riformulare intensamente
         self.rephrase_button = QPushButton("🧠 Riformula intensamente")
         self.rephrase_button.setObjectName("rephrase_button")
-        self.rephrase_button.setStyleSheet("""
-            QPushButton {
+
+        # Usa dimensione font dalle preferenze per il pulsante riformula
+        rephrase_button_font_size = self.settings.get('fonts', {}).get('main_font_size', 13)
+        self.rephrase_button.setStyleSheet(f"""
+            QPushButton {{
                 background-color: #17a2b8;
                 color: white;
                 border: none;
@@ -1309,14 +2246,15 @@ class MainWindow(QMainWindow):
                 font-weight: bold;
                 min-height: 35px;
                 min-width: 160px;
-            }
-            QPushButton:hover {
+                font-size: {rephrase_button_font_size}px;
+            }}
+            QPushButton:hover {{
                 background-color: #138496;
-            }
-            QPushButton:disabled {
+            }}
+            QPushButton:disabled {{
                 background-color: #adb5bd;
                 color: #6c757d;
-            }
+            }}
         """)
         self.rephrase_button.clicked.connect(self.handle_rephrase_button)
 
@@ -1334,8 +2272,8 @@ class MainWindow(QMainWindow):
         self.copy_button = QPushButton("📋 Copia")
         self.copy_button.setObjectName("copy_button")
         self.copy_button.clicked.connect(self.handle_copy_button)
-        self.copy_button.setStyleSheet("""
-            QPushButton {
+        self.copy_button.setStyleSheet(f"""
+            QPushButton {{
                 background-color: #007bff;
                 color: white;
                 border: 2px solid #0056b3;
@@ -1344,11 +2282,12 @@ class MainWindow(QMainWindow):
                 font-weight: bold;
                 min-height: 35px;
                 min-width: 100px;
-            }
-            QPushButton:hover {
+                font-size: {main_font_size}px;
+            }}
+            QPushButton:hover {{
                 background-color: #0056b3;
                 border-color: #004085;
-            }
+            }}
         """)
         rephrase_layout.addWidget(self.copy_button)
 
@@ -1358,11 +2297,14 @@ class MainWindow(QMainWindow):
         self.page_info_label = QPushButton("Pag. 1")
         self.page_info_label.setObjectName("page_info_label")
         self.page_info_label.setEnabled(False)  # Non cliccabile
-        self.page_info_label.setStyleSheet("""
-            QPushButton {
+
+        # Usa dimensione font dalle preferenze per il pulsante pagina
+        page_button_font_size = self.settings.get('fonts', {}).get('main_font_size', 13) - 1  # Un po' più piccolo per il pulsante pagina
+        self.page_info_label.setStyleSheet(f"""
+            QPushButton {{
                 color: #495057;
                 font-weight: bold;
-                font-size: 12px;
+                font-size: {page_button_font_size}px;
                 padding: 2px 8px;
                 background: rgba(255, 255, 255, 0.8);
                 border: 1px solid #dee2e6;
@@ -1371,7 +2313,7 @@ class MainWindow(QMainWindow):
                 max-width: 60px;
                 text-align: center;
                 margin-left: 5px;
-            }
+            }}
         """)
         rephrase_layout.addWidget(self.page_info_label)
         rephrase_layout.addStretch()
@@ -1390,8 +2332,37 @@ class MainWindow(QMainWindow):
 
         main_controls_layout.addLayout(navigation_layout)
 
-        layout.addWidget(self.details_text_label)
-        layout.addLayout(main_controls_layout)  # Pulsanti direttamente sotto il testo
+        # Usa QSplitter per rendere resizable la sezione testo e controlli
+        details_splitter = QSplitter(Qt.Orientation.Vertical)
+        details_splitter.setHandleWidth(3)
+        details_splitter.setStyleSheet("""
+            QSplitter::handle {
+                background: rgba(108, 117, 125, 0.3);
+                border-radius: 2px;
+            }
+            QSplitter::handle:hover {
+                background: rgba(108, 117, 125, 0.6);
+            }
+        """)
+
+        # Widget contenitore per il testo
+        text_container = QWidget()
+        text_layout = QVBoxLayout(text_container)
+        text_layout.setContentsMargins(0, 0, 0, 0)
+        text_layout.addWidget(self.details_text_label)
+        details_splitter.addWidget(text_container)
+
+        # Widget contenitore per i controlli
+        controls_container = QWidget()
+        controls_layout = QVBoxLayout(controls_container)
+        controls_layout.setContentsMargins(0, 0, 0, 0)
+        controls_layout.addLayout(main_controls_layout)
+        details_splitter.addWidget(controls_container)
+
+        # Imposta proporzioni iniziali (80% testo, 20% controlli)
+        details_splitter.setSizes([400, 100])
+
+        layout.addWidget(details_splitter)
 
         # Aggiungi al layout dei dettagli
         self.details_layout.addWidget(container)
@@ -1438,9 +2409,9 @@ class MainWindow(QMainWindow):
 
         # Aggiorna testi dei pulsanti
         if self.current_page < self.total_pages - 1:
-            self.forward_button.setText("➡️ Prossima pagina")
+            pass
         else:
-            self.forward_button.setText("🔄 Ritorna all'inizio")
+            pass
 
         # Aggiorna stato pulsanti navigazione
         self.back_button.setEnabled(self.current_page > 0)
@@ -2446,7 +3417,6 @@ Riformulazione intensa:"""
             # Nasconde il contenuto del log nei dettagli
             if hasattr(self, 'log_button'):
                 self.log_button.setChecked(False)
-                self.log_button.setText("📋 Log")
                 # Torna alla visualizzazione precedente o pulisce
                 if hasattr(self, 'previous_details_content'):
                     self.show_text_in_details(self.previous_details_content)
@@ -3436,32 +4406,38 @@ ESEMPI:
         pass
 
     def update_footer_status(self):
-        """Aggiorna il label di stato nel footer con data, utente, sessione tutor e condivisione schermo."""
-        from datetime import datetime
-        import getpass
-
+        """Aggiorna le informazioni di stato nel footer con design moderno e informazioni utili."""
         try:
-            # Data attuale
-            current_date = datetime.now().strftime("%d/%m/%Y %H:%M")
+            from datetime import datetime
+            current_time = datetime.now().strftime("%H:%M:%S")
 
-            # Nome utente (da sistema)
-            username = getpass.getuser()
+            # Conta elementi attivi
+            pensierini_count = 0
+            if hasattr(self, 'pensierini_layout') and self.pensierini_layout:
+                pensierini_count = self.pensierini_layout.count()
 
-            # Stato sessione tutor
-            tutor_session = "Sì" if self.tutor_session_active else "No"
+            work_items_count = 0
+            if hasattr(self, 'work_area_layout') and self.work_area_layout:
+                work_items_count = self.work_area_layout.count()
 
-            # Stato condivisione schermo
-            screen_sharing = "Sì" if self.screen_sharing_active else "No"
+            # Stato del sistema
+            ai_status = "🟢" if (hasattr(self, 'ollama_bridge') and self.ollama_bridge) else "🔴"
+            voice_status = "🟢" if SpeechRecognitionThread else "🔴"
+            ocr_status = "🟢" if OCR_AVAILABLE else "🔴"
 
-            # Aggiorna il testo del label nel footer
-            status_text = "📅 {current_date} | 👤 {username} | 🎓 Tutor: {tutor_session} | 🖥️ Condivisione: {screen_sharing}"
+            # Messaggio dinamico basato sul contesto
+            if pensierini_count > 0:
+                status_text = f"🕐 {current_time} | 📝 {pensierini_count} pensierini | 🎯 {work_items_count} elementi | {ai_status} AI | {voice_status} Voce | {ocr_status} OCR"
+            else:
+                status_text = f"🕐 {current_time} | 🎨 CogniFlow pronto | Premi F1 per aiuto | {ai_status} AI | {voice_status} Voce | {ocr_status} OCR"
+
             if hasattr(self, 'status_footer_label'):
                 self.status_footer_label.setText(status_text)
 
-        except Exception:
-            logging.error("Errore aggiornamento footer status: {e}")
+        except Exception as e:
+            logging.error(f"Errore nell'aggiornamento del footer: {e}")
             if hasattr(self, 'status_footer_label'):
-                self.status_footer_label.setText("Status non disponibile")
+                self.status_footer_label.setText("🕐 Sistema attivo | Premi F1 per aiuto")
 
     def set_tutor_session_status(self, active: bool):
         """Imposta lo stato della sessione tutor e aggiorna il footer."""
