@@ -113,7 +113,7 @@ Item {
         // Tema 7: Moderno (Grigio/Nero)
         readonly property var modernTheme: ({
             name: "Moderno",
-            primaryColor: "#000000",
+            primaryColor: "#6c757d",
             secondaryColor: "#6c757d",
             successColor: "#28a745",
             errorColor: "#dc3545",
@@ -135,7 +135,7 @@ Item {
         // Tema 9: Minimal (Bianco/Nero)
         readonly property var minimalTheme: ({
             name: "Minimal",
-            primaryColor: "#000000",
+            primaryColor: "#f5f5dc",
             secondaryColor: "#ffffff",
             successColor: "#000000",
             errorColor: "#ff0000",

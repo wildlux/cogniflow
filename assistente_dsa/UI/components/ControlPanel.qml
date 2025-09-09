@@ -25,8 +25,8 @@ Rectangle {
     property color primaryColor: "#4a90e2"
     property real borderWidth: 0
     property real borderRadius: 0
-    property real contentMargins: 10
-    property real spacing: 10
+    property real contentMargins: 5
+    property real spacing: 5
 
     // ===== DESIGNER LAYOUT =====
     // Proprietà di layout modificabili dal designer

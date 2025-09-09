@@ -404,70 +404,33 @@ class MainWindow(QMainWindow):
         return unified_section
 
     def create_pensierini_input_section(self):
-        """Crea la sezione input pensierini con layout orizzontale"""
+        """Crea la sezione input pensierini"""
         pensierini_group = QGroupBox("✏️ Creazione Pensierini")
-        pensierini_group.setMinimumHeight(100)  # Aumentato per layout a due righe
-        pensierini_group.setMaximumHeight(120)  # Aumentato per layout a due righe
+        pensierini_group.setMinimumHeight(150)
+        pensierini_group.setMaximumHeight(150)
 
-        layout = QHBoxLayout(pensierini_group)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(10)
+        layout = QVBoxLayout(pensierini_group)
+        layout.setContentsMargins(8, 15, 8, 8)
 
-        # Campo di testo principale a sinistra (60% dello spazio)
-        self.input_text_area.setMinimumHeight(50)  # Altezza minima per usabilità
-        self.input_text_area.setMaximumHeight(70)  # Altezza massima
-        layout.addWidget(self.input_text_area, 6)  # Stretch factor 6 (60%)
+        # Campo di testo in alto (occupa tutto lo spazio disponibile)
+        self.input_text_area.setFixedHeight(60)  # Più alto per migliore usabilità
+        layout.addWidget(self.input_text_area)
 
-        # Sezione pulsanti a destra (40% dello spazio)
-        buttons_section = QVBoxLayout()
-        buttons_section.setSpacing(8)
+        # Riga pulsanti in basso
+        buttons_row = QHBoxLayout()
+        buttons_row.setSpacing(8)
 
-        # Prima riga: Nuovo campo input + pulsante inserisci
-        first_row = QHBoxLayout()
-        first_row.setSpacing(8)
+        self.add_pensierino_button.setFixedHeight(32)
+        buttons_row.addWidget(self.add_pensierino_button, 1)
 
-        # Nuovo campo di input (70% della prima riga)
-        self.quick_input = QLineEdit()
-        self.quick_input.setPlaceholderText("Testo rapido...")
-        self.quick_input.setMinimumHeight(35)
-        self.quick_input.setMaximumHeight(45)
-        self.quick_input.setObjectName("quick_input")
-        first_row.addWidget(self.quick_input, 7)  # 70% della riga
+        # Pulsante pulisci
+        self.clear_pensierini_button = QPushButton("🧹 Pulisci Tutto")
+        self.clear_pensierini_button.setFixedHeight(32)
+        self.clear_pensierini_button.setObjectName("clear_pensierini_button")
+        self.clear_pensierini_button.clicked.connect(self.clear_all_pensierini_with_confirmation)
+        buttons_row.addWidget(self.clear_pensierini_button, 1)
 
-        # Pulsante aggiungi pensierino (30% della prima riga)
-        self.add_pensierino_button.setText("➕ Aggiungi pensierino")
-        self.add_pensierino_button.setMinimumHeight(35)
-        self.add_pensierino_button.setMaximumHeight(45)
-        self.add_pensierino_button.setMinimumWidth(150)
-        first_row.addWidget(self.add_pensierino_button, 3)  # 30% della riga
-
-        buttons_section.addLayout(first_row)
-
-        # Seconda riga: Pulsanti di controllo
-        second_row = QHBoxLayout()
-        second_row.setSpacing(8)
-
-        # Pulsante cancella testo inserito
-        self.clear_input_button = QPushButton("🧽 Cancella testo")
-        self.clear_input_button.setMinimumHeight(35)
-        self.clear_input_button.setMaximumHeight(45)
-        self.clear_input_button.setMinimumWidth(140)
-        self.clear_input_button.setObjectName("clear_input_button")
-        self.clear_input_button.clicked.connect(self.clear_input_text)
-        second_row.addWidget(self.clear_input_button)
-
-        # Pulsante cancella tutto
-        self.clear_all_button = QPushButton("🗑️ Cancella tutto")
-        self.clear_all_button.setMinimumHeight(35)
-        self.clear_all_button.setMaximumHeight(45)
-        self.clear_all_button.setMinimumWidth(140)
-        self.clear_all_button.setObjectName("clear_all_button")
-        self.clear_all_button.clicked.connect(self.clear_all_pensierini_with_confirmation)
-        second_row.addWidget(self.clear_all_button)
-
-        buttons_section.addLayout(second_row)
-
-        layout.addLayout(buttons_section, 4)  # Stretch factor 4 (40%)
+        layout.addLayout(buttons_row)
 
         return pensierini_group
 
@@ -516,30 +479,10 @@ class MainWindow(QMainWindow):
             print(f"⚠️ Errore pulizia colonna C: {e}")
 
     def clear_input_text(self):
-        """Pulisce i campi di input testo"""
-        cleared = False
+        """Pulisce il campo di input testo"""
         if hasattr(self, 'input_text_area'):
             self.input_text_area.clear()
-            cleared = True
-        if hasattr(self, 'quick_input'):
-            self.quick_input.clear()
-            cleared = True
-        if cleared:
-            print("✅ Campi di input testo puliti")
-
-    def undo_last_action(self):
-        """Annulla l'ultima azione nei campi di testo"""
-        if hasattr(self, 'quick_input') and self.quick_input.hasFocus():
-            # Se il focus è sul campo rapido, annulla lì
-            self.quick_input.undo()
-            print("✅ Azione annullata nel campo di input rapido")
-        elif hasattr(self, 'input_text_area'):
-            # Altrimenti annulla nell'area di testo principale
-            if self.input_text_area.isUndoRedoEnabled():
-                self.input_text_area.undo()
-                print("✅ Azione annullata nell'area di testo principale")
-            else:
-                print("⚠️ Undo non disponibile nell'area di testo")
+            print("✅ Campo di input testo pulito")
 
     def clear_all_pensierini_with_confirmation(self):
         """Pulisce tutto (input + colonne A, B, C) con conferma"""
@@ -581,7 +524,7 @@ class MainWindow(QMainWindow):
         # Prima creo tutti i pulsanti necessari
         self._create_subject_buttons()
 
-        tools_group = QGroupBox("🛠️ Cassetta degli attrezzi")
+        tools_group = QGroupBox("🛠️ Strumenti e Assistenza")
         tools_group.setMinimumHeight(200)
 
         layout = QVBoxLayout(tools_group)
@@ -601,7 +544,9 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(tools_splitter)
 
-        # Sezione pensierini rimossa da qui - ora è indipendente
+        # Aggiungi sezione input pensierini in basso
+        pensierini_input_section = self.create_pensierini_input_section()
+        layout.addWidget(pensierini_input_section)
 
         return tools_group
 
@@ -645,235 +590,133 @@ class MainWindow(QMainWindow):
         return subject_buttons
 
     def create_tools_tabs(self):
-        """Crea il widget con griglia 2 colonne a sinistra e contenuto a destra"""
-        from PyQt6.QtWidgets import QSplitter, QStackedWidget, QVBoxLayout, QWidget, QGridLayout, QPushButton
+        """Crea il widget con schede per tutti gli strumenti"""
+        from PyQt6.QtWidgets import QTabWidget
 
-        # Widget principale con splitter
-        main_widget = QWidget()
-        main_layout = QHBoxLayout(main_widget)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-
-        # Widget contenitore per la griglia 2 colonne
-        grid_container = QWidget()
-        grid_container.setMaximumWidth(170)  # Larghezza aumentata per ospitare 20px di spaziatura
-        grid_layout = QGridLayout(grid_container)
-        grid_layout.setContentsMargins(5, 5, 5, 5)
-        grid_layout.setHorizontalSpacing(20)  # 20px tra colonne
-        grid_layout.setVerticalSpacing(8)     # 8px tra righe (mantenuto)
-
-        # Stili comuni per i pulsanti
-        button_style = """
-            QPushButton {
+        tabs = QTabWidget()
+        # tabs.setTabPosition(QTabWidget.TabPosition.West)  # Commentato per layout orizzontale
+        tabs.setStyleSheet("""
+            QTabWidget::pane {
                 border: 1px solid #dee2e6;
                 border-radius: 6px;
                 background: rgba(255, 255, 255, 0.95);
-                color: #495057;
-                font-weight: bold;
-                font-size: 10px;
-                padding: 8px 6px;
-                text-align: center;
-                min-height: 40px;
-                min-width: 70px;
-                max-width: 70px;
             }
 
-            QPushButton:hover {
+            QTabBar::tab {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #ffffff, stop:1 #f8f9fa);
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                padding: 8px 16px;
+                margin-right: 2px;
+                color: #495057;
+                font-weight: bold;
+                font-size: 12px;
+                min-width: 80px;
+            }
+
+            QTabBar::tab:selected {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #e3f2fd, stop:1 #bbdefb);
+                border-color: #2196f3;
+                color: #1976d2;
+            }
+
+            QTabBar::tab:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                     stop:0 #f8f9ff, stop:1 #e8f4fd);
                 border-color: #64b5f6;
             }
+        """)
 
-            QPushButton:checked {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #e3f2fd, stop:1 #bbdefb);
-                color: #1976d2;
-                border-color: #2196f3;
-                border-left: 3px solid #2196f3;
-            }
-        """
-
-        # Crea i pulsanti per la griglia 2x3
-        self.transcription_btn = QPushButton("🎤\nTrascrizione")
-        self.transcription_btn.setCheckable(True)
-        self.transcription_btn.setStyleSheet(button_style)
-
-        self.ai_media_btn = QPushButton("🧠\nAI & Media")
-        self.ai_media_btn.setCheckable(True)
-        self.ai_media_btn.setStyleSheet(button_style)
-
-        self.subjects_btn = QPushButton("📚\nMaterie")
-        self.subjects_btn.setCheckable(True)
-        self.subjects_btn.setStyleSheet(button_style)
-
-        self.utilities_btn = QPushButton("🛠️\nUtilità")
-        self.utilities_btn.setCheckable(True)
-        self.utilities_btn.setStyleSheet(button_style)
-
-        self.iot_btn = QPushButton("🔌\nIoT")
-        self.iot_btn.setCheckable(True)
-        self.iot_btn.setStyleSheet(button_style)
-
-        # Disponi i pulsanti in griglia 2 colonne
-        grid_layout.addWidget(self.transcription_btn, 0, 0)  # Riga 0, Colonna 0
-        grid_layout.addWidget(self.ai_media_btn, 0, 1)      # Riga 0, Colonna 1
-        grid_layout.addWidget(self.subjects_btn, 1, 0)      # Riga 1, Colonna 0
-        grid_layout.addWidget(self.utilities_btn, 1, 1)     # Riga 1, Colonna 1
-        grid_layout.addWidget(self.iot_btn, 2, 0)           # Riga 2, Colonna 0
-
-        # Stacked widget per il contenuto a destra
-        self.tools_stack = QStackedWidget()
-
-        # Crea i contenuti
+        # Scheda 1: Trascrizione
         transcription_tab = self.create_transcription_tab()
+        tabs.addTab(transcription_tab, "🎤 Trascrizione")
+
+        # Scheda 2: AI & Media
         ai_media_tab = self.create_ai_media_tab()
+        tabs.addTab(ai_media_tab, "🧠 AI & Media")
+
+        # Scheda 3: Materie
         subjects_tab = self.create_subjects_tab()
+        tabs.addTab(subjects_tab, "📚 Materie")
+
+        # Scheda 4: Utilità
         utilities_tab = self.create_utilities_tab()
+        tabs.addTab(utilities_tab, "🛠️ Utilità")
+
+        # Scheda 5: IoT
         iot_tab = self.create_iot_tab()
+        tabs.addTab(iot_tab, "🔌 IoT")
 
-        # Aggiungi i contenuti allo stack
-        self.tools_stack.addWidget(transcription_tab)
-        self.tools_stack.addWidget(ai_media_tab)
-        self.tools_stack.addWidget(subjects_tab)
-        self.tools_stack.addWidget(utilities_tab)
-        self.tools_stack.addWidget(iot_tab)
-
-        # Metodo per gestire il cambio di tab
-        def switch_to_tab(index):
-            # Deseleziona tutti i pulsanti
-            self.transcription_btn.setChecked(False)
-            self.ai_media_btn.setChecked(False)
-            self.subjects_btn.setChecked(False)
-            self.utilities_btn.setChecked(False)
-            self.iot_btn.setChecked(False)
-
-            # Seleziona il pulsante corrente
-            buttons = [self.transcription_btn, self.ai_media_btn, self.subjects_btn, self.utilities_btn, self.iot_btn]
-            if 0 <= index < len(buttons):
-                buttons[index].setChecked(True)
-
-            # Cambia il contenuto
-            self.tools_stack.setCurrentIndex(index)
-
-        # Collega i pulsanti al metodo di cambio
-        self.transcription_btn.clicked.connect(lambda: switch_to_tab(0))
-        self.ai_media_btn.clicked.connect(lambda: switch_to_tab(1))
-        self.subjects_btn.clicked.connect(lambda: switch_to_tab(2))
-        self.utilities_btn.clicked.connect(lambda: switch_to_tab(3))
-        self.iot_btn.clicked.connect(lambda: switch_to_tab(4))
-
-        # Seleziona il primo pulsante per default
-        switch_to_tab(0)
-
-        # Aggiungi al layout principale
-        main_layout.addWidget(grid_container)
-        main_layout.addWidget(self.tools_stack)
-
-        return main_widget
-
-    def toggle_pensierini_section(self):
-        """Mostra/nasconde la sezione creazione pensierini (INDIPENDENTE dal pannello strumenti)"""
-        if hasattr(self, 'pensierini_input_section'):
-            is_visible = self.pensierini_input_section.isVisible()
-            self.pensierini_input_section.setVisible(not is_visible)
-
-            # Aggiorna il testo del pulsante
-            if not is_visible:
-                self.toggle_pensierini_button.setText("✏️ Nascondi Pensierini")
-            else:
-                self.toggle_pensierini_button.setText("✏️ Mostra Pensierini")
-
-            # Salva nelle preferenze (indipendente dalle preferenze del pannello strumenti)
-            self.settings['ui'] = self.settings.get('ui', {})
-            self.settings['ui']['pensierini_section_visible'] = not is_visible
-
-            # Salva le impostazioni
-            from main_03_configurazione_e_opzioni import save_settings
-            save_settings(self.settings)
+        return tabs
 
     def create_transcription_tab(self):
-        """Crea la scheda Trascrizione con stile unificato"""
+        """Crea la scheda Trascrizione"""
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setSpacing(6)  # Spaziatura unificata
-        layout.setContentsMargins(12, 12, 12, 12)  # Margini unificati
+        layout.setSpacing(8)
+        layout.setContentsMargins(10, 15, 10, 10)
 
         layout.addWidget(self.voice_button)
         layout.addWidget(self.audio_transcription_button)
         layout.addWidget(self.ocr_button)
         layout.addWidget(self.graphics_tablet_button)
 
-        layout.addStretch()  # Spazio flessibile unificato
+        layout.addStretch()  # Spazio flessibile
         return widget
 
     def create_ai_media_tab(self):
-        """Crea la scheda AI & Media con stile unificato"""
+        """Crea la scheda AI & Media"""
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setSpacing(6)  # Spaziatura unificata
-        layout.setContentsMargins(12, 12, 12, 12)  # Margini unificati
+        layout.setSpacing(8)
+        layout.setContentsMargins(10, 15, 10, 10)
 
         layout.addWidget(self.ai_button)
 
-        # Gruppo riconoscimento con stile unificato
+        # Gruppo riconoscimento
         recognition_group = QGroupBox("👁️ Riconoscimento")
         recognition_group.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
                 font-size: 11px;
                 border: 1px solid #dee2e6;
-                border-radius: 6px;
-                margin-top: 6px;
-                padding-top: 8px;
-                background: rgba(255, 255, 255, 0.9);
-                color: #495057;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 8px;
-                padding: 2px 8px;
-                color: #495057;
-                font-weight: bold;
+                border-radius: 4px;
+                margin-top: 8px;
+                padding-top: 10px;
+                background: rgba(255, 255, 255, 0.8);
             }
         """)
         recognition_layout = QVBoxLayout(recognition_group)
-        recognition_layout.setSpacing(4)
-        recognition_layout.setContentsMargins(8, 8, 8, 8)
         recognition_layout.addWidget(self.face_button)
         recognition_layout.addWidget(self.hand_button)
         layout.addWidget(recognition_group)
 
-        layout.addStretch()  # Spazio flessibile unificato
+        layout.addStretch()
         return widget
 
     def create_subjects_tab(self):
-        """Crea la scheda Materie con stile unificato"""
+        """Crea la scheda Materie"""
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setSpacing(6)  # Spaziatura unificata
-        layout.setContentsMargins(12, 12, 12, 12)  # Margini unificati
+        layout.setContentsMargins(10, 15, 10, 10)
 
-        # Scroll area per le materie con stile unificato
+        # Scroll area per le materie
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll.setStyleSheet("""
-            QScrollArea {
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                background: rgba(255, 255, 255, 0.9);
-            }
-        """)
 
         subjects_widget = QWidget()
         subjects_layout = QGridLayout(subjects_widget)
-        subjects_layout.setSpacing(4)  # Spaziatura unificata per la griglia
-        subjects_layout.setContentsMargins(8, 8, 8, 8)  # Margini unificati
+        subjects_layout.setSpacing(4)
+        subjects_layout.setContentsMargins(5, 5, 5, 5)
 
         # Aggiungi pulsanti materie in griglia
         subject_buttons = self._create_subject_buttons()
         for i, button in enumerate(subject_buttons):
-            row, col = divmod(i, 4)  # 4 colonne per layout uniforme
+            row, col = divmod(i, 4)  # 4 colonne invece di 5 per adattarsi meglio
             subjects_layout.addWidget(button, row, col)
 
         scroll.setWidget(subjects_widget)
@@ -881,32 +724,32 @@ class MainWindow(QMainWindow):
         return widget
 
     def create_utilities_tab(self):
-        """Crea la scheda Utilità con stile unificato"""
+        """Crea la scheda Utilità"""
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setSpacing(6)  # Spaziatura unificata
-        layout.setContentsMargins(12, 12, 12, 12)  # Margini unificati
+        layout.setSpacing(8)
+        layout.setContentsMargins(10, 15, 10, 10)
 
         layout.addWidget(self.media_button)
         layout.addWidget(self.clean_button)
         layout.addWidget(self.log_button)
 
-        layout.addStretch()  # Spazio flessibile unificato
+        layout.addStretch()
         return widget
 
     def create_iot_tab(self):
-        """Crea la scheda IoT con stile unificato"""
+        """Crea la scheda IoT"""
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setSpacing(6)  # Spaziatura unificata
-        layout.setContentsMargins(12, 12, 12, 12)  # Margini unificati
+        layout.setSpacing(8)
+        layout.setContentsMargins(10, 15, 10, 10)
 
         layout.addWidget(self.arduino_button)
         layout.addWidget(self.circuit_button)
         layout.addWidget(self.screen_share_button)
         layout.addWidget(self.collab_button)
 
-        layout.addStretch()  # Spazio flessibile unificato
+        layout.addStretch()
         return widget
 
 
@@ -991,34 +834,24 @@ class MainWindow(QMainWindow):
         self.collab_button.clicked.connect(self.handle_collab_button)
 
     def toggle_tools_panel(self):
-        """Mostra/nasconde il pannello degli strumenti (INDIPENDENTE dalla sezione pensierini)"""
+        """Mostra/nasconde il pannello degli strumenti nel nuovo layout unificato."""
         # Log metriche PRIMA del toggle
         self.log_ui_metrics("BEFORE_TOGGLE")
 
         if self.tools_group.isVisible():
             # Nasconde la sezione unificata strumenti
             self.tools_group.setVisible(False)
-
-            # Ricalcola le proporzioni considerando tutte e 3 le sezioni
+            # Ricalcola le proporzioni per dare più spazio al contenuto principale
             current_sizes = self.vertical_splitter.sizes()
             main_content_size = current_sizes[0]  # Contenuto principale
-            pensierini_size = current_sizes[1]    # Sezione pensierini
-            tools_size = current_sizes[2]         # Sezione strumenti
-
-            # Ridistribuisci lo spazio liberato
-            total_available = main_content_size + tools_size
-            if hasattr(self, 'pensierini_input_section') and self.pensierini_input_section.isVisible():
-                # Se pensierini è visibile, ridistribuisci tra main e pensierini
-                main_new = int(total_available * 0.75)
-                pensierini_new = total_available - main_new
-                self.vertical_splitter.setSizes([main_new, pensierini_new, 0])
-            else:
-                # Se pensierini è nascosto, tutto allo spazio main
-                self.vertical_splitter.setSizes([total_available, 0, 0])
+            tools_size = current_sizes[1]         # Sezione strumenti
+            total_current = main_content_size + tools_size
+            # Distribuisci tutto lo spazio al contenuto principale
+            self.vertical_splitter.setSizes([total_current, 0])
 
             # Aggiorna il testo del pulsante
             if hasattr(self, 'toggle_tools_button'):
-                self.toggle_tools_button.setText("🔧 Visualizza cassetta degli attrezzi")
+                self.toggle_tools_button.setText("🔧 Visualizza Ingranaggi")
 
             # Salva nelle preferenze
             self.settings['ui'] = self.settings.get('ui', {})
@@ -1026,29 +859,19 @@ class MainWindow(QMainWindow):
         else:
             # Mostra la sezione unificata strumenti
             self.tools_group.setVisible(True)
-
-            # Ricalcola le proporzioni considerando tutte e 3 le sezioni
+            # Ripristina proporzioni bilanciate
             current_sizes = self.vertical_splitter.sizes()
             main_content_size = current_sizes[0]  # Contenuto principale
-            pensierini_size = current_sizes[2]    # Sezione pensierini
-
-            # Calcola il nuovo spazio disponibile
-            total_available = main_content_size
-            if hasattr(self, 'pensierini_input_section') and self.pensierini_input_section.isVisible():
-                # Entrambi visibili: main 60%, pensierini 15%, tools 25%
-                main_new = int(total_available * 0.6)
-                pensierini_new = int(total_available * 0.15)
-                tools_new = total_available - main_new - pensierini_new
-                self.vertical_splitter.setSizes([main_new, pensierini_new, tools_new])
-            else:
-                # Solo tools visibile: main 70%, tools 30%
-                main_new = int(total_available * 0.7)
-                tools_new = total_available - main_new
-                self.vertical_splitter.setSizes([main_new, 0, tools_new])
+            tools_size = current_sizes[1]         # Sezione strumenti
+            total_current = main_content_size + tools_size
+            # 70% contenuto principale, 30% sezione strumenti
+            main_new = int(total_current * 0.7)
+            tools_new = total_current - main_new
+            self.vertical_splitter.setSizes([main_new, tools_new])
 
             # Aggiorna il testo del pulsante
             if hasattr(self, 'toggle_tools_button'):
-                self.toggle_tools_button.setText("🔧 Nascondi cassetta degli attrezzi")
+                self.toggle_tools_button.setText("🔧 Nascondi Ingranaggi")
 
             # Salva nelle preferenze
             self.settings['ui'] = self.settings.get('ui', {})
@@ -1349,14 +1172,11 @@ class MainWindow(QMainWindow):
         self.input_text_area.setPlaceholderText("Scrivi qui, ( premi INVIO per creare un pensierino - Premi INVIO di destra per tornare a capo )")
         self.input_text_area.setFixedHeight(35)  # Altezza esatta del pulsante "Aggiungi Pensierino"
         # Rimuovi limite di larghezza massima per permettere espansione
-        # Installa event filter per intercettare Invio e Ctrl+Z
+        # Installa event filter per intercettare Invio
         self.input_text_area.installEventFilter(self)
-
-        # Abilita undo nell'area di testo
-        self.input_text_area.setUndoRedoEnabled(True)
         input_row_layout.addWidget(self.input_text_area, 4)  # Stretch factor 4 (80% circa)
 
-        self.add_pensierino_button = QPushButton("➕ Aggiungi pensierino")
+        self.add_pensierino_button = QPushButton("➕ Aggiungi Pensierino")
         self.add_pensierino_button.setObjectName("add_pensierino_button")
         self.add_pensierino_button.setMaximumWidth(150)  # Larghezza massima ridotta
         self.add_pensierino_button.clicked.connect(self.add_text_from_input_area)
@@ -1653,13 +1473,7 @@ class MainWindow(QMainWindow):
         # ROW 1: Main content (columns A, B, C)
         vertical_splitter.addWidget(self.main_splitter)
 
-        # Create pensierini input section
-        self.pensierini_input_section = self.create_pensierini_input_section()
-
-        # ROW 2: Pensierini section
-        vertical_splitter.addWidget(self.pensierini_input_section)
-
-        # ROW 3: Unified tools section
+        # ROW 2: Unified section containing pensierini + tools
         unified_tools_section = self.create_unified_tools_section()
         vertical_splitter.addWidget(unified_tools_section)
 
@@ -1672,43 +1486,17 @@ class MainWindow(QMainWindow):
 
         # Check preferences for initial tools panel state
         tools_visible = self.settings.get('ui', {}).get('tools_panel_visible', True)
-        pensierini_visible = self.settings.get('ui', {}).get('pensierini_section_visible', True)
-
-        if tools_visible and pensierini_visible:
-            vertical_splitter.setSizes([400, 100, 300])  # Main content, pensierini, tools
-        elif tools_visible and not pensierini_visible:
-            vertical_splitter.setSizes([500, 0, 400])  # Main content, pensierini hidden, tools
-        elif not tools_visible and pensierini_visible:
-            vertical_splitter.setSizes([600, 200, 0])  # Main content, pensierini, tools hidden
+        if tools_visible:
+            vertical_splitter.setSizes([450, 450])  # 50% main content, 50% unified tools
+            if hasattr(self, 'toggle_tools_button'):
+                self.toggle_tools_button.setChecked(True)
+                self.toggle_tools_button.setText("🔧 Nascondi Ingranaggi")
         else:
-            vertical_splitter.setSizes([800, 0, 0])  # Main content only
-
-        # Set initial visibility states
-        self.tools_group.setVisible(tools_visible)
-        self.pensierini_input_section.setVisible(pensierini_visible)
-
-        # Update button states
-        if hasattr(self, 'toggle_tools_button'):
-            self.toggle_tools_button.setChecked(tools_visible)
-            self.toggle_tools_button.setText("🔧 Nascondi cassetta degli attrezzi" if tools_visible else "🔧 Visualizza cassetta degli attrezzi")
-
-        if hasattr(self, 'toggle_pensierini_button'):
-            self.toggle_pensierini_button.setChecked(pensierini_visible)
-            self.toggle_pensierini_button.setText("✏️ Nascondi Pensierini" if pensierini_visible else "✏️ Mostra Pensierini")
-
-        # Check preferences for initial pensierini section state
-        pensierini_visible = self.settings.get('ui', {}).get('pensierini_section_visible', True)
-        if hasattr(self, 'pensierini_input_section'):
-            self.pensierini_input_section.setVisible(pensierini_visible)
-        if hasattr(self, 'toggle_pensierini_button'):
-            self.toggle_pensierini_button.setChecked(pensierini_visible)
-            if pensierini_visible:
-                self.toggle_pensierini_button.setText("✏️ Nascondi Pensierini")
-            else:
-                self.toggle_pensierini_button.setText("✏️ Mostra Pensierini")
-
-        # Create pensierini input section
-        self.pensierini_input_section = self.create_pensierini_input_section()
+            vertical_splitter.setSizes([800, 50])  # Hide tools section when not visible
+            self.tools_group.setVisible(False)
+            if hasattr(self, 'toggle_tools_button'):
+                self.toggle_tools_button.setChecked(False)
+                self.toggle_tools_button.setText("🔧 Visualizza Ingranaggi")
 
         # Add vertical splitter to main layout
         main_layout.addWidget(vertical_splitter, 1)
@@ -1716,7 +1504,43 @@ class MainWindow(QMainWindow):
         # Footer con informazioni di stato
         footer_layout = QHBoxLayout()
 
-        # Catturatore eventi mouse (click_status_label) in basso a sinistra
+        # Pulsante per mostrare/nascondere il pannello strumenti (in basso a sinistra)
+        self.toggle_tools_button = QPushButton("🔧 Ingranaggi")
+        self.toggle_tools_button.setObjectName("toggle_tools_button")
+        self.toggle_tools_button.setCheckable(True)
+        self.toggle_tools_button.setMinimumHeight(32)  # Altezza ridotta per il footer
+        self.toggle_tools_button.clicked.connect(self.toggle_tools_panel)
+        footer_layout.addWidget(self.toggle_tools_button)
+
+        footer_layout.addStretch()  # Spazio centrale
+
+        # Label per informazioni di stato in basso a destra
+        self.status_footer_label = QLabel()
+        self.status_footer_label.setObjectName("status_footer_label")
+
+        # Usa dimensione font dalle preferenze per il footer (un po' più piccola)
+        footer_font_size = self.settings.get('fonts', {}).get('main_font_size', 13) - 2
+        self.status_footer_label.setStyleSheet(f"""
+            QLabel#status_footer_label {{
+                color: #495057;
+                font-size: {footer_font_size}px;
+                padding: 6px 12px;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(255, 255, 255, 0.95), stop:1 rgba(248, 249, 250, 0.95));
+                border-radius: 8px;
+                border: 1px solid #dee2e6;
+                font-weight: bold;
+                text-align: center;
+                min-height: 20px;
+            }}
+        """)
+        self.update_footer_status()  # Aggiorna le informazioni di stato
+        footer_layout.addWidget(self.status_footer_label)
+
+        # Spazio tra status_footer_label e click_status_label
+        footer_layout.addSpacing(15)
+
+        # Mouse click tracking label accanto alla data (a destra)
         self.click_status_label = QLabel("Clicca su un elemento...")
         self.click_status_label.setObjectName("click_status_label")
         click_font_size = self.settings.get('fonts', {}).get('main_font_size', 13) - 1
@@ -1734,59 +1558,7 @@ class MainWindow(QMainWindow):
                 max-width: 200px;
             }}
         """)
-
-        # Pulsante per mostrare/nascondere il pannello strumenti (spostato più a destra)
-        self.toggle_tools_button = QPushButton("🔧 Visualizza cassetta degli attrezzi")
-        self.toggle_tools_button.setObjectName("toggle_tools_button")
-        self.toggle_tools_button.setCheckable(True)
-        self.toggle_tools_button.setMinimumHeight(32)  # Altezza ridotta per il footer
-        self.toggle_tools_button.clicked.connect(self.toggle_tools_panel)
-        footer_layout.addWidget(self.toggle_tools_button)
-
-        # Pulsante per mostrare/nascondere la sezione creazione pensierini
-        self.toggle_pensierini_button = QPushButton("✏️ Mostra Pensierini")
-        self.toggle_pensierini_button.setObjectName("toggle_pensierini_button")
-        self.toggle_pensierini_button.setCheckable(True)
-        self.toggle_pensierini_button.setMinimumHeight(32)
-        self.toggle_pensierini_button.clicked.connect(self.toggle_pensierini_section)
-        footer_layout.addWidget(self.toggle_pensierini_button)
-
-        footer_layout.addStretch()  # Spazio centrale
-
-        # Click status label moved here from left side
         footer_layout.addWidget(self.click_status_label)
-
-        # Pulsante per informazioni di stato (data etc.) in basso a destra - cliccabile per aiuto
-        self.status_footer_label = QPushButton()
-        self.status_footer_label.setObjectName("status_footer_label")
-        self.status_footer_label.setFlat(True)  # Rimuove l'aspetto pulsante
-        self.status_footer_label.clicked.connect(self._show_help)  # Collega al click per mostrare aiuto
-
-        # Usa dimensione font dalle preferenze per il footer (un po' più piccola)
-        footer_font_size = self.settings.get('fonts', {}).get('main_font_size', 13) - 2
-        self.status_footer_label.setStyleSheet(f"""
-            QPushButton#status_footer_label {{
-                color: #495057;
-                font-size: {footer_font_size}px;
-                padding: 6px 12px;
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(255, 255, 255, 0.95), stop:1 rgba(248, 249, 250, 0.95));
-                border-radius: 8px;
-                border: 1px solid #dee2e6;
-                font-weight: bold;
-                text-align: center;
-                min-height: 20px;
-            }}
-            QPushButton#status_footer_label:hover {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(248, 249, 250, 0.95), stop:1 rgba(241, 243, 244, 0.95));
-                border: 1px solid #adb5bd;
-            }}
-        """)
-        # Aggiungi tooltip per il suggerimento di aiuto
-        self.status_footer_label.setToolTip("Cliccami per l'aiuto!")
-        self.update_footer_status()  # Aggiorna le informazioni di stato
-        footer_layout.addWidget(self.status_footer_label)
 
         main_layout.addLayout(footer_layout)
 
@@ -1859,7 +1631,7 @@ class MainWindow(QMainWindow):
                     font-family: 'Segoe UI', Arial, sans-serif;
                 }
 
-                /* Pulsanti compatti negli strumenti */
+                /* Pulsanti compatti nelle schede */
                 QTabWidget QPushButton {
                     min-height: 32px;
                     font-size: 11px;
@@ -1877,18 +1649,14 @@ class MainWindow(QMainWindow):
                     margin: 1px;
                 }
 
-                /* Miglioramenti per la lista verticale */
-                QListWidget {
+                /* Miglioramenti per le schede */
+                QTabWidget {
                     background: rgba(255, 255, 255, 0.95);
                     border-radius: 6px;
                 }
 
-                QListWidget::item {
-                    border-bottom: 1px solid #eee;
-                }
-
-                QListWidget::item:selected {
-                    border-left: 3px solid #2196f3;
+                QTabWidget::tab-bar {
+                    alignment: left;
                 }
 
                 /* Splitter migliorato per il layout unificato */
@@ -2161,7 +1929,6 @@ class MainWindow(QMainWindow):
 
             if hasattr(self, 'ai_button'):
                 self.ai_button.setToolTip("🧠 Chiedi all'Intelligenza Artificiale\n"
-                                        "AI utilizzata: Llama 2 (7B parametri)\n"
                                         "Invia richieste a Ollama AI\n"
                                         "Ottieni risposte intelligenti e riformulazioni")
 
@@ -2272,7 +2039,6 @@ class MainWindow(QMainWindow):
             QShortcut(QKeySequence("Ctrl+A"), self).activated.connect(self.handle_ai_button)
             QShortcut(QKeySequence("Ctrl+V"), self).activated.connect(self.handle_voice_button)
             QShortcut(QKeySequence("Ctrl+M"), self).activated.connect(self.handle_media_button)
-            QShortcut(QKeySequence("Ctrl+Z"), self).activated.connect(self.undo_last_action)
 
             logging.info("✅ Scorciatoie da tastiera aggiunte con successo")
 
@@ -2852,20 +2618,12 @@ class MainWindow(QMainWindow):
         self._handle_mouse_event(widget, "PRESS", Qt.MouseButton.LeftButton)
 
     def add_text_from_input_area(self):
-        """Aggiunge testo dall'area di input come pensierino."""
-        # Prima controlla il campo di input rapido
-        text = ""
-        if hasattr(self, 'quick_input') and self.quick_input.text().strip():
-            text = self.quick_input.text().strip()
-            self.quick_input.clear()
-        elif self.input_text_area.toPlainText().strip():
-            text = self.input_text_area.toPlainText().strip()
-            self.input_text_area.clear()
-
+        text = self.input_text_area.toPlainText().strip()
         if text and DraggableTextWidget:
             widget = DraggableTextWidget(text, self.settings)
             self.pensierini_layout.addWidget(widget)
-            logging.info(f"Aggiunto pensierino: {text[:50]}...")
+            self.input_text_area.clear()
+            logging.info("Aggiunto pensierino: {text[:50]}...")
 
     def handle_ai_button(self):
         """Gestisce la funzione AI: invia richiesta a Ollama e mostra risposta."""

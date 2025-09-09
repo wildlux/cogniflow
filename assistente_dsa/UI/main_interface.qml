@@ -170,7 +170,7 @@ ApplicationWindow {
     // Layout principale
     ColumnLayout {
         anchors.fill: parent
-        spacing: 10
+        spacing: 5
 
         // Barra degli strumenti
         ToolBar {
@@ -467,7 +467,7 @@ ApplicationWindow {
 
                             Label {
                                 text: "📝 Caratteri: " + mainEditor.text.length
-                                color: "black"
+                                color: themeManager.textColor
                                 style: Text.Outline
                                 styleColor: "white"
                                 font.pixelSize: 12
@@ -475,7 +475,7 @@ ApplicationWindow {
 
                             Label {
                                 text: "📄 Parole: " + (mainEditor.text.split(/\s+/).filter(word => word.length > 0).length)
-                                color: "black"
+                                color: themeManager.textColor
                                 style: Text.Outline
                                 styleColor: "white"
                                 font.pixelSize: 12
@@ -485,7 +485,7 @@ ApplicationWindow {
 
                             Label {
                                 text: isReading ? "🔊 Lettura in corso..." : "⏸️ Pronto"
-                                color: isReading ? themeManager.successColor : "white"
+                                color: isReading ? themeManager.successColor : themeManager.textColor
                                 font.pixelSize: 12
                             }
                         }
@@ -554,7 +554,7 @@ ApplicationWindow {
 
                     ColumnLayout {
                         anchors.fill: parent
-                        anchors.margins: 10
+                        anchors.margins: 5
                         spacing: 10
 
                         // Titolo area di lavoro
@@ -693,7 +693,7 @@ ApplicationWindow {
 
                                 Label {
                                     text: "📝 Caratteri: " + mainEditor.text.length
-                                    color: "black"
+                                    color: themeManager.textColor
                                     style: Text.Outline
                                     styleColor: "white"
                                     font.pixelSize: 12
@@ -701,7 +701,7 @@ ApplicationWindow {
 
                                 Label {
                                     text: "📄 Parole: " + (mainEditor.text.split(/\s+/).filter(word => word.length > 0).length)
-                                    color: "black"
+                                    color: themeManager.textColor
                                     style: Text.Outline
                                     styleColor: "white"
                                     font.pixelSize: 12
@@ -711,7 +711,7 @@ ApplicationWindow {
 
                                 Label {
                                     text: isReading ? "🔊 Lettura in corso..." : "⏸️ Pronto"
-                                    color: isReading ? themeManager.successColor : "white"
+                                    color: isReading ? themeManager.successColor : (themeManager.primaryColor === "#000000" ? "#000000" : "white")
                                     font.pixelSize: 12
                                 }
                             }
