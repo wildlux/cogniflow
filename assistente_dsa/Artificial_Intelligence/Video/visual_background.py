@@ -558,7 +558,6 @@ class VideoThread(QThread):
                     # Aggiungi il testo all'area centrale
                     current_text = self.main_window.work_area_main_text_edit.toPlainText()
                     new_text = current_text + f"\n\n[TRASCINATO]: {text}"
-                    self.main_window.work_area_main_text_edit.setText(new_text)
 
                     # Rimuovi il widget dalla colonna A
                     last_widget.setParent(None)

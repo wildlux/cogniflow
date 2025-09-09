@@ -16,8 +16,7 @@ class VoiceHandlers:
 
     def handle_voice_button(self):
         """Avvia il riconoscimento vocale quando si clicca il pulsante voce."""
-        self.main_window.btn_voice.setEnabled(False)
-        self.main_window.btn_voice.setText("🎤 In registrazione...")
+
 
         # Utilizza il modello Vosk selezionato invece del lang_code
         vosk_model = self.main_window.settings.get('vosk_model', 'vosk-model-it-0.22')
@@ -43,8 +42,7 @@ class VoiceHandlers:
                                 "• vosk-model-it-0.22 (Italiano completo)\n"
                                 "• vosk-model-small-it-0.22 (Italiano piccolo)\n"
                                 "• vosk-model-small-en-us-0.15 (Inglese)")
-            self.main_window.btn_voice.setEnabled(True)
-            self.main_window.btn_voice.setText("🎤 Trascrivi")
+
             return
 
         self.main_window.speech_rec_thread = SpeechRecognitionThread(vosk_model)
@@ -58,12 +56,10 @@ class VoiceHandlers:
     def on_voice_recognized(self, text):
         """Riceve il testo riconosciuto e lo inserisce nell'area di dettaglio."""
         self.main_window.work_area_left_text_edit.append(text)
-        self.main_window.btn_voice.setText("🎤 Trascrivi")
 
     def on_voice_error(self, message):
         """Mostra un messaggio di errore in caso di fallimento del riconoscimento vocale."""
         QMessageBox.warning(self.main_window, "Riconoscimento Vocale", message)
-        self.main_window.btn_voice.setText("🎤 Trascrivi")
 
     def get_vosk_model_for_language(self, language_code):
         """

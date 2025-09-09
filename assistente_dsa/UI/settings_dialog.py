@@ -10,7 +10,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QCheckBox,
-    QGroupBox, QTabWidget, QWidget, QMessageBox, QScrollArea
+    QGroupBox, QTabWidget, QWidget, QMessageBox, QScrollArea, QGridLayout
 )
 
 # Import del sistema di configurazione globale
@@ -26,80 +26,11 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.settings = load_settings()
 
-        self.setWindowTitle("Impostazioni DSA Assistant")
+
         self.setModal(True)
-        self.resize(900, 700)
 
-        # Applica stile al dialog
-        self.setStyleSheet("""
-            QDialog {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #f8f9fa, stop:1 #e9ecef);
-            }
 
-            QGroupBox {
-                font-weight: bold;
-                border: 2px solid #000000;
-                border-radius: 8px;
-                margin-top: 6px;
-                padding-top: 10px;
-                background: rgba(255, 255, 255, 0.9);
-            }
-
-            QGroupBox::title {
-                color: #2c3e50;
-                padding: 0 10px;
-            }
-
-            QLabel {
-                color: #2c3e50;
-                font-weight: bold;
-            }
-
-            QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
-                border: 2px solid #000000;
-                border-radius: 5px;
-                padding: 5px;
-                background: white;
-            }
-
-            QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
-                border-color: #000000;
-                background: #f8f9fa;
-            }
-
-            QPushButton {
-                background-color: #4a90e2;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                padding: 10px 20px;
-                font-weight: bold;
-                min-width: 120px;
-                min-height: 35px;
-            }
-
-            QPushButton:hover {
-                background-color: #357abd;
-            }
-
-            QTabWidget::pane {
-                border: 1px solid #000000;
-                background: rgba(255, 255, 255, 0.9);
-            }
-
-            QTabBar::tab {
-                background: #6c757d;
-                color: white;
-                padding: 10px 20px;
-                border: none;
-                border-radius: 5px 5px 0 0;
-            }
-
-            QTabBar::tab:selected {
-                background: #4a90e2;
-            }
-        """)
+        # Applica stile al dialog - REMOVED
 
         self.setup_ui()
         self.load_current_settings()
@@ -497,6 +428,240 @@ class SettingsDialog(QDialog):
 
         scroll_layout.addWidget(button_bg_group)
 
+        # === SEZIONE COLORI PULSANTI SPECIFICI ===
+        button_colors_group = QGroupBox("🎯 Colori Pulsanti Specifici")
+        button_colors_group.setStyleSheet("QGroupBox { font-weight: bold; }")
+        button_colors_layout = QVBoxLayout(button_colors_group)
+
+        # Carica i colori attuali dalle impostazioni
+        colors = get_setting('colors', {})
+        button_text_colors = colors.get('button_text_colors', {})
+        button_border_colors = colors.get('button_border_colors', {})
+
+        # Pulsanti principali
+        main_buttons = [
+            ("options_button", "⚙️ Opzioni", button_text_colors.get('options_button', '#000000')),
+            ("save_button", "💾 Salva", button_text_colors.get('save_button', '#000000')),
+            ("load_button", "📂 Carica", button_text_colors.get('load_button', '#000000')),
+            ("add_pensierino_button", "➕ Aggiungi Pensierino", button_text_colors.get('add_pensierino_button', '#000000')),
+            ("toggle_tools_button", "🔧 Ingranaggi", button_text_colors.get('toggle_tools_button', '#000000'))
+        ]
+
+        self.main_button_color_buttons = {}
+        for button_id, button_name, default_color in main_buttons:
+            color_layout = QHBoxLayout()
+            color_layout.addWidget(QLabel(f"{button_name}:"))
+
+            color_button = QPushButton()
+            color_button.setFixedSize(80, 35)
+            color_button.setStyleSheet(f"background-color: {default_color}; border: 2px solid #000000; border-radius: 4px;")
+            color_button.clicked.connect(lambda checked, bid=button_id, btn=color_button: self.choose_button_text_color(bid, btn))
+            color_layout.addWidget(color_button)
+
+            # Label per mostrare il codice colore
+            color_label = QLabel(default_color)
+            color_label.setFixedWidth(80)
+            color_layout.addWidget(color_label)
+
+            color_layout.addStretch()
+            button_colors_layout.addLayout(color_layout)
+
+            self.main_button_color_buttons[button_id] = (color_button, color_label)
+
+        # Pulsanti sezione Trascrizione
+        transcription_group = QGroupBox("🎤 Pulsanti Trascrizione")
+        transcription_layout = QVBoxLayout(transcription_group)
+
+        transcription_buttons = [
+            ("voice_button", "🎤 Voce → Testo", button_text_colors.get('voice_button', '#000000')),
+            ("audio_transcription_button", "🎵 Audio → Testo", button_text_colors.get('audio_transcription_button', '#000000')),
+            ("ocr_button", "📄 OCR → Testo", button_text_colors.get('ocr_button', '#000000')),
+            ("graphics_tablet_button", "🎨 Tavoletta", button_text_colors.get('graphics_tablet_button', '#000000'))
+        ]
+
+        self.transcription_button_colors = {}
+        for button_id, button_name, default_color in transcription_buttons:
+            color_layout = QHBoxLayout()
+            color_layout.addWidget(QLabel(f"{button_name}:"))
+
+            color_button = QPushButton()
+            color_button.setFixedSize(80, 35)
+            color_button.setStyleSheet(f"background-color: {default_color}; border: 2px solid #000000; border-radius: 4px;")
+            color_button.clicked.connect(lambda checked, bid=button_id, btn=color_button: self.choose_button_text_color(bid, btn))
+            color_layout.addWidget(color_button)
+
+            color_label = QLabel(default_color)
+            color_label.setFixedWidth(80)
+            color_layout.addWidget(color_label)
+
+            color_layout.addStretch()
+            transcription_layout.addLayout(color_layout)
+
+            self.transcription_button_colors[button_id] = (color_button, color_label)
+
+        button_colors_layout.addWidget(transcription_group)
+
+        # Pulsanti sezione AI & Media
+        ai_media_group = QGroupBox("🤖 Pulsanti AI & Media")
+        ai_media_layout = QVBoxLayout(ai_media_group)
+
+        ai_buttons = [
+            ("ai_button", "🧠 Chiedi ad A.I.", button_text_colors.get('ai_button', '#000000')),
+            ("face_button", "❌ Faccia/e", button_text_colors.get('face_button', '#000000')),
+            ("hand_button", "❌ Gesti", button_text_colors.get('hand_button', '#000000'))
+        ]
+
+        self.ai_button_colors = {}
+        for button_id, button_name, default_color in ai_buttons:
+            color_layout = QHBoxLayout()
+            color_layout.addWidget(QLabel(f"{button_name}:"))
+
+            color_button = QPushButton()
+            color_button.setFixedSize(80, 35)
+            color_button.setStyleSheet(f"background-color: {default_color}; border: 2px solid #000000; border-radius: 4px;")
+            color_button.clicked.connect(lambda checked, bid=button_id, btn=color_button: self.choose_button_text_color(bid, btn))
+            color_layout.addWidget(color_button)
+
+            color_label = QLabel(default_color)
+            color_label.setFixedWidth(80)
+            color_layout.addWidget(color_label)
+
+            color_layout.addStretch()
+            ai_media_layout.addLayout(color_layout)
+
+            self.ai_button_colors[button_id] = (color_button, color_label)
+
+        button_colors_layout.addWidget(ai_media_group)
+
+        # Pulsanti sezione Conoscenza (griglia 4x5)
+        knowledge_group = QGroupBox("🌍 Pulsanti Materie Scolastiche")
+        knowledge_layout = QGridLayout(knowledge_group)
+        knowledge_layout.setSpacing(8)
+
+        knowledge_buttons = [
+            ("ipa_button", "📝 IPA"),
+            ("math_button", "🔢 Matematica"),
+            ("chemistry_button", "⚗️ Chimica"),
+            ("physics_button", "⚛️ Fisica"),
+            ("biology_button", "🧬 Biologia"),
+            ("italian_button", "🇮🇹 Italiano"),
+            ("history_button", "📚 Storia"),
+            ("computer_science_button", "💻 Info"),
+            ("os_scripting_button", "🖥️ Sistemi"),
+            ("astronomy_button", "🌌 Astronomia"),
+            ("advanced_math_button", "📐 Mat.Sup."),
+            ("law_button", "⚖️ Diritto"),
+            ("probability_stats_button", "📊 Statistica"),
+            ("english_button", "🇺🇸 Inglese"),
+            ("german_button", "🇩🇪 Tedesco"),
+            ("spanish_button", "🇪🇸 Spagnolo"),
+            ("sicilian_button", "🏛️ Siciliano"),
+            ("japanese_button", "🇯🇵 Giapponese"),
+            ("chinese_button", "🇨🇳 Cinese"),
+            ("russian_button", "🇷🇺 Russo")
+        ]
+
+        self.knowledge_button_colors = {}
+        for i, (button_id, button_name) in enumerate(knowledge_buttons):
+            row = i // 5
+            col = i % 5
+
+            # Layout verticale per ogni pulsante
+            button_layout = QVBoxLayout()
+
+            # Etichetta del pulsante
+            label = QLabel(button_name)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            button_layout.addWidget(label)
+
+            # Pulsante colore
+            default_color = button_text_colors.get(button_id, '#000000')
+            color_button = QPushButton()
+            color_button.setFixedSize(60, 30)
+            color_button.setStyleSheet(f"background-color: {default_color}; border: 2px solid #000000; border-radius: 4px;")
+            color_button.clicked.connect(lambda checked, bid=button_id, btn=color_button: self.choose_button_text_color(bid, btn))
+
+            # Label codice colore
+            color_label = QLabel(default_color)
+            color_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            color_label.setFixedWidth(60)
+
+            button_layout.addWidget(color_button)
+            button_layout.addWidget(color_label)
+
+            knowledge_layout.addLayout(button_layout, row, col)
+
+            self.knowledge_button_colors[button_id] = (color_button, color_label)
+
+        button_colors_layout.addWidget(knowledge_group)
+
+        # Pulsanti sezione Utilità
+        utilities_group = QGroupBox("⚙️ Pulsanti Utilità")
+        utilities_layout = QVBoxLayout(utilities_group)
+
+        utility_buttons = [
+            ("media_button", "📁 Carica Media", button_text_colors.get('media_button', '#000000')),
+            ("clean_button", "🧹 Pulisci", button_text_colors.get('clean_button', '#000000')),
+            ("log_button", "📋 Log", button_text_colors.get('log_button', '#000000'))
+        ]
+
+        self.utility_button_colors = {}
+        for button_id, button_name, default_color in utility_buttons:
+            color_layout = QHBoxLayout()
+            color_layout.addWidget(QLabel(f"{button_name}:"))
+
+            color_button = QPushButton()
+            color_button.setFixedSize(80, 35)
+            color_button.setStyleSheet(f"background-color: {default_color}; border: 2px solid #000000; border-radius: 4px;")
+            color_button.clicked.connect(lambda checked, bid=button_id, btn=color_button: self.choose_button_text_color(bid, btn))
+            color_layout.addWidget(color_button)
+
+            color_label = QLabel(default_color)
+            color_label.setFixedWidth(80)
+            color_layout.addWidget(color_label)
+
+            color_layout.addStretch()
+            utilities_layout.addLayout(color_layout)
+
+            self.utility_button_colors[button_id] = (color_button, color_label)
+
+        button_colors_layout.addWidget(utilities_group)
+
+        # Pulsanti sezione IoT
+        iot_group = QGroupBox("🔗 Pulsanti IoT")
+        iot_layout = QVBoxLayout(iot_group)
+
+        iot_buttons = [
+            ("arduino_button", "🔌 Arduino", button_text_colors.get('arduino_button', '#000000')),
+            ("circuit_button", "⚡ Circuito", button_text_colors.get('circuit_button', '#000000')),
+            ("screen_share_button", "📺 Condividi", button_text_colors.get('screen_share_button', '#000000')),
+            ("collab_button", "🤝 Collabora", button_text_colors.get('collab_button', '#000000'))
+        ]
+
+        self.iot_button_colors = {}
+        for button_id, button_name, default_color in iot_buttons:
+            color_layout = QHBoxLayout()
+            color_layout.addWidget(QLabel(f"{button_name}:"))
+
+            color_button = QPushButton()
+            color_button.setFixedSize(80, 35)
+            color_button.setStyleSheet(f"background-color: {default_color}; border: 2px solid #000000; border-radius: 4px;")
+            color_button.clicked.connect(lambda checked, bid=button_id, btn=color_button: self.choose_button_text_color(bid, btn))
+            color_layout.addWidget(color_button)
+
+            color_label = QLabel(default_color)
+            color_label.setFixedWidth(80)
+            color_layout.addWidget(color_label)
+
+            color_layout.addStretch()
+            iot_layout.addLayout(color_layout)
+
+            self.iot_button_colors[button_id] = (color_button, color_label)
+
+        button_colors_layout.addWidget(iot_group)
+
+        scroll_layout.addWidget(button_colors_group)
+
         # === SEZIONE ANTEPRIMA ===
         preview_group = QGroupBox("👁️ Anteprima delle Modifiche")
         preview_group.setStyleSheet("QGroupBox { font-weight: bold; }")
@@ -586,6 +751,34 @@ class SettingsDialog(QDialog):
             color_hex = color.name()
             button.setStyleSheet("background-color: {color_hex}; color: white; border: none; border-radius: 4px;")
 
+    def choose_button_text_color(self, button_id, button):
+        """Permette di scegliere un colore del testo per un pulsante specifico."""
+        from PyQt6.QtWidgets import QColorDialog
+
+        current_color = button.palette().color(button.backgroundRole())
+        color = QColorDialog.getColor(current_color, self, f"Scegli colore testo per {button_id}")
+
+        if color.isValid():
+            color_hex = color.name()
+            button.setStyleSheet(f"background-color: {color_hex}; border: 2px solid #000000; border-radius: 4px;")
+
+            # Trova la label corrispondente e aggiorna il testo
+            # Cerca in tutti i dizionari di pulsanti
+            all_button_dicts = [
+                getattr(self, 'main_button_color_buttons', {}),
+                getattr(self, 'transcription_button_colors', {}),
+                getattr(self, 'ai_button_colors', {}),
+                getattr(self, 'knowledge_button_colors', {}),
+                getattr(self, 'utility_button_colors', {}),
+                getattr(self, 'iot_button_colors', {})
+            ]
+
+            for button_dict in all_button_dicts:
+                if button_id in button_dict:
+                    _, label = button_dict[button_id]
+                    label.setText(color_hex)
+                    break
+
     def update_preview(self):
         """Aggiorna l'anteprima con le impostazioni correnti."""
         try:
@@ -623,18 +816,43 @@ class SettingsDialog(QDialog):
             set_setting('main_font_size', font_size)
             set_setting('main_font_weight', font_weight)
 
+            # Salva i colori dei pulsanti
+            button_text_colors = {}
+
+            # Raccogli colori da tutti i gruppi di pulsanti
+            all_button_groups = [
+                getattr(self, 'main_button_color_buttons', {}),
+                getattr(self, 'transcription_button_colors', {}),
+                getattr(self, 'ai_button_colors', {}),
+                getattr(self, 'knowledge_button_colors', {}),
+                getattr(self, 'utility_button_colors', {}),
+                getattr(self, 'iot_button_colors', {})
+            ]
+
+            for button_group in all_button_groups:
+                for button_id, (color_button, color_label) in button_group.items():
+                    color_hex = color_label.text()
+                    button_text_colors[button_id] = color_hex
+
+            # Salva i colori nel file settings.json
+            colors = get_setting('colors', {})
+            colors['button_text_colors'] = button_text_colors
+            set_setting('colors', colors)
+
             print("✅ Impostazioni font salvate:")
             print("   - Font: {font_family}")
             print("   - Dimensione: {font_size}pt")
             print("   - Peso: {font_weight}")
+            print("✅ Colori pulsanti salvati: {len(button_text_colors)} pulsanti")
 
             # Qui implementeremo la logica per applicare le modifiche all'interfaccia principale
             QMessageBox.information(self, "Personalizzazioni Salvate",
-                                    "✅ Le personalizzazioni sono state salvate con successo!\n\n"
-                                    "🎨 Font: {font_family}\n"
-                                    "📏 Dimensione: {font_size}pt\n"
-                                    "💪 Peso: {font_weight}\n\n"
-                                    "Le impostazioni sono state salvate nel file settings.json.")
+                                     "✅ Le personalizzazioni sono state salvate con successo!\n\n"
+                                     "🎨 Font: {font_family}\n"
+                                     "📏 Dimensione: {font_size}pt\n"
+                                     "💪 Peso: {font_weight}\n"
+                                     "🎯 Colori pulsanti: {len(button_text_colors)} configurati\n\n"
+                                     "Le impostazioni sono state salvate nel file settings.json.")
 
         except Exception:
             QMessageBox.critical(self, "Errore", "Errore nell'applicazione delle personalizzazioni:\n{str(e)}")

@@ -1,0 +1,36 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+<qresource>
+    <!-- Icone e immagini per l'interfaccia -->
+    <file>../ICO-fonts-wallpaper/icon.png</file>
+    <file>../ICO-fonts-wallpaper/ICONA.ico</file>
+    <file>../ICO-fonts-wallpaper/ICONA.png</file>
+    <file>../ICO-fonts-wallpaper/default_wallpaper.png</file>
+
+    <!-- Font personalizzato -->
+    <file>../ICO-fonts-wallpaper/OpenDyslexic-Regular.otf</file>
+
+    <!-- Screenshot di esempio -->
+    <file>../Screenshot/ESempio di schermate md</file>
+    <file>../Screenshot/Schermata_20250905_235501.png</file>
+    <file>../Screenshot/Schermata_20250906_021055.png</file>
+    <file>../Screenshot/Schermata_20250906_021105.png</file>
+    <file>../Screenshot/Schermata_20250906_021122.png</file>
+    <file>../Screenshot/Schermata_20250906_021138.png</file>
+    <file>../Screenshot/Schermata_20250906_021153.png</file>
+    <file>../Screenshot/Schermata_20250906_021200.png</file>
+    <file>../Screenshot/Schermata_20250906_021208.png</file>
+    <file>../Screenshot/Schermata_20250906_021217.png</file>
+    <file>../Screenshot/Schermata_20250906_021222.png</file>
+    <file>../Screenshot/Schermata_20250906_021229.png</file>
+
+    <!-- File di configurazione -->
+    <file>../Artificial_Intelligence/Ollama/installed_models.json</file>
+    <file>../Artificial_Intelligence/Ollama/recommended_models.json</file>
+
+    <!-- Documentazione -->
+    <file>../README.md</file>
+    <file>../README_REFACTORING.md</file>
+    <file>../CONTRIBUTING.md</file>
+</qresource>
+</RCC>

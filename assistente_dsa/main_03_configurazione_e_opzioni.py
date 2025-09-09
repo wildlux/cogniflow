@@ -61,7 +61,8 @@ class ConfigManager:
                 "button_min_width": 120,
                 "button_min_height": 40,
                 "button_icon_position": "top-left",
-                "button_text_position": "right"
+                "button_text_position": "right",
+                "tools_panel_visible": True
             },
             "fonts": {
                 "main_font_family": "Arial",
@@ -70,6 +71,78 @@ class ConfigManager:
                 "pensierini_font_size": 10,
                 "default_font_size": 12,
                 "default_pensierini_font_size": 10
+            },
+            "colors": {
+                "button_text_colors": {
+                    "options_button": "#000000",
+                    "toggle_tools_button": "#000000",
+                    "save_button": "#000000",
+                    "load_button": "#000000",
+                    "add_pensierino_button": "#000000",
+                    "voice_button": "#000000",
+                    "audio_transcription_button": "#000000",
+                    "ocr_button": "#000000",
+                    "graphics_tablet_button": "#000000",
+                    "ai_button": "#000000",
+                    "face_button": "#000000",
+                    "hand_button": "#000000",
+                    "ipa_button": "#000000",
+                    "math_button": "#000000",
+                    "chemistry_button": "#000000",
+                    "physics_button": "#000000",
+                    "biology_button": "#000000",
+                    "italian_button": "#000000",
+                    "history_button": "#000000",
+                    "computer_science_button": "#000000",
+                    "os_scripting_button": "#000000",
+                    "astronomy_button": "#000000",
+                    "advanced_math_button": "#000000",
+                    "law_button": "#000000",
+                    "probability_stats_button": "#000000",
+                    "english_button": "#000000",
+                    "german_button": "#000000",
+                    "spanish_button": "#000000",
+                    "sicilian_button": "#000000",
+                    "japanese_button": "#000000",
+                    "chinese_button": "#000000",
+                    "russian_button": "#000000",
+                    "media_button": "#000000",
+                    "clean_button": "#000000",
+                    "log_button": "#000000",
+                    "arduino_button": "#000000",
+                    "circuit_button": "#000000",
+                    "screen_share_button": "#000000",
+                    "collab_button": "#000000"
+                },
+                "button_border_colors": {
+                    "general_border": "#495057",
+                    "toggle_tools_border": "#495057",
+                    "save_border": "#495057",
+                    "load_border": "#495057",
+                    "add_pensierino_border": "#495057"
+                },
+                "button_background_colors": {
+                    "general_background": "transparent",
+                    "toggle_tools_background": "transparent",
+                    "save_background": "transparent",
+                    "load_background": "transparent",
+                    "add_pensierino_background": "transparent",
+                    "tools_background": "transparent"
+                },
+                "button_hover_colors": {
+                    "general_hover": "#e9ecef",
+                    "toggle_tools_hover": "#e9ecef",
+                    "save_hover": "#e9ecef",
+                    "load_hover": "#e9ecef",
+                    "add_pensierino_hover": "#e9ecef"
+                },
+                "button_pressed_colors": {
+                    "general_pressed": "#dee2e6",
+                    "toggle_tools_pressed": "#dee2e6",
+                    "save_pressed": "#dee2e6",
+                    "load_pressed": "#dee2e6",
+                    "add_pensierino_pressed": "#dee2e6"
+                }
             },
             "detection_systems": {
                 "hand_detection_system": "Auto (Migliore)",

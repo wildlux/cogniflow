@@ -44,7 +44,7 @@ class DraggableTextWidget(QFrame):
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setFrameShadow(QFrame.Shadow.Raised)
         self.setMinimumHeight(WIDGET_MIN_HEIGHT)
-        self.setStyleSheet(WIDGET_STYLE_SHEET)
+
 
         self.settings = settings
         self.original_text = text
@@ -57,7 +57,9 @@ class DraggableTextWidget(QFrame):
 
         layout = QHBoxLayout(self)
         self.text_label = QLabel(text)
-        self.text_label.setStyleSheet("font-weight: bold; font-size: {DEFAULT_FONT_SIZE}px;")
+        # Usa le preferenze font dalle impostazioni utente
+        pensierini_font_size = self.settings.get('fonts', {}).get('pensierini_font_size', DEFAULT_FONT_SIZE)
+        self.text_label.setStyleSheet(f"font-weight: bold; font-size: {pensierini_font_size}px;")
         self.text_label.setWordWrap(True)
         self.text_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.text_label.customContextMenuRequested.connect(self.show_context_menu)

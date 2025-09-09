@@ -26,8 +26,7 @@ class TextReadingHandlers:
             return
 
         self.main_window.is_reading = True
-        self.main_window.read_button.setText("⏹️")
-        self.main_window.read_button.setStyleSheet("background-color: #e74c3c; color: white;")
+
 
         selected_voice = self.main_window.settings.get('tts_voice', 'it-IT')
         # Gestisci la voce in modo sicuro
@@ -55,8 +54,6 @@ class TextReadingHandlers:
                     logging.warning("Thread TTS non terminato entro il timeout")
             self.main_window.tts_thread = None
         self.main_window.is_reading = False
-        self.main_window.read_button.setText("🔊")
-        self.main_window.read_button.setStyleSheet("")
         logging.info("Lettura testo interrotta.")
 
     def on_reading_started(self):
@@ -66,14 +63,11 @@ class TextReadingHandlers:
     def on_reading_finished(self):
         """Gestisce la fine della lettura."""
         self.main_window.is_reading = False
-        self.main_window.read_button.setText("🔊")
-        self.main_window.read_button.setStyleSheet("")
         logging.info("Lettura testo completata.")
 
     def on_reading_error(self, message):
         """Gestisce gli errori durante la lettura."""
         self.main_window.is_reading = False
-        self.main_window.read_button.setText("🔊")
         self.main_window.read_button.setStyleSheet("")
         logging.error("Errore durante la lettura vocale: {message}")
         self.main_window.tts_thread = None
