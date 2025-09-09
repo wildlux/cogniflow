@@ -401,8 +401,8 @@ class MainWindow(QMainWindow):
         pensierini_section = self.create_pensierini_input_section()
         tools_splitter.addWidget(pensierini_section)
 
-        # Imposta proporzioni iniziali (70% strumenti, 30% pensierini)
-        tools_splitter.setSizes([7, 3])
+        # Imposta proporzioni iniziali (40% strumenti, 60% pensierini)
+        tools_splitter.setSizes([4, 6])
 
         unified_layout.addWidget(tools_splitter)
         return unified_section
@@ -410,8 +410,8 @@ class MainWindow(QMainWindow):
     def create_pensierini_input_section(self):
         """Crea la sezione input pensierini"""
         pensierini_group = QGroupBox("✏️ Creazione Pensierini")
-        pensierini_group.setMinimumHeight(80)
-        pensierini_group.setMaximumHeight(120)
+        pensierini_group.setMinimumHeight(150)
+        pensierini_group.setMaximumHeight(150)
 
         layout = QVBoxLayout(pensierini_group)
         layout.setContentsMargins(8, 15, 8, 8)
@@ -500,7 +500,7 @@ class MainWindow(QMainWindow):
         from PyQt6.QtWidgets import QTabWidget
 
         tabs = QTabWidget()
-        tabs.setTabPosition(QTabWidget.TabPosition.West)
+        # tabs.setTabPosition(QTabWidget.TabPosition.West)  # Commentato per layout orizzontale
         tabs.setStyleSheet("""
             QTabWidget::pane {
                 border: 1px solid #dee2e6;
@@ -1386,15 +1386,15 @@ class MainWindow(QMainWindow):
         self.tools_group = unified_tools_section  # For toggle compatibility
 
         # Set minimum window size
-        self.setMinimumSize(1000, 700)
+        self.setMinimumSize(1000, 850)
 
         # Check preferences for initial tools panel state
         tools_visible = self.settings.get('ui', {}).get('tools_panel_visible', True)
         if tools_visible:
-            vertical_splitter.setSizes([500, 300])  # 70% main content, 30% unified tools
+            vertical_splitter.setSizes([450, 450])  # 50% main content, 50% unified tools
             self.toggle_tools_button.setChecked(True)
         else:
-            vertical_splitter.setSizes([700, 100])  # Hide tools section when not visible
+            vertical_splitter.setSizes([800, 50])  # Hide tools section when not visible
             self.tools_group.setVisible(False)
             self.toggle_tools_button.setChecked(False)
 
