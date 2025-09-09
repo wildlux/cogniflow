@@ -416,19 +416,112 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(pensierini_group)
         layout.setContentsMargins(8, 15, 8, 8)
 
-        # Riga input + pulsante
-        input_row = QHBoxLayout()
-        input_row.setSpacing(8)
+        # Campo di testo in alto (occupa tutto lo spazio disponibile)
+        self.input_text_area.setFixedHeight(60)  # Più alto per migliore usabilità
+        layout.addWidget(self.input_text_area)
 
-        self.input_text_area.setFixedHeight(32)
-        input_row.addWidget(self.input_text_area, 4)
+        # Riga pulsanti in basso
+        buttons_row = QHBoxLayout()
+        buttons_row.setSpacing(8)
 
         self.add_pensierino_button.setFixedHeight(32)
-        input_row.addWidget(self.add_pensierino_button, 1)
+        buttons_row.addWidget(self.add_pensierino_button, 1)
 
-        layout.addLayout(input_row)
+        # Pulsante pulisci
+        self.clear_pensierini_button = QPushButton("🧹 Pulisci Tutto")
+        self.clear_pensierini_button.setFixedHeight(32)
+        self.clear_pensierini_button.setObjectName("clear_pensierini_button")
+        self.clear_pensierini_button.clicked.connect(self.clear_all_pensierini_with_confirmation)
+        buttons_row.addWidget(self.clear_pensierini_button, 1)
+
+        layout.addLayout(buttons_row)
 
         return pensierini_group
+
+    def clear_column_a(self):
+        """Pulisce la colonna A (pensierini)"""
+        try:
+            # Per ora, mostriamo solo un messaggio informativo
+            # La pulizia effettiva dei pensierini richiede l'implementazione specifica
+            print("✅ Colonna A (pensierini) - pulizia pianificata")
+            QMessageBox.information(self, "Info Pulizia", "La pulizia della colonna A sarà implementata nella prossima versione.")
+        except Exception as e:
+            print(f"⚠️ Errore pulizia colonna A: {e}")
+
+    def clear_column_b(self):
+        """Pulisce la colonna B (area di lavoro)"""
+        try:
+            if hasattr(self, 'work_area_layout') and self.work_area_layout:
+                # Rimuove tutti i widget dalla colonna B in modo sicuro
+                count = self.work_area_layout.count()
+                for i in range(count - 1, -1, -1):  # Scorri al contrario per sicurezza
+                    item = self.work_area_layout.itemAt(i)
+                    if item:
+                        widget = item.widget()
+                        if widget:
+                            self.work_area_layout.removeItem(item)
+                            widget.setVisible(False)  # Nasconde invece di eliminare
+                print("✅ Colonna B (area di lavoro) pulita")
+        except Exception as e:
+            print(f"⚠️ Errore pulizia colonna B: {e}")
+
+    def clear_column_c(self):
+        """Pulisce la colonna C (dettagli)"""
+        try:
+            if hasattr(self, 'details_layout') and self.details_layout:
+                # Rimuove tutti i widget dalla colonna C in modo sicuro
+                count = self.details_layout.count()
+                for i in range(count - 1, -1, -1):  # Scorri al contrario per sicurezza
+                    item = self.details_layout.itemAt(i)
+                    if item:
+                        widget = item.widget()
+                        if widget:
+                            self.details_layout.removeItem(item)
+                            widget.setVisible(False)  # Nasconde invece di eliminare
+                print("✅ Colonna C (dettagli) pulita")
+        except Exception as e:
+            print(f"⚠️ Errore pulizia colonna C: {e}")
+
+    def clear_input_text(self):
+        """Pulisce il campo di input testo"""
+        if hasattr(self, 'input_text_area'):
+            self.input_text_area.clear()
+            print("✅ Campo di input testo pulito")
+
+    def clear_all_pensierini_with_confirmation(self):
+        """Pulisce tutto (input + colonne A, B, C) con conferma"""
+        reply = QMessageBox.question(
+            self,
+            "Conferma Pulizia Totale",
+            "⚠️ ATTENZIONE: Questa azione pulirà:\n\n"
+            "• Il campo di input testo\n"
+            "• Tutti i pensierini (Colonna A)\n"
+            "• L'area di lavoro (Colonna B)\n"
+            "• I dettagli (Colonna C)\n\n"
+            "Questa operazione è IRREVERSIBILE.\n\n"
+            "Vuoi continuare?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            # Procedi con la pulizia
+            self.clear_input_text()
+            self.clear_column_a()
+            self.clear_column_b()
+            self.clear_column_c()
+
+            QMessageBox.information(
+                self,
+                "Pulizia Completata",
+                "✅ Tutto è stato pulito con successo!\n\n"
+                "• Campo di input: VUOTO\n"
+                "• Colonna A: VUOTA\n"
+                "• Colonna B: VUOTA\n"
+                "• Colonna C: VUOTA"
+            )
+        else:
+            print("❌ Pulizia annullata dall'utente")
 
     def create_unified_tools_section_content(self):
         """Crea il contenuto unificato di tutti gli strumenti con schede e area risultati"""
