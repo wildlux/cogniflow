@@ -390,88 +390,139 @@ class SettingsDialog(QDialog):
 
         scroll_layout.addWidget(font_group)
 
-        # === SEZIONE COLORI TESTO ===
-        text_color_group = QGroupBox("📝 Colori del Testo")
-        text_color_group.setStyleSheet("QGroupBox { font-weight: bold; }")
-        text_color_layout = QVBoxLayout(text_color_group)
 
-        # Colori semplificati per categorie principali
-        text_categories = [
-            ("Testo normale", "#333333"),
-            ("Titoli", "#2c3e50"),
-            ("Sfondo principale", "#ffffff")
-        ]
-
-        self.text_color_buttons = {}
-        for category, default_color in text_categories:
-            color_layout = QHBoxLayout()
-            color_layout.addWidget(QLabel(f"{category}:"))
-
-            color_button = QPushButton()
-            color_button.setFixedSize(80, 35)
-            color_button.setStyleSheet(f"background-color: {default_color}; color: white; border: 2px solid #000000; border-radius: 4px;")
-            color_button.clicked.connect(lambda checked, cat=category, btn=color_button: self.choose_color(cat, btn))
-            color_layout.addWidget(color_button)
-
-            # Label per mostrare il codice colore
-            color_label = QLabel(default_color)
-            color_label.setFixedWidth(80)
-            color_layout.addWidget(color_label)
-
-            color_layout.addStretch()
-            text_color_layout.addLayout(color_layout)
-
-            self.text_color_buttons[category] = (color_button, color_label)
-
-        scroll_layout.addWidget(text_color_group)
 
         # === SEZIONE ANTEPRIMA (Stile Windows XP) ===
         preview_group = QGroupBox("👁️ Anteprima Finestra Demo")
         preview_group.setStyleSheet("QGroupBox { font-weight: bold; }")
         preview_layout = QVBoxLayout(preview_group)
 
-        # Finestra demo (simula una finestra dell'app)
+        # Finestra demo professionale (simula una finestra dell'app)
         demo_window = QFrame()
         demo_window.setFrameStyle(QFrame.Shape.Box)
-        demo_window.setStyleSheet("QFrame { background-color: #f0f0f0; border: 2px solid #000000; }")
+        demo_window.setStyleSheet("""
+            QFrame {
+                background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f0f0f0, stop:1 #e0e0e0);
+                border: 2px solid #808080;
+                border-radius: 5px;
+            }
+        """)
         demo_layout = QVBoxLayout(demo_window)
+        demo_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Barra del titolo
+        # Barra del titolo professionale
         title_bar = QHBoxLayout()
-        title_label = QLabel("Finestra Demo - CogniFlow")
-        title_label.setStyleSheet("font-weight: bold; color: black; padding: 2px;")
+        title_bar.setContentsMargins(5, 5, 5, 5)
+        title_icon = QLabel("📄")
+        title_icon.setStyleSheet("font-size: 16px;")
+        title_bar.addWidget(title_icon)
+        title_label = QLabel("CogniFlow - Finestra Demo Professionale")
+        title_label.setStyleSheet("font-weight: bold; color: #000080; font-size: 12px;")
         title_bar.addWidget(title_label)
         title_bar.addStretch()
+        minimize_button = QPushButton("_")
+        minimize_button.setFixedSize(25, 20)
+        minimize_button.setStyleSheet("QPushButton { background-color: #c0c0c0; border: 1px solid #808080; } QPushButton:hover { background-color: #d0d0d0; }")
+        title_bar.addWidget(minimize_button)
         close_button = QPushButton("X")
-        close_button.setFixedSize(20, 20)
-        close_button.setStyleSheet("QPushButton { background-color: #ff0000; color: white; border: none; }")
+        close_button.setFixedSize(25, 20)
+        close_button.setStyleSheet("QPushButton { background-color: #c0c0c0; border: 1px solid #808080; color: red; font-weight: bold; } QPushButton:hover { background-color: #ffcccc; }")
         title_bar.addWidget(close_button)
         demo_layout.addLayout(title_bar)
 
-        # Contenuto demo
-        content_layout = QVBoxLayout()
+        # Barra menu
+        menu_bar = QHBoxLayout()
+        menu_bar.setContentsMargins(5, 0, 5, 0)
+        file_menu = QPushButton("File")
+        file_menu.setStyleSheet("QPushButton { background-color: transparent; color: black; border: none; text-align: left; padding: 2px 10px; } QPushButton:hover { background-color: #e0e0e0; }")
+        file_menu.clicked.connect(lambda: self.change_demo_color("menu"))
+        menu_bar.addWidget(file_menu)
+        edit_menu = QPushButton("Modifica")
+        edit_menu.setStyleSheet("QPushButton { background-color: transparent; color: black; border: none; text-align: left; padding: 2px 10px; } QPushButton:hover { background-color: #e0e0e0; }")
+        edit_menu.clicked.connect(lambda: self.change_demo_color("menu"))
+        menu_bar.addWidget(edit_menu)
+        view_menu = QPushButton("Visualizza")
+        view_menu.setStyleSheet("QPushButton { background-color: transparent; color: black; border: none; text-align: left; padding: 2px 10px; } QPushButton:hover { background-color: #e0e0e0; }")
+        view_menu.clicked.connect(lambda: self.change_demo_color("menu"))
+        menu_bar.addWidget(view_menu)
+        menu_bar.addStretch()
+        demo_layout.addLayout(menu_bar)
 
-        # Testo di esempio
-        self.demo_text = QLabel("Questo è un testo di esempio nella finestra demo.")
+        # Barra strumenti
+        toolbar = QHBoxLayout()
+        toolbar.setContentsMargins(5, 0, 5, 5)
+        self.toolbar_button1 = QPushButton("📂")
+        self.toolbar_button1.setFixedSize(30, 30)
+        self.toolbar_button1.setStyleSheet("QPushButton { background-color: #f0f0f0; border: 1px solid #c0c0c0; } QPushButton:hover { background-color: #e0e0e0; }")
+        self.toolbar_button1.clicked.connect(lambda: self.change_demo_color("toolbar"))
+        toolbar.addWidget(self.toolbar_button1)
+        self.toolbar_button2 = QPushButton("💾")
+        self.toolbar_button2.setFixedSize(30, 30)
+        self.toolbar_button2.setStyleSheet("QPushButton { background-color: #f0f0f0; border: 1px solid #c0c0c0; } QPushButton:hover { background-color: #e0e0e0; }")
+        self.toolbar_button2.clicked.connect(lambda: self.change_demo_color("toolbar"))
+        toolbar.addWidget(self.toolbar_button2)
+        self.toolbar_button3 = QPushButton("🔍")
+        self.toolbar_button3.setFixedSize(30, 30)
+        self.toolbar_button3.setStyleSheet("QPushButton { background-color: #f0f0f0; border: 1px solid #c0c0c0; } QPushButton:hover { background-color: #e0e0e0; }")
+        self.toolbar_button3.clicked.connect(lambda: self.change_demo_color("toolbar"))
+        toolbar.addWidget(self.toolbar_button3)
+        toolbar.addStretch()
+        demo_layout.addLayout(toolbar)
+
+        # Area contenuto principale
+        content_area = QHBoxLayout()
+        content_area.setContentsMargins(10, 10, 10, 10)
+
+        # Pannello sinistro (albero o lista)
+        left_panel = QVBoxLayout()
+        left_label = QPushButton("Progetti")
+        left_label.setStyleSheet("font-weight: bold; color: black; padding: 5px; border: none; background: transparent; text-align: left;")
+        left_label.clicked.connect(lambda: self.change_demo_color("panel"))
+        left_panel.addWidget(left_label)
+        self.left_item1 = QPushButton("📄 Documento 1")
+        self.left_item1.setStyleSheet("color: black; padding: 2px 5px; border: none; background: transparent; text-align: left;")
+        self.left_item1.clicked.connect(lambda: self.change_demo_color("item"))
+        left_panel.addWidget(self.left_item1)
+        self.left_item2 = QPushButton("📄 Documento 2")
+        self.left_item2.setStyleSheet("color: black; padding: 2px 5px; border: none; background: transparent; text-align: left;")
+        self.left_item2.clicked.connect(lambda: self.change_demo_color("item"))
+        left_panel.addWidget(self.left_item2)
+        left_panel.addStretch()
+        content_area.addLayout(left_panel, 1)
+
+        # Separatore
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        content_area.addWidget(separator)
+
+        # Area centrale (editor)
+        center_area = QVBoxLayout()
+        center_label = QPushButton("Editor di Testo")
+        center_label.setStyleSheet("font-weight: bold; color: black; padding: 5px; border: none; background: transparent; text-align: left;")
+        center_label.clicked.connect(lambda: self.change_demo_color("panel"))
+        center_area.addWidget(center_label)
+        self.demo_text = QLabel("Questo è il contenuto dell'editor.\nClicca sui pulsanti per cambiare i colori.")
         self.demo_text.setWordWrap(True)
-        self.demo_text.setStyleSheet("color: black; padding: 5px;")
-        content_layout.addWidget(self.demo_text)
+        self.demo_text.setStyleSheet("color: black; padding: 10px; background-color: white; border: 1px solid #c0c0c0; min-height: 60px;")
+        center_area.addWidget(self.demo_text)
+        content_area.addLayout(center_area, 3)
 
-        # Pulsanti di esempio
-        buttons_layout = QHBoxLayout()
-        self.demo_button1 = QPushButton("Apri File")
-        self.demo_button1.setStyleSheet("QPushButton { background-color: #c0c0c0; color: black; border: 2px outset #c0c0c0; padding: 5px; } QPushButton:pressed { border: 2px inset #c0c0c0; }")
-        self.demo_button1.clicked.connect(lambda: self.change_demo_color("button"))
-        buttons_layout.addWidget(self.demo_button1)
+        demo_layout.addLayout(content_area)
 
-        self.demo_button2 = QPushButton("Salva")
-        self.demo_button2.setStyleSheet("QPushButton { background-color: #c0c0c0; color: black; border: 2px outset #c0c0c0; padding: 5px; } QPushButton:pressed { border: 2px inset #c0c0c0; }")
-        self.demo_button2.clicked.connect(lambda: self.change_demo_color("button"))
-        buttons_layout.addWidget(self.demo_button2)
+        # Barra di stato
+        status_bar = QHBoxLayout()
+        status_bar.setContentsMargins(5, 0, 5, 5)
+        self.status_label = QLabel("Pronto - Clicca sugli elementi per personalizzare i colori")
+        self.status_label.setStyleSheet("color: black; padding: 2px;")
+        status_bar.addWidget(self.status_label)
+        status_bar.addStretch()
+        self.status_button = QPushButton("Info")
+        self.status_button.setStyleSheet("QPushButton { background-color: #f0f0f0; border: 1px solid #c0c0c0; padding: 2px 10px; } QPushButton:hover { background-color: #e0e0e0; }")
+        self.status_button.clicked.connect(lambda: self.change_demo_color("status"))
+        status_bar.addWidget(self.status_button)
+        demo_layout.addLayout(status_bar)
 
-        content_layout.addLayout(buttons_layout)
-
-        demo_layout.addLayout(content_layout)
         preview_layout.addWidget(demo_window)
 
         # Istruzioni
@@ -513,20 +564,16 @@ class SettingsDialog(QDialog):
         self.tab_widget.addTab(widget, "🎨 Personalizza")
 
     def choose_color(self, category, button):
-        """Permette di scegliere un colore per una categoria di testo."""
+        """Permette di scegliere un colore per una categoria (semplificato)."""
         from PyQt6.QtWidgets import QColorDialog
 
         current_color = button.palette().color(button.backgroundRole())
-        color = QColorDialog.getColor(current_color, self, "Scegli colore per {category}")
+        color = QColorDialog.getColor(current_color, self, f"Scegli colore per {category}")
 
         if color.isValid():
             color_hex = color.name()
-            button.setStyleSheet("background-color: {color_hex}; border: 1px solid #ccc;")
-            # Trova la label corrispondente e aggiorna il testo
-            for cat, (btn, label) in self.text_color_buttons.items():
-                if cat == category:
-                    label.setText(color_hex)
-                    break
+            button.setStyleSheet(f"background-color: {color_hex}; border: 1px solid #ccc;")
+            # Aggiorna il colore del pulsante (senza salvare etichette)
 
     def choose_button_color(self, category, button, color_type):
         """Permette di scegliere un colore per una categoria di pulsante."""
@@ -595,12 +642,62 @@ class SettingsDialog(QDialog):
         from PyQt6.QtWidgets import QColorDialog
 
         if element == "button":
-            current_color = self.demo_button1.palette().color(self.demo_button1.backgroundRole())
+            # Per pulsanti toolbar
+            current_color = self.toolbar_button1.palette().color(self.toolbar_button1.backgroundRole())
             color = QColorDialog.getColor(current_color, self, "Scegli colore per pulsanti demo")
             if color.isValid():
                 color_hex = color.name()
-                self.demo_button1.setStyleSheet(f"QPushButton {{ background-color: {color_hex}; color: black; border: 2px outset {color_hex}; padding: 5px; }} QPushButton:pressed {{ border: 2px inset {color_hex}; }}")
-                self.demo_button2.setStyleSheet(f"QPushButton {{ background-color: {color_hex}; color: black; border: 2px outset {color_hex}; padding: 5px; }} QPushButton:pressed {{ border: 2px inset {color_hex}; }}")
+                self.toolbar_button1.setStyleSheet(f"QPushButton {{ background-color: {color_hex}; border: 1px solid #c0c0c0; }} QPushButton:hover {{ background-color: {self.lighten_color(color_hex)}; }}")
+                self.toolbar_button2.setStyleSheet(f"QPushButton {{ background-color: {color_hex}; border: 1px solid #c0c0c0; }} QPushButton:hover {{ background-color: {self.lighten_color(color_hex)}; }}")
+                self.toolbar_button3.setStyleSheet(f"QPushButton {{ background-color: {color_hex}; border: 1px solid #c0c0c0; }} QPushButton:hover {{ background-color: {self.lighten_color(color_hex)}; }}")
+        elif element == "menu":
+            # Per barra menu
+            color = QColorDialog.getColor(Qt.GlobalColor.white, self, "Scegli colore per barra menu")
+            if color.isValid():
+                color_hex = color.name()
+                # Aggiorna stili menu (simplificato)
+                self.status_label.setText(f"Menu color changed to {color_hex}")
+        elif element == "toolbar":
+            # Già gestito in button
+            pass
+        elif element == "panel":
+            # Per pannelli
+            color = QColorDialog.getColor(Qt.GlobalColor.lightGray, self, "Scegli colore per pannelli")
+            if color.isValid():
+                color_hex = color.name()
+                self.demo_text.setStyleSheet(f"color: black; padding: 10px; background-color: {color_hex}; border: 1px solid #c0c0c0; min-height: 60px;")
+        elif element == "text":
+            # Per testo
+            color = QColorDialog.getColor(Qt.GlobalColor.black, self, "Scegli colore per testo")
+            if color.isValid():
+                color_hex = color.name()
+                self.demo_text.setStyleSheet(f"color: {color_hex}; padding: 10px; background-color: white; border: 1px solid #c0c0c0; min-height: 60px;")
+        elif element == "item":
+            # Per elementi lista
+            color = QColorDialog.getColor(Qt.GlobalColor.black, self, "Scegli colore per elementi lista")
+            if color.isValid():
+                color_hex = color.name()
+                self.left_item1.setStyleSheet(f"color: {color_hex}; padding: 2px 5px;")
+                self.left_item2.setStyleSheet(f"color: {color_hex}; padding: 2px 5px;")
+        elif element == "status":
+            # Per barra stato
+            color = QColorDialog.getColor(Qt.GlobalColor.white, self, "Scegli colore per barra stato")
+            if color.isValid():
+                color_hex = color.name()
+                self.status_label.setStyleSheet(f"color: black; padding: 2px; background-color: {color_hex};")
+
+    def lighten_color(self, color_hex):
+        """Schiarisci un colore per hover."""
+        # Semplice schiarimento (aggiungi offset)
+        if color_hex.startswith('#') and len(color_hex) == 7:
+            r = int(color_hex[1:3], 16)
+            g = int(color_hex[3:5], 16)
+            b = int(color_hex[5:7], 16)
+            r = min(255, r + 20)
+            g = min(255, g + 20)
+            b = min(255, b + 20)
+            return f"#{r:02x}{g:02x}{b:02x}"
+        return color_hex
 
     def apply_demo_changes(self):
         """Applica le modifiche dalla demo alle impostazioni."""
@@ -678,22 +775,7 @@ class SettingsDialog(QDialog):
                                     "📏 Dimensione: {default_font_size}pt\n"
                                     "💪 Peso: {default_font_weight}")
 
-            # Ripristina colori testo
-            default_text_colors = {
-                "Testo normale": "#333333",
-                "Titoli e intestazioni": "#2c3e50",
-                "Testo evidenziato": "#007bff",
-                "Testo di errore": "#dc3545",
-                "Testo di successo": "#28a745",
-                "Testo di avviso": "#ffc107"
-            }
-
-            for category, color in default_text_colors.items():
-                if category in self.text_color_buttons:
-                    button, label = self.text_color_buttons[category]
-                    button.setStyleSheet("background-color: {color}; border: 2px solid #000000; border-radius: 4px;")
-                    button.setFixedSize(80, 35)
-                    label.setText(color)
+            # Ripristino colori testo rimosso (semplificato)
 
             # Ripristino sfondi semplificato (rimosso)
 
