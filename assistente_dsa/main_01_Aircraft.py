@@ -1358,7 +1358,7 @@ class MainWindow(QMainWindow):
 
             # Aggiorna il testo del pulsante
             if hasattr(self, 'toggle_tools_button'):
-                self.toggle_tools_button.setText("🔧 Visualizza cassetta degli attrezzi")
+                self.toggle_tools_button.setText("🔧 Cassetta degli attrezzi")
 
             # Salva nelle preferenze
             self.settings['ui'] = self.settings.get('ui', {})
@@ -1378,7 +1378,7 @@ class MainWindow(QMainWindow):
 
             # Aggiorna il testo del pulsante
             if hasattr(self, 'toggle_tools_button'):
-                self.toggle_tools_button.setText("🔧 Nascondi cassetta degli attrezzi")
+                self.toggle_tools_button.setText("🔧 Cassetta degli attrezzi")
 
             # Salva nelle preferenze
             self.settings['ui'] = self.settings.get('ui', {})
@@ -2045,7 +2045,7 @@ class MainWindow(QMainWindow):
         # Update button states
         if hasattr(self, 'toggle_tools_button'):
             self.toggle_tools_button.setChecked(tools_visible)
-            self.toggle_tools_button.setText("🔧 Nascondi cassetta degli attrezzi" if tools_visible else "🔧 Visualizza cassetta degli attrezzi")
+            self.toggle_tools_button.setText("🔧 Cassetta degli attrezzi")
 
         # Add vertical splitter to main layout
         main_layout.addWidget(vertical_splitter, 1)
@@ -2237,7 +2237,7 @@ class MainWindow(QMainWindow):
         footer_layout.addLayout(pensierini_footer_layout)
 
         # Pulsante per mostrare/nascondere il pannello strumenti (spostato più a destra)
-        self.toggle_tools_button = QPushButton("🔧 Visualizza cassetta degli attrezzi")
+        self.toggle_tools_button = QPushButton("🔧 Cassetta degli attrezzi")
         self.toggle_tools_button.setObjectName("toggle_tools_button")
         self.toggle_tools_button.setCheckable(True)
         self.toggle_tools_button.setMinimumHeight(32)  # Altezza ridotta per il footer
