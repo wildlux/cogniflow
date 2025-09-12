@@ -1521,9 +1521,7 @@ class MainWindow(QMainWindow):
             now = datetime.now()
             time_str = now.strftime("⌚️ %d/%m/%Y %H:%M")
 
-            # Aggiorna entrambe le etichette
-            if hasattr(self, 'unified_time_label'):
-                self.unified_time_label.setText(time_str)
+
 
         except Exception as e:
             print(f"Errore nell'aggiornamento degli orari: {e}")
@@ -2257,28 +2255,7 @@ class MainWindow(QMainWindow):
         # Pulsante webcam aggiunto qui
         footer_layout.addWidget(self.webcam_button)
 
-        # Orologio unificato in basso a destra (ultima implementazione)
-        self.unified_time_label = QLabel("⌚️")
-        self.unified_time_label.setObjectName("unified_time_label")
-        self.unified_time_label.setStyleSheet("""
-            QLabel#unified_time_label {
-                color: #495057;
-                font-size: 12px;
-                padding: 5px 10px;
-                background: rgba(255, 255, 255, 0.9);
-                border-radius: 8px;
-                border: 1px solid #dee2e6;
-                font-weight: bold;
-                min-width: 140px;
-                text-align: center;
-            }
-        """)
-        # Rendi cliccabile per mostrare aiuto
-        self.unified_time_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.unified_time_label.setToolTip("Cliccami per l'aiuto! ⌚️")
-        # Installa event filter per gestire il click
-        self.unified_time_label.installEventFilter(self)
-        footer_layout.addWidget(self.unified_time_label)
+
 
         # === GUIDA RAPIDA IN BASSO A DESTRA ===
         self.quick_help_button = QPushButton("❓ Guida")
@@ -2315,13 +2292,7 @@ class MainWindow(QMainWindow):
         # Apply modern UI improvements
         QTimer.singleShot(200, self._apply_modern_ui_styles)
 
-        # Timer per aggiornare gli orari ogni minuto
-        self.time_update_timer = QTimer()
-        self.time_update_timer.timeout.connect(self._update_time_labels)
-        self.time_update_timer.start(60000)  # Aggiorna ogni minuto
 
-        # Aggiorna immediatamente gli orari
-        self._update_time_labels()
 
     def _apply_modern_ui_styles(self):
         """Applica stili moderni e miglioramenti all'interfaccia utente."""
@@ -3174,10 +3145,7 @@ class MainWindow(QMainWindow):
         from PyQt6.QtCore import Qt, QEvent
         from PyQt6.QtGui import QMouseEvent
 
-        # Gestione specifica per l'orologio unificato
-        if hasattr(self, 'unified_time_label') and a0 == self.unified_time_label and a1 and a1.type() == QEvent.Type.MouseButtonPress:
-            self._show_help()
-            return True
+
 
         # Handle all mouse events for tracking
         try:
@@ -5709,22 +5677,10 @@ ESEMPI:
             else:
                 status_text = f"🕐 {current_time} | 🎨 CogniFlow pronto | Premi F1 per aiuto | {ai_status} AI | {voice_status} Voce | {ocr_status} OCR"
 
-            if hasattr(self, 'unified_time_label'):
-                # Mantieni l'orario e aggiungi informazioni di stato
-                current_time = self.unified_time_label.text().split(' ')[1] if len(self.unified_time_label.text().split(' ')) > 1 else ""
-                if current_time:
-                    self.unified_time_label.setText(f"⌚️ {current_time} | {status_text}")
-                else:
-                    self.unified_time_label.setText(f"⌚️ {status_text}")
+
 
         except Exception as e:
             logging.error(f"Errore nell'aggiornamento del footer: {e}")
-            if hasattr(self, 'unified_time_label'):
-                current_time = self.unified_time_label.text().split(' ')[1] if len(self.unified_time_label.text().split(' ')) > 1 else ""
-                if current_time:
-                    self.unified_time_label.setText(f"⌚️ {current_time} | Sistema attivo")
-                else:
-                    self.unified_time_label.setText("⌚️ Sistema attivo")
 
     def set_tutor_session_status(self, active: bool):
         """Imposta lo stato della sessione tutor e aggiorna il footer."""
