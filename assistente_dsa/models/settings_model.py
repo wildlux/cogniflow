@@ -49,7 +49,7 @@ class SettingsModel:
                 "button_background_colors": {"general": "#FFFFFF"}
             },
             "ai": {
-                "selected_ai_model": "llama2:7b",
+                "selected_ai_model": "gemma:2b",
                 "ollama_url": "http://localhost:11434"
             },
             "tts": {

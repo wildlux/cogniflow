@@ -143,10 +143,39 @@ class SettingsDialog(QDialog):
         theme_layout.addWidget(self.theme_combo)
         app_layout.addLayout(theme_layout)
 
+        # Checkbox per bypass login
+        self.bypass_login_checkbox = QCheckBox("Bypass login")
+        self.bypass_login_checkbox.setToolTip("Se abilitato, salta la finestra di login e avvia direttamente l'applicazione")
+        app_layout.addWidget(self.bypass_login_checkbox)
+
         layout.addWidget(app_group)
         layout.addStretch()
 
         self.tab_widget.addTab(widget, "Generale")
+
+    def setup_startup_tab(self):
+        """Configura il tab avvio applicazione."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # Gruppo impostazioni avvio
+        startup_group = QGroupBox("Impostazioni di Avvio")
+        startup_layout = QVBoxLayout(startup_group)
+
+        # Checkbox per bypassare login
+        self.bypass_login_checkbox = QCheckBox("Bypass login e launcher")
+        self.bypass_login_checkbox.setToolTip("Se abilitato, salta la finestra di login e il launcher, avviando direttamente l'applicazione principale")
+        startup_layout.addWidget(self.bypass_login_checkbox)
+
+        # Checkbox per avvio automatico applicazione principale
+        self.auto_start_checkbox = QCheckBox("Avvio automatico applicazione principale")
+        self.auto_start_checkbox.setToolTip("Se abilitato, avvia automaticamente l'applicazione principale dopo il login")
+        startup_layout.addWidget(self.auto_start_checkbox)
+
+        layout.addWidget(startup_group)
+        layout.addStretch()
+
+        self.tab_widget.addTab(widget, "Avvio")
 
     def setup_ui_tab(self):
         """Configura il tab interfaccia utente."""
@@ -783,6 +812,7 @@ class SettingsDialog(QDialog):
             # Generale
             self.app_name_edit.setText(get_setting('application.app_name', 'CogniFlow'))
             self.theme_combo.setCurrentText(get_setting('application.theme', 'Chiaro'))
+            self.bypass_login_checkbox.setChecked(get_setting('startup.bypass_login', False))
 
             # UI
             self.window_width_spin.setValue(get_setting('ui.window_width', 1200))
@@ -807,6 +837,7 @@ class SettingsDialog(QDialog):
             # Generale
             set_setting('application.app_name', self.app_name_edit.text())
             set_setting('application.theme', self.theme_combo.currentText())
+            set_setting('startup.bypass_login', self.bypass_login_checkbox.isChecked())
 
             # UI
             set_setting('ui.window_width', self.window_width_spin.value())

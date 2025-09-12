@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  mediapipe-service:
+    build:
+      context: ./mediapipe_service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - cogniflow-network
+
+  cogniflow-app:
+    build:
+      context: ./assistente_dsa
+      dockerfile: ../Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      mediapipe-service:
+        condition: service_healthy
+    environment:
+      - MEDIAPIPE_SERVICE_URL=http://mediapipe-service:8001
+      - USE_MEDIAPIPE=true
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${HOME}/.Xauthority:/root/.Xauthority:rw
+    restart: unless-stopped
+    networks:
+      - cogniflow-network
+
+networks:
+  cogniflow-network:
+    driver: bridge
+
+volumes:
+  mediapipe-cache:
+    driver: local

@@ -12,8 +12,8 @@ Rectangle {
     // Proprietà principali esposte al designer
     property bool isReading: false
     property bool isRecording: false
-    property string selectedModel: "llama2:7b"
-    property var availableModels: ["llama2:7b", "codellama:7b", "llava:7b"]
+    property string selectedModel: "gemma:2b"
+    property var availableModels: ["gemma:2b", "llama2:7b", "codellama:7b", "llava:7b"]
     property bool useShiftEnterForNewline: true
     property var themeManager: null
 

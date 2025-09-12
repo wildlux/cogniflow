@@ -211,13 +211,13 @@ class UserFriendlyErrorHandler:
         # Errore generico
         return {
             "title": "⚠️ Errore Inaspettato",
-            "message": "Si è verificato un errore imprevisto.\n\n"
-            "📋 Dettagli tecnici: {str(error)}\n\n"
-            "💡 Suggerimenti:\n"
-            "• Riavvia l'applicazione\n"
-            "• Verifica la connessione internet\n"
-            "• Contatta il supporto se il problema persiste\n\n"
-            "📝 Il team di sviluppo è stato informato.",
+            "message": f"Si è verificato un errore imprevisto.\n\n"
+            f"📋 Dettagli tecnici: {str(error)}\n\n"
+            f"💡 Suggerimenti:\n"
+            f"• Riavvia l'applicazione\n"
+            f"• Verifica la connessione internet\n"
+            f"• Contatta il supporto se il problema persiste\n\n"
+            f"📝 Il team di sviluppo è stato informato.",
             "icon": QMessageBox.Icon.Warning
         }
 
@@ -233,23 +233,23 @@ class UserFriendlyErrorHandler:
             friendly_name = self.import_error_mappings.get(module_name, module_name)
 
             return {
-                "title": "📦 Libreria Mancante: {friendly_name}",
-                "message": "La libreria '{friendly_name}' non è installata.\n\n"
-                "💡 Per installare:\n"
-                "• Apri il terminale o prompt dei comandi\n"
-                "• Digita: pip install {module_name}\n"
-                "• Premi Invio e attendi il completamento\n"
-                "• Riavvia l'applicazione\n\n"
-                "🔧 Se hai problemi, consulta la documentazione.",
+                "title": f"📦 Libreria Mancante: {friendly_name}",
+                "message": f"La libreria '{friendly_name}' non è installata.\n\n"
+                f"💡 Per installare:\n"
+                f"• Apri il terminale o prompt dei comandi\n"
+                f"• Digita: pip install {module_name}\n"
+                f"• Premi Invio e attendi il completamento\n"
+                f"• Riavvia l'applicazione\n\n"
+                f"🔧 Se hai problemi, consulta la documentazione.",
                 "icon": QMessageBox.Icon.Information
             }
 
         return self.error_mappings.get("generic", {
             "title": "📦 Libreria Mancante",
-            "message": "Una libreria necessaria non è installata.\n\n"
-            "💡 Prova a installare le dipendenze con:\n"
-            "pip install -r requirements.txt\n\n"
-            "📋 Errore originale: {str(error)}",
+            "message": f"Una libreria necessaria non è installata.\n\n"
+            f"💡 Prova a installare le dipendenze con:\n"
+            f"pip install -r requirements.txt\n\n"
+            f"📋 Errore originale: {str(error)}",
             "icon": QMessageBox.Icon.Warning
         })
 
@@ -275,7 +275,7 @@ class UserFriendlyErrorHandler:
 
         # Aggiungi pulsante "Dettagli tecnici" se disponibile
         if hasattr(error, '__traceback__'):
-            msg_box.setDetailedText("Errore tecnico completo:\n{str(error)}")
+            msg_box.setDetailedText(f"Errore tecnico completo:\n{str(error)}")
 
         msg_box.exec()
 
@@ -293,11 +293,11 @@ class UserFriendlyErrorHandler:
         success_messages = {
             "ai_response": {
                 "title": "🎉 Risposta AI Ricevuta!",
-                "message": "Eccellente! L'intelligenza artificiale ha elaborato la tua richiesta.\n\n{details}"
+                "message": f"Eccellente! L'intelligenza artificiale ha elaborato la tua richiesta.\n\n{details}"
             },
             "voice_recognition": {
                 "title": "🎤 Testo Riconosciuto!",
-                "message": "Perfetto! Il tuo discorso è stato trascritto correttamente.\n\n{details}"
+                "message": f"Perfetto! Il tuo discorso è stato trascritto correttamente.\n\n{details}"
             },
             "ocr_complete": {
                 "title": "📄 OCR Completato!",

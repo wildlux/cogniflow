@@ -11,7 +11,8 @@ from PyQt6.QtCore import QObject, pyqtSignal
 try:
     from Artificial_Intelligence.Ollama.ollama_bridge import OllamaBridge
     OLLAMA_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    logging.warning(f"Impossibile importare OllamaBridge: {e}")
     OllamaBridge = None
     OLLAMA_AVAILABLE = False
 
@@ -31,7 +32,10 @@ class AIService(QObject):
         self.logger = logging.getLogger(__name__)
 
         # Inizializza il bridge Ollama
-        self.ollama_bridge = OllamaBridge() if OLLAMA_AVAILABLE else None
+        if OLLAMA_AVAILABLE and OllamaBridge is not None:
+            self.ollama_bridge = OllamaBridge()
+        else:
+            self.ollama_bridge = None
         self._connected = False
 
         if self.ollama_bridge:
@@ -52,7 +56,7 @@ class AIService(QObject):
         self.logger.error(f"Errore AI: {error_msg}")
         self.error_occurred.emit(error_msg)
 
-    def send_request(self, prompt: str, model: str = "llama2:7b") -> bool:
+    def send_request(self, prompt: str, model: str = "gemma:2b") -> bool:
         """Invia una richiesta all'AI"""
         if not self.ollama_bridge:
             error_msg = "Servizio AI non disponibile - Ollama non inizializzato"
@@ -101,7 +105,7 @@ class AIService(QObject):
         try:
             # Qui dovremmo implementare la logica per ottenere i modelli disponibili
             # Per ora restituiamo una lista di default
-            return ["llama2:7b", "llama2:13b", "codellama:7b", "mistral:7b"]
+            return ["gemma:2b", "llama2:7b", "llama2:13b", "codellama:7b", "mistral:7b"]
         except Exception as e:
             self.logger.error(f"Errore recupero modelli: {e}")
             return []

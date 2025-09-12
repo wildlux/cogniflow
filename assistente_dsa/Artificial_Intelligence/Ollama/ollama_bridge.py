@@ -63,7 +63,7 @@ class OllamaBridge(QObject):
         self.statusChanged.emit("Errore")
 
     @pyqtSlot(str, str)
-    def sendPrompt(self, prompt, model="llama2:7b"):
+    def sendPrompt(self, prompt, model="gemma:2b"):
         """Invia un prompt a Ollama"""
         print("🔍 Bridge: sendPrompt chiamato con prompt '{prompt[:50]}...' e modello '{model}'")
 

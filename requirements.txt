@@ -9,6 +9,8 @@ requests>=2.31.0
 
 # Image processing
 Pillow>=10.0.0
+mediapipe>=0.10.0
+opencv-python>=4.8.0
 # pytesseract (external, requires tesseract-ocr system package)
 
 # Audio processing

@@ -398,7 +398,7 @@ class LoginDialog(QDialog):  # type: ignore
 
 
 class LauncherMainWindow(QMainWindow):  # type: ignore
-    """Main launcher window with webcam button."""
+    """Main launcher window."""
 
     def __init__(self):
         super().__init__()
@@ -478,7 +478,7 @@ class LauncherMainWindow(QMainWindow):  # type: ignore
 
 
 def open_launcher_gui():
-    """Open the main launcher GUI window with login."""
+    """Open the main launcher GUI window with login or bypass based on settings."""
     if not pyqt_available:
         print("❌ PyQt6 not available. Cannot open GUI window.")
         return
@@ -488,16 +488,40 @@ def open_launcher_gui():
     if app is None:
         app = QApplication(sys.argv)  # type: ignore
 
-    # Show login dialog first
+    # Check if bypass login is enabled
+    bypass_login = get_setting('startup.bypass_login', False)
+
+    if bypass_login:
+        print("🔓 Bypass login abilitato - Avvio diretto dell'applicazione principale...")
+        # Skip login and go directly to main application
+        import subprocess
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        aircraft_script = os.path.join(current_dir, "main_01_Aircraft.py")
+
+        if os.path.exists(aircraft_script):
+            cmd = [sys.executable, aircraft_script]
+            try:
+                subprocess.Popen(cmd, cwd=current_dir)
+                print("✅ Applicazione principale avviata con successo")
+            except Exception as e:
+                print(f"❌ Errore avvio applicazione principale: {e}")
+        else:
+            print(f"❌ Script applicazione principale non trovato: {aircraft_script}")
+        return
+
+    # Normal login flow
+    print("🔐 Bypass login disabilitato - Richiesta autenticazione...")
     login_dialog = LoginDialog()
     if login_dialog.exec() == QDialog.DialogCode.Accepted:  # type: ignore
         # Login successful, show main window
+        print("✅ Login riuscito - Avvio launcher...")
         window = LauncherMainWindow()
         window.show()
         app.exec()  # type: ignore
     else:
-        # Login cancelled or failed
-        print("Login cancelled or failed.")
+        # Login cancelled or failed - do not start application
+        print("❌ Login annullato o fallito - Applicazione non avviata")
+        return
 
 
 
@@ -542,53 +566,46 @@ def run_app():
         # Selezione tema
         select_theme()
 
-        # Open main launcher GUI
-        if pyqt_available:
-            print("\n🖥️  Opening launcher GUI...")
-            open_launcher_gui()
+        # Check if bypass login is enabled
+        bypass_login = get_setting('startup.bypass_login', False)
+
+        if bypass_login:
+            print("\n🔓 Bypass login abilitato - Avvio diretto applicazione principale...")
+            # Skip launcher GUI and run main application directly
+            import subprocess
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            aircraft_script = os.path.join(current_dir, "main_01_Aircraft.py")
+
+            if not os.path.exists(aircraft_script):
+                print(f"ERROR: Script not found: {aircraft_script}")
+                return
+
+            cmd = [sys.executable, aircraft_script]
+            try:
+                result = subprocess.run(
+                    cmd,
+                    cwd=current_dir,
+                    timeout=300,  # 5 minutes timeout
+                    capture_output=True,
+                    text=True
+                )
+                if result.returncode != 0:
+                    print(f"Aircraft exited with error code: {result.returncode}")
+                    print(f"STDOUT: {result.stdout}")
+                    print(f"STDERR: {result.stderr}")
+                else:
+                    print("Aircraft completed successfully")
+            except subprocess.TimeoutExpired:
+                print("ERROR: Application startup timeout")
+            except Exception as e:
+                print(f"ERROR: Unexpected error during startup: {e}")
         else:
-            print("\n⚠️  PyQt6 not available - cannot open GUI")
-
-        # Import and run main_01_Aircraft
-        import subprocess
-
-        # Get the current script directory
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        aircraft_script = os.path.join(current_dir, "main_01_Aircraft.py")
-
-        # Validate script path before execution
-        if not os.path.exists(aircraft_script):
-            print(f"ERROR: Script not found: {aircraft_script}")
-            return
-
-        # Secure command execution with timeout
-        cmd = [sys.executable, aircraft_script]
-        try:
-            result = subprocess.run(
-                cmd,
-                cwd=current_dir,
-                timeout=300,  # 5 minutes timeout
-                capture_output=True,
-                text=True
-            )
-        except subprocess.TimeoutExpired:
-            print("ERROR: Application startup timeout")
-            return
-        except subprocess.CalledProcessError as e:
-            print(f"ERROR: Application failed with code {e.returncode}")
-            print(f"STDOUT: {cast(str, e.stdout)}")
-            print(f"STDERR: {cast(str, e.stderr)}")
-            return
-        except Exception as e:
-            print(f"ERROR: Unexpected error during startup: {e}")
-            return
-
-        if result.returncode != 0:
-            print(f"Aircraft exited with error code: {result.returncode}")
-            print(f"STDOUT: {result.stdout}")
-            print(f"STDERR: {result.stderr}")
-        else:
-            print("Aircraft completed successfully")
+            # Normal flow with launcher GUI
+            if pyqt_available:
+                print("\n🖥️  Opening launcher GUI...")
+                open_launcher_gui()
+            else:
+                print("\n⚠️  PyQt6 not available - cannot open GUI")
 
     except Exception as e:
         print(f"Application error: {e}")

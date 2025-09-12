@@ -24,8 +24,8 @@ ApplicationWindow {
     property string currentText: ""
     property var settings: ({})
     property bool useShiftEnterForNewline: true
-    property string selectedModel: "llama2:7b"
-    property var availableModels: ["llama2:7b", "codellama:7b", "llava:7b"]
+    property string selectedModel: "gemma:2b"
+    property var availableModels: ["gemma:2b", "llama2:7b", "codellama:7b", "llava:7b"]
     property bool showLogMessages: true
     property var workspacePensierini: []
 

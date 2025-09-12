@@ -35,6 +35,13 @@
       "recommended": true,
       "parameters": 3
     },
+    "gemma:2b": {
+      "description": "Modello leggero di Google, eccellente per conversazioni e compiti generali con basso consumo di memoria",
+      "use_cases": ["Conversazione generale", "Compiti leggeri", "Risposte rapide"],
+      "size_gb": 1.5,
+      "recommended": true,
+      "parameters": 2
+    },
     "llama2:13b": {
       "description": "Versione più grande e potente di Llama2 per compiti complessi",
       "use_cases": ["Analisi approfondita", "Ragionamento complesso", "Creatività"],
@@ -61,9 +68,10 @@
     "vision": ["llava:7b", "llava:13b"],
     "coding": ["codellama:7b", "codellama:13b"],
     "general": ["llama2:7b", "llama2:13b", "mistral:7b"],
-    "lightweight": ["phi:3b"]
+    "lightweight": ["phi:3b", "gemma:2b"]
   },
   "installation_order": [
+    "gemma:2b",
     "phi:3b",
     "llama2:7b",
     "mistral:7b",

@@ -100,11 +100,15 @@ class CogniFlowController(QObject):
 
     # ==================== AI METHODS ====================
 
-    def send_ai_request(self, prompt: str, model: str = None) -> bool:
+    def send_ai_request(self, prompt: str, model: Optional[str] = None) -> bool:
         """Invia una richiesta all'AI"""
         try:
             if model is None:
-                model = self.settings.get('ai.selected_ai_model', 'llama2:7b')
+                model = self.settings.get('ai.selected_ai_model', 'gemma:2b')
+
+            # Ensure model is not None
+            if model is None:
+                model = 'gemma:2b'
 
             self.ai_active = True
             return self.ai_service.send_request(prompt, model)

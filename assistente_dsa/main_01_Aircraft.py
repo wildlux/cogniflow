@@ -9,7 +9,7 @@ import logging
 import os
 import sys
 from datetime import datetime
-from PyQt6.QtCore import Qt, QTimer, QEvent, QPropertyAnimation, QEasingCurve, QDateTime
+from PyQt6.QtCore import Qt, QTimer, QEvent, QPropertyAnimation, QEasingCurve, QDateTime, pyqtSignal
 from PyQt6.QtGui import QFontDatabase, QFont, QColor, QShortcut, QKeySequence
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel,
@@ -81,29 +81,59 @@ except ImportError:
     QVideoWidget = None
     MULTIMEDIA_AVAILABLE = False
 
+# Import VideoThread per gesture recognition
+try:
+    from Artificial_Intelligence.Video.visual_background import VideoThread
+    VIDEO_THREAD_AVAILABLE = True
+except ImportError:
+    VideoThread = None
+    VIDEO_THREAD_AVAILABLE = False
+    logging.warning("VideoThread non disponibile - funzionalità webcam limitate")
+
 
 class WebcamTestWindow(QMainWindow):
-    """Finestra separata per il test della webcam."""
+    """Finestra separata per il test della webcam con supporto gesture."""
+
+    # Signals for hand gesture integration
+    hand_position_signal = pyqtSignal(int, int)  # x, y coordinates
+    gesture_detected_signal = pyqtSignal(str)    # gesture type
+
+    # Signals for human detection (LIDAR-like)
+    human_detected_signal = pyqtSignal(list)     # list of human bounding boxes
+    human_position_signal = pyqtSignal(int, int) # center position of primary human
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_window = parent
         self.setWindowTitle("🧪 Test Webcam - CogniFlow")
         self.setGeometry(100, 100, 800, 600)
-        # Icona della finestra (semplificata)
-        try:
-            from PyQt6.QtGui import QIcon
-            # Usa un'icona semplice se disponibile
-            pass
-        except:
-            pass
 
         # Inizializza componenti
         self.webcam_active = False
         self.test_timer = None
+        self.video_thread = None
+
+        # Hand gesture state
+        self.hand_x = 0
+        self.hand_y = 0
+        self.current_gesture = "none"
+        self.is_dragging = False
+        self.drag_start_pos = None
+        self.button_original_pos = None
+
+        # Visual feedback
+        self.hover_highlight = False
 
         self.setup_ui()
         self.setup_connections()
+
+        # Connect gesture signals
+        self.hand_position_signal.connect(self.on_hand_position_update)
+        self.gesture_detected_signal.connect(self.on_gesture_detected)
+
+        # Connect human detection signals (LIDAR-like)
+        self.human_detected_signal.connect(self.on_human_detected)
+        self.human_position_signal.connect(self.on_human_position_update)
 
     def setup_ui(self):
         """Configura l'interfaccia utente della finestra di test."""
@@ -115,7 +145,7 @@ class WebcamTestWindow(QMainWindow):
         layout.setContentsMargins(15, 15, 15, 15)
 
         # Titolo
-        title_label = QLabel("🧪 Webcam Test Window")
+        title_label = QLabel("🧪 Webcam Test Window - Gesture Control")
         title_label.setStyleSheet("""
             QLabel {
                 font-size: 18px;
@@ -127,21 +157,64 @@ class WebcamTestWindow(QMainWindow):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
 
-        # Area video (placeholder per ora)
-        self.video_area = QLabel("📹 Webcam Feed\n\nClicca 'Avvia Test' per iniziare")
-        self.video_area.setMinimumHeight(400)
-        self.video_area.setStyleSheet("""
-            QLabel {
-                background: #f8f9fa;
-                border: 2px dashed #dee2e6;
-                border-radius: 8px;
-                font-size: 16px;
-                color: #6c757d;
-                padding: 20px;
+        # Splitter orizzontale per webcam e area di trascinamento
+        self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.main_splitter.setHandleWidth(4)
+        self.main_splitter.setStyleSheet("""
+            QSplitter::handle {
+                background: rgba(108, 117, 125, 0.4);
+                border: 1px solid rgba(108, 117, 125, 0.6);
+                border-radius: 2px;
+            }
+            QSplitter::handle:hover {
+                background: rgba(74, 144, 226, 0.6);
+                border-color: rgba(74, 144, 226, 0.8);
             }
         """)
-        self.video_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.video_area)
+
+        # === Colonna SINISTRA: Webcam ===
+        self.setup_webcam_column()
+
+        # === Colonna DESTRA: Area di trascinamento ===
+        self.setup_drag_column()
+
+        # Imposta proporzioni uguali per le due colonne
+        self.main_splitter.setSizes([400, 400])
+
+        layout.addWidget(self.main_splitter)
+
+        # Pulsante semi-trasparente sovrapposto all'immagine webcam
+        self.test_button = QPushButton("Pulsante di Prova")
+        self.test_button.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.8);
+                color: #333;
+                border: 2px solid rgba(0, 123, 255, 0.9);
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 8px 16px;
+                z-index: 10;
+            }
+            QPushButton:hover {
+                background: rgba(255, 255, 255, 0.95);
+                border-color: #007bff;
+            }
+            QPushButton:pressed {
+                background: rgba(0, 123, 255, 0.2);
+            }
+        """)
+        self.test_button.setFixedSize(160, 45)
+        self.test_button.clicked.connect(self.on_test_button_clicked)
+
+        # Posiziona il pulsante come figlio del container video per la sovrimpressione
+        self.test_button.setParent(self.video_container)
+
+        # Carica la posizione salvata o usa quella di default
+        button_x, button_y = self.load_button_position()
+        self.test_button.move(button_x, button_y)  # Posizione assoluta sopra l'immagine webcam
+        self.test_button.raise_()  # Porta il pulsante in primo piano
+        self.test_button.show()
 
         # Controlli
         controls_layout = QHBoxLayout()
@@ -224,6 +297,133 @@ class WebcamTestWindow(QMainWindow):
         controls_layout.addStretch()
         layout.addLayout(controls_layout)
 
+        # === Controlli Tracciamento ===
+        tracking_layout = QHBoxLayout()
+        tracking_layout.setSpacing(8)
+
+        # Etichetta sezione
+        tracking_label = QLabel("🎯 Tracciamento:")
+        tracking_label.setStyleSheet("""
+            QLabel {
+                font-size: 12px;
+                font-weight: bold;
+                color: #495057;
+                padding: 5px;
+            }
+        """)
+        tracking_layout.addWidget(tracking_label)
+
+        # Pulsante traccia viso
+        self.face_tracking_btn = QPushButton("👤 Traccia Viso")
+        self.face_tracking_btn.setCheckable(True)
+        self.face_tracking_btn.setChecked(False)
+        self.face_tracking_btn.setMinimumHeight(30)
+        self.face_tracking_btn.setStyleSheet("""
+            QPushButton {
+                background: #6c757d;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: bold;
+                padding: 6px 10px;
+            }
+            QPushButton:hover {
+                background: #5a6268;
+            }
+            QPushButton:checked {
+                background: #28a745;
+            }
+            QPushButton:checked:hover {
+                background: #218838;
+            }
+        """)
+        tracking_layout.addWidget(self.face_tracking_btn)
+
+        # Pulsante traccia mano sinistra
+        self.left_hand_tracking_btn = QPushButton("✋ SX Traccia Mano")
+        self.left_hand_tracking_btn.setCheckable(True)
+        self.left_hand_tracking_btn.setChecked(False)
+        self.left_hand_tracking_btn.setMinimumHeight(30)
+        self.left_hand_tracking_btn.setStyleSheet("""
+            QPushButton {
+                background: #6c757d;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: bold;
+                padding: 6px 10px;
+            }
+            QPushButton:hover {
+                background: #5a6268;
+            }
+            QPushButton:checked {
+                background: #007bff;
+            }
+            QPushButton:checked:hover {
+                background: #0056b3;
+            }
+        """)
+        tracking_layout.addWidget(self.left_hand_tracking_btn)
+
+        # Pulsante traccia mano destra
+        self.right_hand_tracking_btn = QPushButton("✋ DX Traccia Mano")
+        self.right_hand_tracking_btn.setCheckable(True)
+        self.right_hand_tracking_btn.setChecked(True)  # Abilitato di default
+        self.right_hand_tracking_btn.setMinimumHeight(30)
+        self.right_hand_tracking_btn.setStyleSheet("""
+            QPushButton {
+                background: #6c757d;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: bold;
+                padding: 6px 10px;
+            }
+            QPushButton:hover {
+                background: #5a6268;
+            }
+            QPushButton:checked {
+                background: #007bff;
+            }
+            QPushButton:checked:hover {
+                background: #0056b3;
+            }
+        """)
+        tracking_layout.addWidget(self.right_hand_tracking_btn)
+
+        # Pulsante rilevamento umano (LIDAR-like)
+        self.human_detection_btn = QPushButton("👤 Rilevamento Umano")
+        self.human_detection_btn.setCheckable(True)
+        self.human_detection_btn.setChecked(True)  # Abilitato di default
+        self.human_detection_btn.setMinimumHeight(30)
+        self.human_detection_btn.setStyleSheet("""
+            QPushButton {
+                background: #6c757d;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: bold;
+                padding: 6px 10px;
+            }
+            QPushButton:hover {
+                background: #5a6268;
+            }
+            QPushButton:checked {
+                background: #17a2b8;
+            }
+            QPushButton:checked:hover {
+                background: #138496;
+            }
+        """)
+        tracking_layout.addWidget(self.human_detection_btn)
+
+        tracking_layout.addStretch()
+        layout.addLayout(tracking_layout)
+
         # Status e informazioni
         self.status_label = QLabel("Status: Pronto per il test")
         self.status_label.setStyleSheet("""
@@ -265,24 +465,389 @@ class WebcamTestWindow(QMainWindow):
         self.start_test_btn.clicked.connect(self.start_webcam_test)
         self.stop_test_btn.clicked.connect(self.stop_webcam_test)
         self.capture_btn.clicked.connect(self.capture_frame)
+        self.test_button.clicked.connect(self.on_test_button_clicked)
+
+        # Connessioni controlli tracciamento
+        self.face_tracking_btn.clicked.connect(self.toggle_face_tracking)
+        self.left_hand_tracking_btn.clicked.connect(self.toggle_left_hand_tracking)
+        self.right_hand_tracking_btn.clicked.connect(self.toggle_right_hand_tracking)
+        self.human_detection_btn.clicked.connect(self.toggle_human_detection)
+
+    def on_hand_position_update(self, webcam_x, webcam_y):
+        """Gestisce l'aggiornamento della posizione della mano."""
+        # Map webcam coordinates to UI coordinates for video area
+        ui_x, ui_y = self.map_webcam_to_ui_coordinates(webcam_x, webcam_y)
+
+        self.hand_x = ui_x
+        self.hand_y = ui_y
+
+        # Map webcam coordinates to drag area coordinates
+        drag_x, drag_y = self.map_webcam_to_drag_coordinates(webcam_x, webcam_y)
+
+        # Update circle position in drag area
+        if hasattr(self, 'drag_circle'):
+            # Keep circle within drag area bounds
+            circle_size = self.drag_circle.size()
+            drag_area_size = self.drag_area.size()
+
+            bounded_x = max(0, min(drag_x - circle_size.width() // 2,
+                                   drag_area_size.width() - circle_size.width()))
+            bounded_y = max(0, min(drag_y - circle_size.height() // 2,
+                                   drag_area_size.height() - circle_size.height()))
+
+            self.drag_circle.move(bounded_x, bounded_y)
+
+        # Check if hand is hovering over the test button
+        button_rect = self.test_button.geometry()
+        if button_rect.contains(ui_x, ui_y):
+            if not self.hover_highlight:
+                self.hover_highlight = True
+                self.update_button_style()
+        else:
+            if self.hover_highlight:
+                self.hover_highlight = False
+                self.update_button_style()
+
+        # Handle dragging if active
+        if self.is_dragging and self.drag_start_pos and self.button_original_pos is not None:
+            # Calculate movement delta
+            delta_x = ui_x - self.drag_start_pos[0]
+            delta_y = ui_y - self.drag_start_pos[1]
+
+            # Update button position
+            new_x = self.button_original_pos.x() + delta_x
+            new_y = self.button_original_pos.y() + delta_y
+
+            # Keep button within bounds
+            new_x = max(0, min(new_x, self.video_container.width() - self.test_button.width()))
+            new_y = max(0, min(new_y, self.video_container.height() - self.test_button.height()))
+
+            self.test_button.move(new_x, new_y)
+
+    def map_webcam_to_ui_coordinates(self, webcam_x, webcam_y):
+        """Converte le coordinate dalla webcam alle coordinate dell'interfaccia utente."""
+        # Use consistent webcam resolution for both mappings
+        # This should match the resolution used by VideoThread
+        webcam_width = 640
+        webcam_height = 480
+
+        # Get the actual size of the video display area
+        video_size = self.video_area.size()
+        ui_width = video_size.width()
+        ui_height = video_size.height()
+
+        # Calculate scale factors
+        scale_x = ui_width / webcam_width
+        scale_y = ui_height / webcam_height
+
+        # Convert coordinates
+        ui_x = int(webcam_x * scale_x)
+        ui_y = int(webcam_y * scale_y)
+
+        return ui_x, ui_y
+
+    def map_webcam_to_drag_coordinates(self, webcam_x, webcam_y):
+        """Converte le coordinate dalla webcam alle coordinate dell'area di trascinamento."""
+        # Use the same webcam resolution as the video area for consistent mapping
+        webcam_width = 640
+        webcam_height = 480
+
+        # Get the actual size of the drag area
+        drag_size = self.drag_area.size()
+        drag_width = drag_size.width()
+        drag_height = drag_size.height()
+
+        # Calculate scale factors
+        scale_x = drag_width / webcam_width
+        scale_y = drag_height / webcam_height
+
+        # Convert coordinates
+        drag_x = int(webcam_x * scale_x)
+        drag_y = int(webcam_y * scale_y)
+
+        return drag_x, drag_y
+
+    def toggle_face_tracking(self):
+        """Attiva/disattiva il tracciamento del viso."""
+        enabled = self.face_tracking_btn.isChecked()
+        if self.video_thread:
+            self.video_thread.face_detection_enabled = enabled
+            status = "ON" if enabled else "OFF"
+            self.status_label.setText(f"Status: Tracciamento viso {status}")
+            print(f"👤 Tracciamento viso: {status}")
+
+    def toggle_left_hand_tracking(self):
+        """Attiva/disattiva il tracciamento della mano sinistra."""
+        enabled = self.left_hand_tracking_btn.isChecked()
+        if self.video_thread:
+            self.video_thread.left_hand_tracking_enabled = enabled
+            status = "ON" if enabled else "OFF"
+            self.status_label.setText(f"Status: Tracciamento mano sinistra {status}")
+            print(f"✋ SX Tracciamento mano sinistra: {status}")
+
+    def toggle_right_hand_tracking(self):
+        """Attiva/disattiva il tracciamento della mano destra."""
+        enabled = self.right_hand_tracking_btn.isChecked()
+        if self.video_thread:
+            self.video_thread.right_hand_tracking_enabled = enabled
+            status = "ON" if enabled else "OFF"
+            self.status_label.setText(f"Status: Tracciamento mano destra {status}")
+            print(f"✋ DX Tracciamento mano destra: {status}")
+
+    def toggle_human_detection(self):
+        """Attiva/disattiva il rilevamento umano (LIDAR-like)."""
+        enabled = self.human_detection_btn.isChecked()
+        if self.video_thread:
+            self.video_thread.human_detection_enabled = enabled
+            status = "ON" if enabled else "OFF"
+            self.status_label.setText(f"Status: Rilevamento umano {status}")
+            print(f"👤 Rilevamento umano (LIDAR): {status}")
+
+    def on_gesture_detected(self, gesture):
+        """Gestisce il rilevamento di un gesto."""
+        self.current_gesture = gesture
+
+        # Update status with more detailed information
+        if gesture == "Mano Chiusa":
+            if self.is_dragging:
+                self.status_label.setText("Status: Trascinamento attivo - Mano Chiusa")
+            else:
+                self.status_label.setText("Status: Mano Chiusa rilevata - Pronto per trascinare")
+        elif gesture == "Mano Aperta":
+            if self.is_dragging:
+                self.status_label.setText("Status: Mano Aperta - Rilascia trascinamento")
+            else:
+                self.status_label.setText("Status: Mano Aperta rilevata")
+        else:
+            self.status_label.setText(f"Status: Gesto rilevato - {gesture}")
+
+        # Handle drag gestures
+        if gesture == "Mano Chiusa" and not self.is_dragging:
+            # Start dragging if hand is over the button
+            button_rect = self.test_button.geometry()
+            if button_rect.contains(self.hand_x, self.hand_y):
+                self.start_drag()
+        elif gesture == "Mano Aperta" and self.is_dragging:
+            # Stop dragging
+            self.stop_drag()
+
+    def start_drag(self):
+        """Inizia il trascinamento del pulsante."""
+        self.is_dragging = True
+        self.drag_start_pos = (self.hand_x, self.hand_y)
+        self.button_original_pos = self.test_button.pos()
+        self.status_label.setText("Status: Trascinamento iniziato")
+        print("🖱️ Trascinamento iniziato con gesto mano chiusa")
+
+    def stop_drag(self):
+        """Termina il trascinamento del pulsante."""
+        if self.is_dragging:
+            self.is_dragging = False
+            self.drag_start_pos = None
+            self.button_original_pos = None
+            self.save_button_position()
+            self.status_label.setText("Status: Trascinamento completato")
+            print("🖱️ Trascinamento completato con gesto mano aperta")
+
+    def on_video_thread_status(self, status):
+        """Gestisce gli aggiornamenti di stato dal VideoThread."""
+        self.status_label.setText(f"Status: {status}")
+
+    def on_human_detected(self, humans):
+        """Gestisce il rilevamento di umani (approccio LIDAR-like)."""
+        if humans:
+            self.status_label.setText(f"Status: {len(humans)} umano(i) rilevato(i)")
+            print(f"👤 Rilevati {len(humans)} umani")
+        else:
+            self.status_label.setText("Status: Nessun umano rilevato")
+
+    def on_human_position_update(self, human_x, human_y):
+        """Gestisce l'aggiornamento della posizione dell'umano primario."""
+        # Map human position to UI coordinates
+        ui_x, ui_y = self.map_webcam_to_ui_coordinates(human_x, human_y)
+
+        # Update status with human position
+        self.status_label.setText(f"Status: Umano rilevato a ({ui_x}, {ui_y})")
+
+        # Use human position for interaction (similar to hand tracking)
+        # Check if human is hovering over the test button
+        button_rect = self.test_button.geometry()
+        if button_rect.contains(ui_x, ui_y):
+            if not self.hover_highlight:
+                self.hover_highlight = True
+                self.update_button_style()
+                print("👤 Umano sopra il pulsante")
+        else:
+            if self.hover_highlight:
+                self.hover_highlight = False
+                self.update_button_style()
+
+    def update_webcam_feed_pixmap(self, pixmap):
+        """Aggiorna il feed della webcam con il pixmap dal VideoThread."""
+        if self.webcam_active and pixmap:
+            # Scale pixmap to fit video area
+            scaled_pixmap = pixmap.scaled(self.video_area.size(), Qt.AspectRatioMode.KeepAspectRatio)
+            self.video_area.setPixmap(scaled_pixmap)
+
+    def update_button_style(self):
+        """Aggiorna lo stile del pulsante basato sullo stato."""
+        base_style = """
+            QPushButton {
+                background: rgba(255, 255, 255, 0.8);
+                color: #333;
+                border: 2px solid rgba(0, 123, 255, 0.9);
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 8px 16px;
+                z-index: 10;
+            }
+        """
+
+        if self.hover_highlight:
+            style = base_style + """
+                QPushButton {
+                    background: rgba(255, 255, 255, 0.95);
+                    border-color: #28a745;
+                    color: #155724;
+                }
+            """
+        elif self.is_dragging:
+            style = base_style + """
+                QPushButton {
+                    background: rgba(255, 193, 7, 0.9);
+                    border-color: #856404;
+                    color: #533f00;
+                }
+            """
+        else:
+            style = base_style + """
+                QPushButton:hover {
+                    background: rgba(255, 255, 255, 0.95);
+                    border-color: #007bff;
+                }
+                QPushButton:pressed {
+                    background: rgba(0, 123, 255, 0.2);
+                }
+            """
+
+        self.test_button.setStyleSheet(style)
+
+    def on_test_button_clicked(self):
+        """Gestisce il click del pulsante di prova."""
+        print("🧪 Pulsante di prova cliccato!")
+        self.status_label.setText("Status: Pulsante di prova attivato")
+        # Puoi aggiungere qui altre azioni per il pulsante di prova
+
+    def keyPressEvent(self, a0):
+        """Gestisce gli eventi della tastiera per spostare il pulsante."""
+        if hasattr(self, 'test_button') and a0 is not None:
+            current_pos = self.test_button.pos()
+            step = 5  # Pixel per spostamento
+
+            if a0.key() == Qt.Key.Key_Up:
+                new_y = max(0, current_pos.y() - step)
+                self.test_button.move(current_pos.x(), new_y)
+                self.save_button_position()
+            elif a0.key() == Qt.Key.Key_Down:
+                # Limita il movimento verso il basso per non uscire dalla finestra
+                max_y = self.height() - self.test_button.height() - 50
+                new_y = min(max_y, current_pos.y() + step)
+                self.test_button.move(current_pos.x(), new_y)
+                self.save_button_position()
+            elif a0.key() == Qt.Key.Key_Left:
+                new_x = max(0, current_pos.x() - step)
+                self.test_button.move(new_x, current_pos.y())
+                self.save_button_position()
+            elif a0.key() == Qt.Key.Key_Right:
+                # Limita il movimento verso destra per non uscire dalla finestra
+                max_x = self.width() - self.test_button.width() - 20
+                new_x = min(max_x, current_pos.x() + step)
+                self.test_button.move(new_x, current_pos.y())
+                self.save_button_position()
+
+        super().keyPressEvent(a0)
+
+    def load_button_position(self):
+        """Carica la posizione del pulsante dal file JSON."""
+        try:
+            settings_file = os.path.join(os.path.dirname(__file__), 'button_position.json')
+            if os.path.exists(settings_file):
+                with open(settings_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    return data.get('x', 10), data.get('y', 10)
+        except Exception as e:
+            print(f"Errore caricamento posizione pulsante: {e}")
+        return 10, 10  # Posizione di default
+
+    def save_button_position(self):
+        """Salva la posizione del pulsante nel file JSON."""
+        if hasattr(self, 'test_button'):
+            try:
+                pos = self.test_button.pos()
+                settings_file = os.path.join(os.path.dirname(__file__), 'button_position.json')
+                data = {
+                    'x': pos.x(),
+                    'y': pos.y(),
+                    'timestamp': datetime.now().isoformat()
+                }
+                with open(settings_file, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                print(f"✓ Posizione pulsante salvata: ({pos.x()}, {pos.y()})")
+            except Exception as e:
+                print(f"Errore salvataggio posizione pulsante: {e}")
+
+    def resizeEvent(self, a0):
+        """Gestisce il ridimensionamento della finestra per riposizionare il pulsante."""
+        if hasattr(self, 'test_button'):
+            # Il pulsante è ora figlio del container video, quindi rimane sempre alla stessa posizione relativa
+            # Non è necessario riposizionarlo manualmente dato che si muove con il container
+            pass
+        super().resizeEvent(a0)
 
     def start_webcam_test(self):
-        """Avvia il test della webcam."""
+        """Avvia il test della webcam con VideoThread per gesture recognition."""
         try:
+            # Check if VideoThread is available
+            if not VIDEO_THREAD_AVAILABLE or VideoThread is None:
+                self.status_label.setText("Status: VideoThread non disponibile")
+                self.video_area.setText("❌ VideoThread non disponibile\n\nFunzionalità avanzate webcam limitate")
+                return
+
             self.webcam_active = True
             self.start_test_btn.setEnabled(False)
             self.stop_test_btn.setEnabled(True)
             self.capture_btn.setEnabled(True)
 
-            # Simula l'avvio della webcam con un timer per aggiornamenti
-            self.test_timer = QTimer()
-            self.test_timer.timeout.connect(self.update_webcam_feed)
-            self.test_timer.start(100)  # Aggiorna ogni 100ms
+            # Initialize VideoThread with gesture recognition enabled
+            self.video_thread = VideoThread(main_window=self)
+            self.video_thread.change_pixmap_signal.connect(self.update_webcam_feed_pixmap)
+            self.video_thread.status_signal.connect(self.on_video_thread_status)
+            self.video_thread.hand_position_signal.connect(self.on_hand_position_update)
+            self.video_thread.gesture_detected_signal.connect(self.on_gesture_detected)
 
-            self.status_label.setText("Status: Test webcam attivo - Simulazione in corso")
-            self.video_area.setText("📹 Webcam Attiva\n\nTest in corso...\nFrame simulati")
+            # Connect human detection signals (LIDAR-like)
+            self.video_thread.human_detected_signal.connect(self.human_detected_signal)
+            self.video_thread.human_position_signal.connect(self.human_position_signal)
 
-            print("🧪 Test webcam avviato nella finestra separata")
+            # Enable gesture recognition features
+            self.video_thread.hand_detection_enabled = True
+            self.video_thread.gesture_recognition_enabled = True
+            self.video_thread.human_detection_enabled = True  # Enable LIDAR-like human detection
+
+            # Sincronizza i controlli di tracciamento con i pulsanti
+            self.video_thread.face_detection_enabled = self.face_tracking_btn.isChecked()
+            self.video_thread.left_hand_tracking_enabled = self.left_hand_tracking_btn.isChecked()
+            self.video_thread.right_hand_tracking_enabled = self.right_hand_tracking_btn.isChecked()
+            self.video_thread.human_detection_enabled = self.human_detection_btn.isChecked()
+
+            # Start the video thread
+            self.video_thread.start()
+
+            self.status_label.setText("Status: Webcam attiva con gesture recognition")
+            self.video_area.clear()  # Remove text, show video
+
+            print("🧪 Test webcam avviato con VideoThread e gesture recognition")
 
         except Exception as e:
             print(f"❌ Errore avvio test webcam: {e}")
@@ -294,16 +859,24 @@ class WebcamTestWindow(QMainWindow):
                     QMessageBox.critical(self, "Errore", f"Errore avvio test webcam: {str(e)}")
 
     def stop_webcam_test(self):
-        """Ferma il test della webcam."""
+        """Ferma il test della webcam con VideoThread."""
         try:
             self.webcam_active = False
             self.start_test_btn.setEnabled(True)
             self.stop_test_btn.setEnabled(False)
             self.capture_btn.setEnabled(False)
 
-            if self.test_timer:
-                self.test_timer.stop()
-                self.test_timer = None
+            # Stop and cleanup VideoThread
+            if self.video_thread:
+                self.video_thread.stop()
+                self.video_thread = None
+
+            # Reset gesture state
+            self.is_dragging = False
+            self.drag_start_pos = None
+            self.button_original_pos = None
+            self.hover_highlight = False
+            self.update_button_style()
 
             self.status_label.setText("Status: Test fermato")
             self.video_area.setText("📹 Webcam Fermata\n\nClicca 'Avvia Test' per ricominciare")
@@ -314,34 +887,156 @@ class WebcamTestWindow(QMainWindow):
             print(f"❌ Errore arresto test webcam: {e}")
             self.status_label.setText(f"Status: Errore arresto - {str(e)}")
 
-    def update_webcam_feed(self):
-        """Aggiorna il feed della webcam (simulazione)."""
-        if self.webcam_active:
-            # Simula aggiornamenti del frame
-            import random
-            frame_num = random.randint(1, 1000)
-            self.video_area.setText(f"📹 Webcam Attiva\n\nFrame: {frame_num}\nTest in corso...")
+
 
     def capture_frame(self):
-        """Cattura un frame dalla webcam."""
+        """Cattura un frame dalla webcam usando VideoThread."""
         try:
-            if self.webcam_active:
-                # Simula cattura frame
-                import random
-                frame_id = random.randint(1000, 9999)
-                self.status_label.setText(f"Status: Frame catturato - ID: {frame_id}")
-                print(f"📸 Frame catturato: {frame_id}")
+            if self.webcam_active and self.video_thread:
+                import cv2
+                import os
+                from datetime import datetime
 
-                # Mostra messaggio di successo
-                if self.parent_window:
-                    try:
-                        show_success_message(self.parent_window, "Cattura frame", f"Frame {frame_id} salvato")
-                    except:
-                        QMessageBox.information(self, "Successo", f"Frame {frame_id} catturato con successo")
+                # Get current frame from video thread
+                # Since VideoThread processes frames internally, we'll capture from its cap
+                if hasattr(self.video_thread, 'cap') and self.video_thread.cap and self.video_thread.cap.isOpened():
+                    ret, frame = self.video_thread.cap.read()
+                    if ret:
+                        # Flip frame horizontally for mirror effect
+                        frame = cv2.flip(frame, 1)
+
+                        # Generate filename with timestamp
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        screenshot_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Screenshot")
+                        os.makedirs(screenshot_dir, exist_ok=True)
+                        filename = os.path.join(screenshot_dir, f"webcam_capture_{timestamp}.png")
+
+                        # Save the image
+                        cv2.imwrite(filename, frame)
+
+                        self.status_label.setText(f"Status: Frame salvato - {os.path.basename(filename)}")
+                        print(f"📸 Frame catturato e salvato: {filename}")
+
+                        # Mostra messaggio di successo
+                        if self.parent_window:
+                            try:
+                                show_success_message(self.parent_window, "Cattura frame", f"Frame salvato come {os.path.basename(filename)}")
+                            except:
+                                QMessageBox.information(self, "Successo", f"Frame catturato e salvato con successo")
+                    else:
+                        self.status_label.setText("Status: Errore cattura frame")
+                        print("❌ Impossibile catturare il frame dalla webcam")
+                else:
+                    self.status_label.setText("Status: Webcam non pronta per cattura")
+                    print("❌ Webcam non pronta per cattura")
+            else:
+                self.status_label.setText("Status: Webcam non attiva")
+                print("❌ Webcam non attiva")
 
         except Exception as e:
             print(f"❌ Errore cattura frame: {e}")
             self.status_label.setText(f"Status: Errore cattura - {str(e)}")
+
+    def setup_webcam_column(self):
+        """Configura la colonna sinistra per il display della webcam."""
+        # Container per la webcam
+        self.video_container = QWidget()
+        self.video_container.setStyleSheet("""
+            QWidget {
+                background: #000;
+                border: 2px solid #333;
+                border-radius: 8px;
+            }
+        """)
+
+        video_layout = QVBoxLayout(self.video_container)
+        video_layout.setContentsMargins(5, 5, 5, 5)
+
+        # Etichetta per il video
+        self.video_area = QLabel("📹 Webcam Feed\n\nClicca 'Avvia Test' per iniziare")
+        self.video_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.video_area.setStyleSheet("""
+            QLabel {
+                color: #666;
+                font-size: 16px;
+                font-weight: bold;
+                background: #111;
+                border-radius: 4px;
+                padding: 20px;
+            }
+        """)
+        self.video_area.setMinimumSize(320, 240)
+
+        video_layout.addWidget(self.video_area)
+        self.main_splitter.addWidget(self.video_container)
+
+    def setup_drag_column(self):
+        """Configura la colonna destra per l'area di trascinamento."""
+        # Container per l'area di trascinamento
+        self.drag_container = QWidget()
+        self.drag_container.setStyleSheet("""
+            QWidget {
+                background: #f8f9fa;
+                border: 2px solid #dee2e6;
+                border-radius: 8px;
+            }
+        """)
+
+        drag_layout = QVBoxLayout(self.drag_container)
+        drag_layout.setContentsMargins(5, 5, 5, 5)
+
+        # Titolo area di trascinamento
+        drag_title = QLabel("🎯 Drag Area")
+        drag_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        drag_title.setStyleSheet("""
+            QLabel {
+                color: #495057;
+                font-size: 14px;
+                font-weight: bold;
+                margin-bottom: 10px;
+            }
+        """)
+        drag_layout.addWidget(drag_title)
+
+        # Area di trascinamento con cerchio
+        self.drag_area = QWidget()
+        self.drag_area.setStyleSheet("""
+            QWidget {
+                background: #ffffff;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+                min-height: 240px;
+            }
+        """)
+        self.drag_area.setMinimumSize(320, 240)
+
+        # Layout per l'area di trascinamento
+        drag_area_layout = QVBoxLayout(self.drag_area)
+        drag_area_layout.setContentsMargins(10, 10, 10, 10)
+
+        # Cerchio trascinabile
+        self.drag_circle = QLabel("●")
+        self.drag_circle.setStyleSheet("""
+            QLabel {
+                color: #007bff;
+                font-size: 40px;
+                background: transparent;
+                border: none;
+            }
+        """)
+        self.drag_circle.setFixedSize(50, 50)
+        self.drag_circle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Posiziona il cerchio al centro inizialmente
+        self.drag_circle.move(135, 95)  # Centro approssimativo dell'area 320x240
+
+        # Aggiungi il cerchio come figlio dell'area di trascinamento
+        self.drag_circle.setParent(self.drag_area)
+        self.drag_circle.raise_()
+        self.drag_circle.show()
+
+        drag_layout.addWidget(self.drag_area)
+        self.main_splitter.addWidget(self.drag_container)
 
     def closeEvent(self, a0):
         """Gestisce la chiusura della finestra."""
@@ -359,6 +1054,18 @@ except ImportError:
     pytesseract = None
     Image = None
     OCR_AVAILABLE = False
+
+# Import VideoThread for advanced webcam features
+try:
+    from Artificial_Intelligence.Video.visual_background import VideoThread
+    VIDEO_THREAD_AVAILABLE = True
+except ImportError:
+    VideoThread = None
+    VIDEO_THREAD_AVAILABLE = False
+    logging.warning("VideoThread non disponibile - funzionalità avanzate webcam limitate")
+
+# Import PyQt6 signals for hand gesture integration
+from PyQt6.QtCore import pyqtSignal
 
 # Classe per gestire l'area di lavoro con supporto al drop
 
@@ -525,11 +1232,14 @@ class MainWindow(QMainWindow):
 
         # Tools panel always visible
 
-        # Timer per aggiornare lo status del footer ogni minuto
+        # Timer per aggiornare l'orario nel footer ogni minuto
         from PyQt6.QtCore import QTimer
         self.footer_timer = QTimer()
-        self.footer_timer.timeout.connect(self.update_footer_status)
+        self.footer_timer.timeout.connect(self._update_time_labels)
         self.footer_timer.start(60000)  # Aggiorna ogni 60 secondi
+
+        # Aggiorna l'orario immediatamente all'avvio
+        self._update_time_labels()
 
         logging.info("Applicazione avviata")
 
@@ -1521,7 +2231,9 @@ class MainWindow(QMainWindow):
             now = datetime.now()
             time_str = now.strftime("⌚️ %d/%m/%Y %H:%M")
 
-
+            # Aggiorna l'etichetta del tempo in basso a sinistra
+            if hasattr(self, 'left_time_label'):
+                self.left_time_label.setText(time_str)
 
         except Exception as e:
             print(f"Errore nell'aggiornamento degli orari: {e}")
@@ -1529,9 +2241,6 @@ class MainWindow(QMainWindow):
     def _stop_webcam(self):
         """Ferma la webcam e chiude la finestra."""
         try:
-            if hasattr(self, 'flip_timer') and self.flip_timer:
-                self.flip_timer.stop()
-
             if hasattr(self, 'webcam_window') and self.webcam_window:
                 self.webcam_window.close()
                 self.webcam_window = None
@@ -1564,19 +2273,19 @@ class MainWindow(QMainWindow):
             # Controlla se è una risposta di riformulazione
             if "Riformula intensamente" in prompt or "Riformulazione intensa" in prompt:
                 # Mostra la riformulazione nell'area risultati
-                full_content = "🧠 RIFORMULAZIONE COMPLETATA\n\n✨ Testo riformulato con intelligenza artificiale:\n\n{response}\n\n{'=' * 50}\n\n📊 Statistiche:\n• Testo originale: {len(self.full_text) if hasattr(self, 'full_text') else 0} caratteri\n• Testo riformulato: {len(response)} caratteri"
+                full_content = f"🧠 RIFORMULAZIONE COMPLETATA\n\n✨ Testo riformulato con intelligenza artificiale:\n\n{response}\n\n{'=' * 50}\n\n📊 Statistiche:\n• Testo originale: {len(self.full_text) if hasattr(self, 'full_text') else 0} caratteri\n• Testo riformulato: {len(response)} caratteri"
 
                 # Log della riformulazione
-                logging.info("Riformulazione AI completata: {len(response)} caratteri")
+                logging.info(f"Riformulazione AI completata: {len(response)} caratteri")
 
                 # Mostra anche nei dettagli per compatibilità
                 self.show_text_in_details(full_content)
             else:
                 # Risposta AI normale (non riformulazione)
-                full_content = "📤 Richiesta:\n{prompt}\n\n{'=' * 50}\n\n🤖 Risposta AI (llama2:7b):\n\n{response}"
+                full_content = f"📤 Richiesta:\n{prompt}\n\n{'=' * 50}\n\n🤖 Risposta AI (llama2:7b):\n\n{response}"
 
                 # Log della risposta ricevuta
-                logging.info("Risposta AI ricevuta per prompt: {prompt[:50]}... (lunghezza: {len(response)} caratteri)")
+                logging.info(f"Risposta AI ricevuta per prompt: {prompt[:50]}... (lunghezza: {len(response)} caratteri)")
 
                 # Mostra anche nei dettagli per compatibilità
                 self.show_text_in_details(full_content)
@@ -1591,9 +2300,9 @@ class MainWindow(QMainWindow):
 
     def _on_ai_error_occurred(self, error_msg):
         """Gestisce gli errori da Ollama."""
-        logging.error("Errore AI: {error_msg}")
+        logging.error(f"Errore AI: {error_msg}")
         # Crea un'eccezione per il sistema user-friendly
-        ai_error = Exception("Errore dal servizio AI: {error_msg}")
+        ai_error = Exception(f"Errore dal servizio AI: {error_msg}")
         show_user_friendly_error(self, ai_error, "servizio AI")
 
     def update_footer_status_old(self):
@@ -1601,9 +2310,9 @@ class MainWindow(QMainWindow):
         try:
             from datetime import datetime
             current_time = datetime.now().strftime("%H:%M:%S")
-            status_text = "🕐 {current_time} | 👤 Sessione attiva | 📊 Sistema operativo"
-        except Exception:
-            logging.error("Errore nell'aggiornamento del footer: {e}")
+            status_text = f"🕐 {current_time} | 👤 Sessione attiva | 📊 Sistema operativo"
+        except Exception as e:
+            logging.error(f"Errore nell'aggiornamento del footer: {e}")
 
     def setup_ui(self):
 
@@ -3343,21 +4052,21 @@ class MainWindow(QMainWindow):
 
             if DraggableTextWidget:
                 # Aggiungi pensierino alla colonna A con indicatore AI
-                ai_pensierino_text = "🤖 {truncated_text}"
+                ai_pensierino_text = f"🤖 {truncated_text}"
                 pensierino_widget = DraggableTextWidget(ai_pensierino_text, self.settings)
                 self.pensierini_layout.addWidget(pensierino_widget)
 
             # Mostra richiesta nell'area risultati
 
             # Invia richiesta a Ollama con modello di default
-            default_model = "llama2:7b"  # Modello raccomandato
+            default_model = "gemma:2b"  # Modello raccomandato
             self.ollama_bridge.sendPrompt(text, default_model)
 
             # Log dell'invio richiesta
-            logging.info("Richiesta AI inviata: {text[:50]}... (modello: {default_model})")
+            logging.info(f"Richiesta AI inviata: {text[:50]}... (modello: {default_model})")
 
         except Exception as e:
-            logging.error("Errore nell'invio richiesta AI: {e}")
+            logging.error(f"Errore nell'invio richiesta AI: {e}")
             return
 
         # La sezione pensierini è stata rimossa - niente da pulire
@@ -3886,14 +4595,14 @@ Riformulazione intensa:"""
             self.show_text_in_details(processing_text)
 
             # Invia richiesta a Ollama con modello di default
-            default_model = "llama2:7b"  # Modello raccomandato
+            default_model = "gemma:2b"  # Modello raccomandato
             self.ollama_bridge.sendPrompt(prompt, default_model)
 
-            logging.info("Richiesta riformulazione inviata: {len(self.full_text)} caratteri (modello: {default_model})")
+            logging.info(f"Richiesta riformulazione inviata: {len(self.full_text)} caratteri (modello: {default_model})")
 
-        except Exception:
-            logging.error("Errore nell'invio richiesta riformulazione: {e}")
-            QMessageBox.critical(self, "Errore AI", "Errore nell'invio della richiesta AI:\n{str(e)}")
+        except Exception as e:
+            logging.error(f"Errore nell'invio richiesta riformulazione: {e}")
+            QMessageBox.critical(self, "Errore AI", f"Errore nell'invio della richiesta AI:\n{str(e)}")
             # Riabilita il pulsante in caso di errore
             if hasattr(self, 'rephrase_button'):
                 self.rephrase_button.setEnabled(True)

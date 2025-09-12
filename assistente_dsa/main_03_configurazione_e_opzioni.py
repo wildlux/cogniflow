@@ -219,6 +219,10 @@ class ConfigManager:
                 "log_dir": os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "LOG"),
                 "config_dir": os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "SETUP_TOOLS_&_Data"),
                 "projects_dir": os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "mia_dispenda_progetti")
+            },
+            "startup": {
+                "bypass_login": False,
+                "auto_start_main_app": False
             }
         }
 

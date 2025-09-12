@@ -9,13 +9,18 @@ import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
+from PyQt6.QtCore import QObject, pyqtSignal
 from models.project_model import ProjectModel
 
 
-class ProjectService:
+class ProjectService(QObject):
     """
     Servizio per gestire il salvataggio e caricamento dei progetti
     """
+
+    # Segnali
+    project_saved = pyqtSignal(str)  # project_name
+    project_loaded = pyqtSignal(str)  # project_name
 
     def __init__(self, projects_dir: Optional[str] = None):
         self.logger = logging.getLogger(__name__)
@@ -52,6 +57,7 @@ class ProjectService:
                 json.dump(project_data, f, indent=2, ensure_ascii=False)
 
             self.logger.info(f"Progetto salvato: {file_path}")
+            self.project_saved.emit(project.name)
             return True
 
         except Exception as e:
@@ -75,6 +81,7 @@ class ProjectService:
             # Crea l'oggetto progetto
             project = ProjectModel.from_dict(project_data)
             self.logger.info(f"Progetto caricato: {file_path}")
+            self.project_loaded.emit(project.name)
             return project
 
         except Exception as e:

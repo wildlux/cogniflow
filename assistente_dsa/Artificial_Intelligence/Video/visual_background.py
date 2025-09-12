@@ -5,8 +5,18 @@ import logging
 import numpy as np
 import math
 import os
+import asyncio
 from PyQt6.QtCore import QThread, pyqtSignal, QSize, Qt
 from PyQt6.QtGui import QImage, QPixmap
+
+# Import MediaPipe client
+try:
+    from services.mediapipe_client import MediaPipeClient
+    MEDIAPIPE_CLIENT_AVAILABLE = True
+except ImportError:
+    MEDIAPIPE_CLIENT_AVAILABLE = False
+    MediaPipeClient = None
+    logging.warning("MediaPipe client non disponibile")
 
 # MediaPipe imports
 try:
@@ -45,6 +55,21 @@ class VideoThread(QThread):
         self.right_hand_tracking_enabled = True  # Abilitato di default
         self.human_detection_enabled = True  # LIDAR-like human detection enabled by default
         self.main_window = main_window
+
+        # Initialize MediaPipe client
+        self.mediapipe_client = None
+        self.use_mediapipe_service = True  # Flag to enable/disable MediaPipe service
+
+        if MEDIAPIPE_CLIENT_AVAILABLE and MediaPipeClient:
+            try:
+                mediapipe_url = os.getenv("MEDIAPIPE_SERVICE_URL", "http://localhost:8001")
+                self.mediapipe_client = MediaPipeClient(mediapipe_url)
+                logging.info(f"MediaPipe client initialized with URL: {mediapipe_url}")
+            except Exception as e:
+                logging.warning(f"Failed to initialize MediaPipe client: {e}")
+                self.mediapipe_client = None
+        else:
+            logging.info("MediaPipe client not available, using local detection")
 
         # Carica i classificatori Haar per il rilevamento
         try:
@@ -331,10 +356,81 @@ class VideoThread(QThread):
         return frame
 
     def detect_humans(self, frame):
-        """Rileva figure umane usando analisi di contorni (approccio LIDAR-like semplificato)."""
+        """Rileva figure umane usando MediaPipe service o fallback OpenCV."""
         if not self.human_detection_enabled:
             return frame
 
+        # Try MediaPipe service first if available
+        if (self.use_mediapipe_service and
+            self.mediapipe_client and
+            MEDIAPIPE_CLIENT_AVAILABLE):
+
+            try:
+                # Run MediaPipe detection asynchronously
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(self.detect_humans_mediapipe(frame))
+                loop.close()
+
+                if result is not None:
+                    return result
+                else:
+                    logging.warning("MediaPipe service failed, falling back to OpenCV")
+            except Exception as e:
+                logging.warning(f"MediaPipe service error: {e}, falling back to OpenCV")
+
+        # Fallback to original OpenCV method
+        return self.detect_humans_opencv(frame)
+
+    async def detect_humans_mediapipe(self, frame):
+        """Rilevamento umani usando MediaPipe service."""
+        try:
+            # Get pose detection from service
+            pose_result = await self.mediapipe_client.detect_pose(frame)
+
+            if pose_result and pose_result.get("detected"):
+                # Draw pose landmarks
+                frame = self.draw_pose_landmarks(frame, pose_result)
+
+                # Extract bounding boxes for compatibility
+                detected_humans = []
+                if pose_result.get("bbox"):
+                    bbox = pose_result["bbox"]
+                    detected_humans.append((
+                        bbox["x"], bbox["y"],
+                        bbox["width"], bbox["height"]
+                    ))
+
+                # Emit signals
+                if detected_humans:
+                    self.human_detected_signal.emit(detected_humans)
+
+                    # Calculate center position
+                    if pose_result.get("bbox"):
+                        bbox = pose_result["bbox"]
+                        center_x = bbox["x"] + bbox["width"] // 2
+                        center_y = bbox["y"] + bbox["height"] // 2
+                        self.human_position_signal.emit(center_x, center_y)
+
+                # Show detection status
+                confidence = pose_result.get("confidence", 0.0)
+                cv2.putText(frame, f'MediaPipe: Pose rilevata ({confidence:.2f})', (10, 150),
+                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+                return frame
+
+            else:
+                # No pose detected
+                cv2.putText(frame, 'MediaPipe: Nessuna posa rilevata', (10, 150),
+                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                return frame
+
+        except Exception as e:
+            logging.error(f"MediaPipe pose detection error: {e}")
+            return None
+
+    def detect_humans_opencv(self, frame):
+        """Rilevamento umani con OpenCV (metodo originale - fallback)."""
         # Verifica che abbiamo i parametri necessari
         if not hasattr(self, 'human_min_area'):
             return frame
@@ -409,7 +505,7 @@ class VideoThread(QThread):
 
         # Mostra statistiche rilevamento umani
         if detected_humans:
-            cv2.putText(frame, f'Umani rilevati: {len(detected_humans)}', (10, 150),
+            cv2.putText(frame, f'OpenCV: Umani rilevati: {len(detected_humans)}', (10, 150),
                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
             # Emit signals per umani rilevati
@@ -417,8 +513,48 @@ class VideoThread(QThread):
             if primary_human_center:
                 self.human_position_signal.emit(primary_human_center[0], primary_human_center[1])
         else:
-            cv2.putText(frame, 'Nessun umano rilevato', (10, 150),
+            cv2.putText(frame, 'OpenCV: Nessun umano rilevato', (10, 150),
                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+
+        return frame
+
+    def draw_pose_landmarks(self, frame, pose_data):
+        """Disegna i landmark della posa sul frame."""
+        if not pose_data.get("landmarks"):
+            return frame
+
+        height, width = frame.shape[:2]
+
+        # Draw pose connections (simplified)
+        pose_connections = [
+            (11, 12), (11, 13), (13, 15), (15, 17), (15, 19), (15, 21),  # Left arm
+            (12, 14), (14, 16), (16, 18), (16, 20), (16, 22),  # Right arm
+            (11, 23), (12, 24), (23, 24),  # Shoulders to hips
+            (23, 25), (25, 27), (27, 29), (29, 31),  # Left leg
+            (24, 26), (26, 28), (28, 30), (30, 32),  # Right leg
+        ]
+
+        landmarks = pose_data["landmarks"]
+
+        # Draw connections
+        for connection in pose_connections:
+            start_idx, end_idx = connection
+            if start_idx < len(landmarks) and end_idx < len(landmarks):
+                start_lm = landmarks[start_idx]
+                end_lm = landmarks[end_idx]
+
+                start_x = int(start_lm["x"] * width)
+                start_y = int(start_lm["y"] * height)
+                end_x = int(end_lm["x"] * width)
+                end_y = int(end_lm["y"] * height)
+
+                cv2.line(frame, (start_x, start_y), (end_x, end_y), (255, 0, 0), 2)
+
+        # Draw landmarks
+        for landmark in landmarks:
+            x = int(landmark["x"] * width)
+            y = int(landmark["y"] * height)
+            cv2.circle(frame, (x, y), 5, (0, 255, 0), -1)
 
         return frame
 

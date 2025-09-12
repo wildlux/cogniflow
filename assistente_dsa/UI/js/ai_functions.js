@@ -49,7 +49,7 @@ function selectFirstModel(availableModels, aiModelCombo) {
     if (availableModels.length > 0) {
         return availableModels[0]
     }
-    return "llama2:7b"
+    return "gemma:2b"
 }
 
 function handleResponseReceived(prompt, response, aiResultsList, addLogMessage) {

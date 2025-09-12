@@ -68,6 +68,8 @@ class SettingsManager:
         "general_button_color": "#4a90e2",
         "hover_button_color": "#357abd",
         "pressed_button_color": "#2e5f8f",
+        "test_button_x": 10,
+        "test_button_y": 10,
         "transcription_button_color": "#17a2b8",
         "ai_button_color": "#28a745",
         "knowledge_button_color": "#4a90e2",
