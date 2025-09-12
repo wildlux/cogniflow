@@ -8,6 +8,20 @@ import os
 from PyQt6.QtCore import QThread, pyqtSignal, QSize, Qt
 from PyQt6.QtGui import QImage, QPixmap
 
+# MediaPipe imports
+try:
+    import mediapipe as mp  # type: ignore
+    MEDIAPIPE_AVAILABLE = True
+    mp_pose = mp.solutions.pose
+    mp_drawing = mp.solutions.drawing_utils
+    mp_drawing_styles = mp.solutions.drawing_styles
+except ImportError:
+    MEDIAPIPE_AVAILABLE = False
+    mp_pose = None
+    mp_drawing = None
+    mp_drawing_styles = None
+    logging.warning("MediaPipe non disponibile - rilevamento pose limitato")
+
 
 class VideoThread(QThread):
     """
@@ -15,6 +29,10 @@ class VideoThread(QThread):
     """
     change_pixmap_signal = pyqtSignal(QPixmap)  # Invia QPixmap invece di dati raw per efficienza
     status_signal = pyqtSignal(str)
+    hand_position_signal = pyqtSignal(int, int)  # x, y coordinates
+    gesture_detected_signal = pyqtSignal(str)    # gesture type
+    human_detected_signal = pyqtSignal(list)     # list of human bounding boxes [(x,y,w,h), ...]
+    human_position_signal = pyqtSignal(int, int) # center position of primary human
 
     def __init__(self, main_window=None):
         super().__init__()
@@ -23,6 +41,9 @@ class VideoThread(QThread):
         self.hand_detection_enabled = False
         self.gesture_recognition_enabled = False
         self.facial_expression_enabled = False
+        self.left_hand_tracking_enabled = False
+        self.right_hand_tracking_enabled = True  # Abilitato di default
+        self.human_detection_enabled = True  # LIDAR-like human detection enabled by default
         self.main_window = main_window
 
         # Carica i classificatori Haar per il rilevamento
@@ -37,7 +58,14 @@ class VideoThread(QThread):
             logging.error("Errore nel caricamento del cascade Haar: {e}")
             self.face_cascade = None
 
+        # Parametri per il rilevamento umano basato su contorni (LIDAR-like)
+        self.human_min_area = 10000  # Area minima per considerare un umano
+        self.human_max_area = 300000  # Area massima
+        self.human_min_aspect = 0.3   # Rapporto aspetto minimo (larghezza/altezza)
+        self.human_max_aspect = 1.2   # Rapporto aspetto massimo
+
         # Per le mani, usiamo un approccio alternativo basato sulla pelle
+        # TODO: Calibration - Adjust skin color thresholds based on lighting conditions
         self.lower_skin = np.array([0, 20, 70], dtype=np.uint8)
         self.upper_skin = np.array([20, 255, 255], dtype=np.uint8)
 
@@ -48,6 +76,7 @@ class VideoThread(QThread):
         self.drag_start_time: float = 0.0
         self.is_dragging = False
         self.drag_timer = 0
+        # TODO: Calibration - Adjust drag threshold based on user preference (seconds)
         self.DRAG_THRESHOLD = 6.0  # 6 secondi per iniziare il trascinamento
 
         # Parametri per il riconoscimento delle espressioni facciali
@@ -92,7 +121,14 @@ class VideoThread(QThread):
                     status_text += "Faccia: OFF  "
 
                 if self.hand_detection_enabled:
-                    status_text += "Mani: ON  "
+                    if self.left_hand_tracking_enabled and self.right_hand_tracking_enabled:
+                        status_text += "Mani: SX+DX  "
+                    elif self.left_hand_tracking_enabled:
+                        status_text += "Mani: SX  "
+                    elif self.right_hand_tracking_enabled:
+                        status_text += "Mani: DX  "
+                    else:
+                        status_text += "Mani: OFF  "
                 else:
                     status_text += "Mani: OFF  "
 
@@ -102,9 +138,14 @@ class VideoThread(QThread):
                     status_text += "Gesti: OFF  "
 
                 if self.facial_expression_enabled:
-                    status_text += "Espressioni: ON"
+                    status_text += "Espressioni: ON  "
                 else:
-                    status_text += "Espressioni: OFF"
+                    status_text += "Espressioni: OFF  "
+
+                if self.human_detection_enabled:
+                    status_text += "Umani: ON"
+                else:
+                    status_text += "Umani: OFF"
 
                 cv2.putText(frame, status_text, (10, frame.shape[0] - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
@@ -121,6 +162,9 @@ class VideoThread(QThread):
 
                 if self.facial_expression_enabled:
                     frame = self.detect_facial_expressions(frame)
+
+                if self.human_detection_enabled:
+                    frame = self.detect_humans(frame)
 
                 # Converti il frame in QPixmap per efficienza
                 rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -201,6 +245,12 @@ class VideoThread(QThread):
                     hand_info = self.analyze_hand_advanced(contour, x, y, w, h, frame.shape[1])
 
                     if hand_info['confidence'] > 0.3:  # Solo mani con buona confidenza
+                        # Controlla se il tracciamento per questa mano è abilitato
+                        hand_type = hand_info['hand_type']
+                        if (hand_type == 'left' and not self.left_hand_tracking_enabled) or \
+                           (hand_type == 'right' and not self.right_hand_tracking_enabled):
+                            continue  # Salta questa mano se il tracciamento è disabilitato
+
                         detected_hands.append((x, y, w, h, hand_info))
 
                         # Colore diverso per mano destra e sinistra
@@ -213,12 +263,23 @@ class VideoThread(QThread):
                         cv2.rectangle(frame, (x, y), (x + w, y + h), color, 3)
 
                         # Info sulla mano
-                        info_text = "{hand_info['hand_type'].upper()}: {hand_info['fingers']} dita, {hand_info['gesture']}"
+                        info_text = f"{hand_info['hand_type'].upper()}: {hand_info['fingers']} dita, {hand_info['gesture']}"
                         cv2.putText(frame, info_text, (x, y - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
                         # Info sulle dita individuali
                         finger_text = "Pollice:{'ON' if hand_info['thumb'] else 'OFF'} Indice:{'ON' if hand_info['index'] else 'OFF'}"
                         cv2.putText(frame, finger_text, (x, y + h + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
+
+                        # Emit signals for hand position and gesture
+                        hand_center_x = x + w // 2
+                        hand_center_y = y + h // 2
+                        self.hand_position_signal.emit(hand_center_x, hand_center_y)
+                        self.gesture_detected_signal.emit(hand_info['gesture'])
+
+                        # Add visual cursor indicator
+                        cursor_color = (0, 255, 0) if hand_info['gesture'] == "Mano Aperta" else (0, 0, 255)
+                        cv2.circle(frame, (hand_center_x, hand_center_y), 10, cursor_color, 2)
+                        cv2.circle(frame, (hand_center_x, hand_center_y), 2, cursor_color, -1)
 
                         # Gestisci l'interazione con l'interfaccia
                         frame = self.handle_advanced_hand_interaction(frame, x, y, w, h, hand_info)
@@ -266,6 +327,98 @@ class VideoThread(QThread):
         else:
             cv2.putText(frame, 'Nessuna mano rilevata', (10, 60),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+        return frame
+
+    def detect_humans(self, frame):
+        """Rileva figure umane usando analisi di contorni (approccio LIDAR-like semplificato)."""
+        if not self.human_detection_enabled:
+            return frame
+
+        # Verifica che abbiamo i parametri necessari
+        if not hasattr(self, 'human_min_area'):
+            return frame
+
+        # Usa rilevamento basato su movimento e forma per umani
+        # Approccio semplificato che analizza i contorni più grandi
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        # Applica filtro gaussiano per ridurre rumore
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+        # Rilevamento edges con Canny
+        edges = cv2.Canny(blurred, 50, 150)
+
+        # Operazioni morfologiche per chiudere i contorni
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
+        closed = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
+
+        # Trova contorni
+        contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        detected_humans = []
+        primary_human_center = None
+
+        for contour in contours:
+            area = cv2.contourArea(contour)
+
+            # Filtra per area (umani dovrebbero avere una certa dimensione)
+            if self.human_min_area < area < self.human_max_area:
+                # Ottieni bounding box
+                x, y, w, h = cv2.boundingRect(contour)
+
+                # Filtra per rapporto aspetto (umani sono generalmente verticali)
+                aspect_ratio = w / h if h > 0 else 0
+                if self.human_min_aspect < aspect_ratio < self.human_max_aspect:
+                    # Calcola circolarità e solidità per filtrare forme umane
+                    perimeter = cv2.arcLength(contour, True)
+                    if perimeter > 0:
+                        circularity = 4 * math.pi * area / (perimeter * perimeter)
+                        hull = cv2.convexHull(contour)
+                        hull_area = cv2.contourArea(hull)
+                        solidity = area / hull_area if hull_area > 0 else 0
+
+                        # Umani hanno generalmente bassa circolarità e alta solidità
+                        if circularity < 0.8 and solidity > 0.7:
+                            # Calcola confidenza basata su area e forma
+                            confidence = min(1.0, (area / self.human_max_area) * 0.8 + solidity * 0.2)
+
+                            if confidence > 0.4:  # Soglia di confidenza
+                                detected_humans.append((x, y, w, h))
+
+                                # Disegna rettangolo per l'umano rilevato
+                                color = (0, 255, 0) if confidence > 0.7 else (0, 165, 255)
+                                cv2.rectangle(frame, (x, y), (x + w, y + h), color, 3)
+
+                                # Calcola centro dell'umano
+                                center_x = x + w // 2
+                                center_y = y + h // 2
+
+                                # Info sull'umano rilevato
+                                info_text = f'Umano: {confidence:.2f}'
+                                cv2.putText(frame, info_text, (x, y - 10),
+                                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
+                                # Disegna centro come punto di riferimento (LIDAR-like)
+                                cv2.circle(frame, (center_x, center_y), 8, color, -1)
+                                cv2.circle(frame, (center_x, center_y), 12, color, 2)
+
+                                # Il primo umano rilevato è considerato primario
+                                if primary_human_center is None:
+                                    primary_human_center = (center_x, center_y)
+
+        # Mostra statistiche rilevamento umani
+        if detected_humans:
+            cv2.putText(frame, f'Umani rilevati: {len(detected_humans)}', (10, 150),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+            # Emit signals per umani rilevati
+            self.human_detected_signal.emit(detected_humans)
+            if primary_human_center:
+                self.human_position_signal.emit(primary_human_center[0], primary_human_center[1])
+        else:
+            cv2.putText(frame, 'Nessun umano rilevato', (10, 150),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
 
         return frame
 
@@ -749,6 +902,46 @@ class VideoThread(QThread):
                     self.drag_timer = 0
 
         return frame
+
+    def webcam_to_ui_coordinates(self, webcam_x, webcam_y, frame_width, frame_height, ui_width, ui_height):
+        """Converte le coordinate dalla webcam alle coordinate dell'interfaccia utente."""
+        # Calcola il rapporto di scala
+        scale_x = ui_width / frame_width
+        scale_y = ui_height / frame_height
+
+        # Converti le coordinate
+        ui_x = int(webcam_x * scale_x)
+        ui_y = int(webcam_y * scale_y)
+
+        return ui_x, ui_y
+
+    def find_element_at_position(self, ui_x, ui_y):
+        """Trova l'elemento dell'interfaccia alla posizione specificata."""
+        if not hasattr(self, 'main_window') or self.main_window is None:
+            return None
+
+        # Cerca nei widget della colonna A (pensierini)
+        if hasattr(self.main_window, 'pensierini_widget') and self.main_window.pensierini_widget:
+            pensierini_layout = getattr(self.main_window.pensierini_widget, 'pensierini_layout', None)
+            if pensierini_layout:
+                for i in range(pensierini_layout.count()):
+                    item = pensierini_layout.itemAt(i)
+                    if item and item.widget():
+                        widget = item.widget()
+                        # Controlla se il punto è dentro il widget
+                        widget_rect = widget.geometry()
+                        if widget_rect.contains(ui_x, ui_y):
+                            return widget
+
+        return None
+
+    def update_drag_position(self, ui_x, ui_y):
+        """Aggiorna la posizione dell'elemento durante il trascinamento."""
+        if self.selected_widget and self.is_dragging:
+            # Muovi il widget alla nuova posizione
+            self.selected_widget.move(ui_x, ui_y)
+            return True
+        return False
 
     def stop(self):
         """Termina il thread in modo sicuro."""
