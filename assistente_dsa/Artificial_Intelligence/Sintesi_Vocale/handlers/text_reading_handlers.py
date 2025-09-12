@@ -3,7 +3,17 @@
 import logging
 from PyQt6.QtWidgets import QMessageBox
 
-from ..managers.tts_manager import TTSThread
+# Import TTS manager con gestione robusta
+try:
+    # Prova importazione relativa
+    from ..managers.tts_manager import TTSThread
+except ImportError:
+    try:
+        # Fallback: importazione assoluta
+        from Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager import TTSThread
+    except ImportError:
+        TTSThread = None
+        logging.warning("TTS Manager non disponibile")
 
 
 class TextReadingHandlers:

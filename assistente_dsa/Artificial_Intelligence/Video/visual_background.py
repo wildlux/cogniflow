@@ -9,15 +9,11 @@ import asyncio
 from PyQt6.QtCore import QThread, pyqtSignal, QSize, Qt
 from PyQt6.QtGui import QImage, QPixmap
 
-# Import MediaPipe client
-try:
-    from services.mediapipe_client import MediaPipeClient
-
-    MEDIAPIPE_CLIENT_AVAILABLE = True
-except ImportError:
-    MEDIAPIPE_CLIENT_AVAILABLE = False
-    MediaPipeClient = None
-    logging.warning("MediaPipe client non disponibile")
+# Import MediaPipe client - DISABILITATO TEMPORANEAMENTE
+# TODO: Riabilitare quando MediaPipe sarà completamente configurato
+MEDIAPIPE_CLIENT_AVAILABLE = False
+MediaPipeClient = None
+logging.info("MediaPipe client temporaneamente disabilitato per stabilità")
 
 # MediaPipe imports
 try:

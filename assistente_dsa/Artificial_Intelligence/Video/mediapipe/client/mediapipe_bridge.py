@@ -14,15 +14,20 @@ sys.path.append(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 )
 
-# Import VideoThread
+# Import VideoThread con gestione robusta
 try:
+    # Prova importazione relativa
     from ...visual_background import VideoThread
-
     VIDEO_THREAD_AVAILABLE = True
 except ImportError:
-    VideoThread = None
-    VIDEO_THREAD_AVAILABLE = False
-    logging.warning("VideoThread non disponibile - funzionalità MediaPipe limitate")
+    try:
+        # Fallback: importazione assoluta
+        from Artificial_Intelligence.Video.visual_background import VideoThread
+        VIDEO_THREAD_AVAILABLE = True
+    except ImportError:
+        VideoThread = None
+        VIDEO_THREAD_AVAILABLE = False
+        logging.warning("VideoThread non disponibile - funzionalità MediaPipe limitate")
 
 
 class MediaPipeBridge(QObject):

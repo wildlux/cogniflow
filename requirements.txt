@@ -27,6 +27,7 @@ typing-extensions>=4.7.0
 
 # Optional: MediaPipe services (richiede sistema specifico)
 flask>=2.0.0
+httpx>=0.25.0
 
 # MediaPipe - INSTALLAZIONE MANUALE RICHIESTA
 # ============================================

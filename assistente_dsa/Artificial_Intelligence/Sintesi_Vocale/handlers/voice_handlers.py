@@ -4,9 +4,21 @@ import logging
 import os
 from PyQt6.QtWidgets import QMessageBox
 
-from ...Riconoscimento_Vocale.managers.speech_recognition_manager import (
-    SpeechRecognitionThread,
-)
+# Import speech recognition con gestione robusta
+try:
+    # Prova importazione relativa
+    from ...Riconoscimento_Vocale.managers.speech_recognition_manager import (
+        SpeechRecognitionThread,
+    )
+except ImportError:
+    try:
+        # Fallback: importazione assoluta
+        from Artificial_Intelligence.Riconoscimento_Vocale.managers.speech_recognition_manager import (
+            SpeechRecognitionThread,
+        )
+    except ImportError:
+        SpeechRecognitionThread = None
+        logging.warning("Speech Recognition non disponibile")
 
 
 class VoiceHandlers:

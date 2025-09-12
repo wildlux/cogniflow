@@ -55,8 +55,18 @@ except ImportError:
         "Sistema TTS non disponibile - funzionalità di pronuncia IPA limitata"
     )
 
-# Import del sistema di configurazione
-from .main_03_configurazione_e_opzioni import get_config, load_settings
+# Import del sistema di configurazione con gestione robusta
+try:
+    # Prova importazione relativa (se eseguito come modulo)
+    from .main_03_configurazione_e_opzioni import get_config, load_settings
+except ImportError:
+    try:
+        # Fallback: importazione assoluta (se eseguito direttamente)
+        from main_03_configurazione_e_opzioni import get_config, load_settings
+    except ImportError as e:
+        logging.error(f"❌ Impossibile importare configurazione: {e}")
+        logging.error("💡 Assicurati di eseguire dal launcher principale: python main_00_launcher.py")
+        sys.exit(1)
 
 try:
     from UI.draggable_text_widget import DraggableTextWidget

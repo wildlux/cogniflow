@@ -14,6 +14,11 @@ import hashlib
 from datetime import datetime
 from typing import cast, Callable, TYPE_CHECKING
 
+# Aggiungi la directory corrente al PYTHONPATH per gestire importazioni assolute
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
 # Webcam capture imports (not used in this file)
 opencv_available = False
 
