@@ -10,11 +10,11 @@ from PyQt6.QtCore import QObject, pyqtSignal, QThread, pyqtSlot
 from PyQt6.QtGui import QPixmap
 
 # Aggiungi il percorso per importare i moduli
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
 
 # Import VideoThread
 try:
-    from Artificial_Intelligence.Video.visual_background import VideoThread
+    from ...visual_background import VideoThread
     VIDEO_THREAD_AVAILABLE = True
 except ImportError:
     VideoThread = None

@@ -43,21 +43,27 @@ Rectangle {
     property bool showThemePanel: true
     property bool showAIPanel: true
     property bool showMediaPipePanel: true
-    property bool webcamEnabled: false
-    property bool detectionEnabled: false
-    property string detectionStatus: "Pronto"
-    property var detectionOptions: ["Pose", "Hands", "Face", "Holistic"]
-    property string selectedDetection: "Pose"
+     property bool webcamEnabled: false
+     property bool detectionEnabled: false
+     property bool handsEnabled: false
+     property bool gesturesEnabled: false
+     property bool expressionsEnabled: false
+     property string detectionStatus: "Pronto"
+     property var detectionOptions: ["Pose", "Hands", "Face", "Holistic"]
+     property string selectedDetection: "Pose"
 
     // ===== DESIGNER SIGNALS =====
     // Segnali per il designer
     signal toggleTTS()
     signal toggleSpeechRecognition()
     signal sendToAI()
-    signal toggleWebcam()
-    signal toggleDetection()
-    signal detectionOptionChanged(string option)
-    signal themeChanged(int index)
+     signal toggleWebcam()
+     signal toggleDetection()
+     signal toggleHands()
+     signal toggleGestures()
+     signal toggleExpressions()
+     signal detectionOptionChanged(string option)
+     signal themeChanged(int index)
 
     // ===== DESIGNER ALIASES =====
     // Alias per componenti interni
@@ -386,57 +392,91 @@ Rectangle {
 
 
 
-                ComboBox {
+                 ComboBox {
 
-                    id: detectionTypeCombo
+                     id: detectionTypeCombo
 
-                    Layout.fillWidth: true
+                     Layout.fillWidth: true
 
-                    Layout.minimumWidth: 200
+                     Layout.minimumWidth: 200
 
-                    model: detectionOptions
+                     model: detectionOptions
 
-                    currentIndex: detectionOptions.indexOf(selectedDetection)
+                     currentIndex: detectionOptions.indexOf(selectedDetection)
 
-                    font.pixelSize: labelFontSize
+                     font.pixelSize: labelFontSize
 
-                    font.bold: labelBold
+                     font.bold: labelBold
 
-                    onCurrentTextChanged: {
+                     onCurrentTextChanged: {
 
-                        if (currentText !== selectedDetection) {
+                         if (currentText !== selectedDetection) {
 
-                            selectedDetection = currentText
+                             selectedDetection = currentText
 
-                            controlPanel.detectionOptionChanged(currentText)
+                             controlPanel.detectionOptionChanged(currentText)
 
-                        }
+                         }
 
-                    }
+                     }
 
-                }
+                 }
 
+                 // Pulsanti specifici per rilevamento
+                 RowLayout {
+                     Layout.fillWidth: true
+                     spacing: 5
 
+                     Button {
+                         text: handsEnabled ? "🤚 Mani OFF" : "🤚 Mani ON"
+                         Layout.fillWidth: true
+                         Layout.minimumHeight: 30
+                         font.pixelSize: buttonFontSize - 1
+                         font.bold: buttonBold
+                         enabled: webcamEnabled
+                         onClicked: controlPanel.toggleHands()
+                     }
 
-                // Controllo rilevamento
+                     Button {
+                         text: gesturesEnabled ? "👋 Gesti OFF" : "👋 Gesti ON"
+                         Layout.fillWidth: true
+                         Layout.minimumHeight: 30
+                         font.pixelSize: buttonFontSize - 1
+                         font.bold: buttonBold
+                         enabled: webcamEnabled
+                         onClicked: controlPanel.toggleGestures()
+                     }
 
-                Button {
+                     Button {
+                         text: expressionsEnabled ? "😊 Espressioni OFF" : "😊 Espressioni ON"
+                         Layout.fillWidth: true
+                         Layout.minimumHeight: 30
+                         font.pixelSize: buttonFontSize - 1
+                         font.bold: buttonBold
+                         enabled: webcamEnabled
+                         onClicked: controlPanel.toggleExpressions()
+                     }
+                 }
 
-                    text: detectionEnabled ? "⏹️ Ferma Rilevamento" : "▶️ Avvia Rilevamento"
+                 // Controllo rilevamento
 
-                    Layout.fillWidth: true
+                 Button {
 
-                    Layout.minimumHeight: 35
+                     text: detectionEnabled ? "⏹️ Ferma Rilevamento" : "▶️ Avvia Rilevamento"
 
-                    font.pixelSize: buttonFontSize
+                     Layout.fillWidth: true
 
-                    font.bold: buttonBold
+                     Layout.minimumHeight: 35
 
-                    enabled: webcamEnabled
+                     font.pixelSize: buttonFontSize
 
-                    onClicked: controlPanel.toggleDetection()
+                     font.bold: buttonBold
 
-                }
+                     enabled: webcamEnabled
+
+                     onClicked: controlPanel.toggleDetection()
+
+                 }
 
             }
 

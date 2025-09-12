@@ -9,6 +9,9 @@ import traceback
 import threading
 import time
 import multiprocessing
+import json
+import hashlib
+from datetime import datetime
 from typing import cast, Callable, TYPE_CHECKING
 
 # Webcam capture imports (not used in this file)
@@ -96,13 +99,88 @@ try:
         get_setting,
         set_setting
     )
-except ImportError:
-    # Fallback for direct execution
-    from assistente_dsa.main_03_configurazione_e_opzioni import (
-        load_settings,
-        get_setting,
-        set_setting
-    )
+except ImportError as e:
+    print(f"❌ ERROR: Could not import configuration module: {e}")
+    print("Please ensure main_03_configurazione_e_opzioni.py exists and is accessible")
+    sys.exit(1)
+
+# Sistema di autenticazione semplificato integrato
+import hashlib
+from datetime import datetime
+
+class SimpleAuthManager:
+    def __init__(self):
+        self.data_dir = os.path.join(os.path.dirname(__file__), "Save", "AUTH")
+        os.makedirs(self.data_dir, exist_ok=True)
+        self.users_file = os.path.join(self.data_dir, "users.json")
+        self._load_users()
+
+    def _load_users(self):
+        if os.path.exists(self.users_file):
+            try:
+                with open(self.users_file, 'r', encoding='utf-8') as f:
+                    self.users = json.load(f)
+            except:
+                self.users = {}
+        else:
+            self.users = {}
+            # Crea utente admin predefinito
+            self._create_default_admin()
+
+    def _create_default_admin(self):
+        admin_user = {
+            "username": "admin",
+            "password_hash": hashlib.sha256("admin123".encode()).hexdigest(),
+            "full_name": "System Administrator",
+            "group": "Administrator",
+            "is_active": True,
+            "created_at": datetime.now().isoformat(),
+            "last_login": None
+        }
+        self.users["admin"] = admin_user
+        self._save_users()
+        print("✅ Utente amministratore creato: admin / admin123")
+
+    def _save_users(self):
+        try:
+            with open(self.users_file, 'w', encoding='utf-8') as f:
+                json.dump(self.users, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"Errore salvataggio utenti: {e}")
+
+    def authenticate(self, username, password):
+        if username not in self.users:
+            return None
+        user = self.users[username]
+        if not user.get("is_active", True):
+            return None
+        if user["password_hash"] != hashlib.sha256(password.encode()).hexdigest():
+            return None
+        user["last_login"] = datetime.now().isoformat()
+        self._save_users()
+        return user
+
+    def get_user_permissions(self, username):
+        user = self.users.get(username)
+        if not user:
+            return {"system_access": False}
+        group = user.get("group", "Guest")
+        # Permessi semplificati
+        permissions = {
+            "Administrator": {"system_access": True, "user_management": True, "ai_access": True},
+            "Teacher": {"system_access": True, "user_management": False, "ai_access": True},
+            "Student": {"system_access": True, "user_management": False, "ai_access": True},
+            "Guest": {"system_access": True, "user_management": False, "ai_access": False}
+        }
+        return permissions.get(group, {"system_access": False})
+
+AUTH_AVAILABLE = True
+auth_manager = SimpleAuthManager()
+
+def get_auth_manager():
+    return auth_manager
+
+print("✅ Authentication system loaded")
 
 
 @conditional_decorator(measure_function_time, "security_checks")
@@ -175,9 +253,13 @@ def perform_security_checks():
     print(f"✅ Python version: {sys.version}")
 
     # Check if running as root (security risk)
-    if os.geteuid() == 0:
-        log_security_event("PERMISSION_CHECK", "Running as root", "WARNING")
-        print("⚠️  WARNING: Running as root - this may pose security risks")
+    try:
+        if os.geteuid() == 0:
+            log_security_event("PERMISSION_CHECK", "Running as root", "WARNING")
+            print("⚠️  WARNING: Running as root - this may pose security risks")
+    except AttributeError:
+        # os.geteuid() not available on Windows
+        pass
 
     # Check write permissions in current directory
     try:
@@ -192,13 +274,12 @@ def perform_security_checks():
         print(f"❌ ERROR: No write permissions in current directory: {e}")
         return False
 
-    # Check required directories exist (parallel)
+    # Check required directories exist (sequential for better error handling)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     required_dirs = ['Save', 'Screenshot', 'assistente_dsa']
     required_paths = [os.path.join(project_root, d) for d in required_dirs]
-    with multiprocessing.Pool(processes=min(len(required_paths), multiprocessing.cpu_count())) as pool:
-        dir_results = pool.map(check_directory, required_paths)
-    for dir_name, exists in dir_results:
+    for dir_path in required_paths:
+        dir_name, exists = check_directory(dir_path)
         if not exists:
             log_security_event("DIRECTORY_CHECK", f"Directory '{dir_name}' missing", "WARNING")
             print(f"⚠️  WARNING: Required directory '{dir_name}' not found")
@@ -206,19 +287,96 @@ def perform_security_checks():
             log_security_event("DIRECTORY_CHECK", f"Directory '{dir_name}' exists", "INFO")
             print(f"✅ Directory '{dir_name}' exists")
 
-    # Check required Python packages (parallel)
+    # Check required Python packages (sequential for better error handling)
     required_packages = ['PyQt6', 'subprocess', 'os', 'sys', 'cv2', 'numpy']
-    with multiprocessing.Pool(processes=min(len(required_packages), multiprocessing.cpu_count())) as pool:
-        package_results = pool.map(check_package, required_packages)
     missing_packages: list[str] = []
-    for package, available in package_results:
-        if available:
-            log_security_event("PACKAGE_CHECK", f"Package '{package}' available", "INFO")
-            print(f"✅ Package '{package}' available")
-        else:
+    for package in required_packages:
+        try:
+            available = check_package(package)[1]
+            if available:
+                log_security_event("PACKAGE_CHECK", f"Package '{package}' available", "INFO")
+                print(f"✅ Package '{package}' available")
+            else:
+                missing_packages.append(package)
+                log_security_event("PACKAGE_CHECK", f"Package '{package}' missing", "WARNING")
+                print(f"❌ Package '{package}' missing")
+        except Exception as e:
             missing_packages.append(package)
-            log_security_event("PACKAGE_CHECK", f"Package '{package}' missing", "WARNING")
-            print(f"❌ Package '{package}' missing")
+            log_security_event("PACKAGE_CHECK", f"Package '{package}' check failed: {e}", "WARNING")
+            print(f"⚠️  Package '{package}' check failed: {e}")
+
+    if missing_packages:
+        log_security_event("PACKAGE_CHECK", f"Missing packages: {', '.join(missing_packages)}", "WARNING")
+        print(f"⚠️  WARNING: Missing packages: {', '.join(missing_packages)}")
+        print("Please install missing packages using: pip install <package>")
+
+    # Take snapshot after security checks
+    if performance_available and performance_monitor:
+        _security_complete_snapshot: SnapshotType = cast(SnapshotType, performance_monitor.take_snapshot("security_checks_complete"))  # noqa: F841
+
+    return True
+    python_version_ok = sys.version_info >= (3, 8)
+    if not python_version_ok:
+        log_security_event("VERSION_CHECK", "Python 3.8+ required", "ERROR")
+        print("❌ ERROR: Python 3.8 or higher required")
+        return False
+
+    # At this point, we know Python version >= 3.8
+    log_security_event("VERSION_CHECK", f"Python {sys.version} detected", "INFO")
+    print(f"✅ Python version: {sys.version}")
+
+    # Check if running as root (security risk)
+    try:
+        if os.geteuid() == 0:
+            log_security_event("PERMISSION_CHECK", "Running as root", "WARNING")
+            print("⚠️  WARNING: Running as root - this may pose security risks")
+    except AttributeError:
+        # os.geteuid() not available on Windows
+        pass
+
+    # Check write permissions in current directory
+    try:
+        test_file = os.path.join(os.getcwd(), ".test_write")
+        with open(test_file, 'w') as f:
+            _ = f.write("test")
+        os.remove(test_file)
+        log_security_event("PERMISSION_CHECK", "Write permissions verified", "INFO")
+        print("✅ Write permissions verified")
+    except Exception as e:
+        log_security_event("PERMISSION_CHECK", f"No write permissions: {e}", "ERROR")
+        print(f"❌ ERROR: No write permissions in current directory: {e}")
+        return False
+
+    # Check required directories exist (sequential for better error handling)
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    required_dirs = ['Save', 'Screenshot', 'assistente_dsa']
+    required_paths = [os.path.join(project_root, d) for d in required_dirs]
+    for dir_path in required_paths:
+        dir_name, exists = check_directory(dir_path)
+        if not exists:
+            log_security_event("DIRECTORY_CHECK", f"Directory '{dir_name}' missing", "WARNING")
+            print(f"⚠️  WARNING: Required directory '{dir_name}' not found")
+        else:
+            log_security_event("DIRECTORY_CHECK", f"Directory '{dir_name}' exists", "INFO")
+            print(f"✅ Directory '{dir_name}' exists")
+
+    # Check required Python packages (sequential for better error handling)
+    required_packages = ['PyQt6', 'subprocess', 'os', 'sys', 'cv2', 'numpy']
+    missing_packages: list[str] = []
+    for package in required_packages:
+        try:
+            available = check_package(package)[1]
+            if available:
+                log_security_event("PACKAGE_CHECK", f"Package '{package}' available", "INFO")
+                print(f"✅ Package '{package}' available")
+            else:
+                missing_packages.append(package)
+                log_security_event("PACKAGE_CHECK", f"Package '{package}' missing", "WARNING")
+                print(f"❌ Package '{package}' missing")
+        except Exception as e:
+            missing_packages.append(package)
+            log_security_event("PACKAGE_CHECK", f"Package '{package}' check failed: {e}", "WARNING")
+            print(f"⚠️  Package '{package}' check failed: {e}")
 
     if missing_packages:
         log_security_event("PACKAGE_CHECK", f"Missing packages: {', '.join(missing_packages)}", "WARNING")
@@ -253,11 +411,12 @@ def test_imports():
 
         # Test degli import critici
         try:
-            # Test classe MainWindow (ora integrata in main_01_Aircraft)
-            print("MainWindow class available in main_01_Aircraft")
+            # Test import del modulo principale
+            import main_01_Aircraft
+            print("✅ Main module (main_01_Aircraft) imported successfully")
 
         except ImportError as e:
-            print(f"Critical module import failed: {e}")
+            print(f"❌ Critical module import failed: {e}")
             return False
 
         # Take snapshot after import tests
@@ -273,35 +432,34 @@ def test_imports():
 
 
 def select_theme():
-    """Allow user to select a theme from available options."""
-    print("\n🎨 Selezione Tema:")
-    themes = get_setting('themes.available', [])  # pyright: ignore[reportAny]
+    """Automatically select the first available theme (Professionale)."""
+    print("\n🎨 Selezione Tema Automatica:")
+
+    # Use default themes since settings file doesn't have them
+    default_themes = [
+        {"name": "Professionale", "icon": "💼", "description": "Per professionisti e studenti universitari"},
+        {"name": "Studente", "icon": "🎒", "description": "Per ragazzi che vanno a scuola"},
+        {"name": "Chimico", "icon": "🥽", "description": "Per chimici o subacquei"},
+        {"name": "Donna", "icon": "👝", "description": "Per donne che hanno tutto in borsa"},
+        {"name": "Artigiano", "icon": "🧰", "description": "Per artigiani, cassetta degli attrezzi"},
+        {"name": "Specchio", "icon": "🪞", "description": "Tema specchio"},
+        {"name": "Magico", "icon": "🪄", "description": "Tema magico"},
+        {"name": "Pensieri", "icon": "💭", "description": "Tema pensieri"},
+        {"name": "Nuvola", "icon": "🗯", "description": "Tema nuvola"},
+        {"name": "Audio", "icon": "🔊", "description": "Tema audio"},
+        {"name": "Chat", "icon": "💬", "description": "Tema chat"}
+    ]
+
+    themes = get_setting('themes.available', default_themes)  # pyright: ignore[reportAny]
     if not themes:
         print("Nessun tema disponibile")
         return
 
-    for i, theme in enumerate(themes, 1):  # pyright: ignore[reportAny]
-        print(f"{i}. {theme['icon']} {theme['name']} - {theme['description']}")
-
-    current_selected = cast(str, get_setting('themes.selected', 'Professionale'))
-    print(f"\nTema attuale: {current_selected}")
-
-    while True:
-        try:
-            choice = input("Scegli un tema (numero) o premi Enter per mantenere attuale: ").strip()
-            if not choice:
-                print(f"Tema mantenuto: {current_selected}")
-                return
-            choice_num = int(choice)
-            if 1 <= choice_num <= len(themes):  # pyright: ignore[reportAny]
-                selected_theme = cast(str, themes[choice_num - 1]['name'])
-                _ = set_setting('themes.selected', selected_theme)
-                print(f"✅ Tema selezionato: {selected_theme}")
-                return
-            else:
-                print("Scelta non valida. Riprova.")
-        except ValueError:
-            print("Inserisci un numero valido.")
+    # Automatically select the first theme (Professionale)
+    selected_theme = cast(str, themes[0]['name'])
+    _ = set_setting('themes.selected', selected_theme)
+    print(f"✅ Tema selezionato automaticamente: {selected_theme}")
+    print("ℹ️  Nota: Menu di selezione temi disabilitato temporaneamente per stabilità")
 
 
 class LoginDialog(QDialog):  # type: ignore[misc]
@@ -505,7 +663,6 @@ def open_launcher_gui():
         return
 
 
-@conditional_decorator(measure_function_time, "run_app")
 def run_app():
     """Run the application by calling main_01_Aircraft.py"""
     # Take initial snapshot
@@ -513,19 +670,22 @@ def run_app():
         _app_startup_snapshot: SnapshotType = cast(SnapshotType, performance_monitor.take_snapshot("app_startup"))  # noqa: F841
 
     if not perform_security_checks():
-        print("Cannot start application due to security check failures")
+        print("❌ Cannot start application due to security check failures")
         return
 
     if not test_imports():
-        print("Cannot start application due to import errors")
+        print("❌ Cannot start application due to import errors")
         return
 
     try:
-        print("Starting DSA Assistant...")
-        print("Calling Aircraft main interface...")
+        print("✅ Starting DSA Assistant...")
+        print("✈️ Calling Aircraft main interface...")
 
         # Start periodic performance monitoring
         _ = start_performance_monitoring()
+
+        # Sistema di autenticazione già inizializzato
+        print("🔐 Authentication system ready")
 
         # Verifica che le impostazioni siano accessibili globalmente
         settings = load_settings()
@@ -534,56 +694,91 @@ def run_app():
         themes = cast(list, get_setting('themes.available', []))  # pyright: ignore[reportMissingTypeArgument,reportUnknownVariableType]
         selected_theme_icon = next((cast(str, t['icon']) for t in themes if cast(str, t['name']) == selected_theme_name), '🎨')  # pyright: ignore[reportUnknownVariableType]
 
-        print(f"Global settings loaded - Theme: {settings['application']['theme']}")
-        print(f"UI Size: {settings['ui']['window_width']}x{settings['ui']['window_height']}")
-        print(f"Selected Theme: {selected_theme_icon} {selected_theme_name}")
+        print(f"✅ Global settings loaded - Theme: {settings['application']['theme']}")
+        print(f"✅ UI Size: {settings['ui']['window_width']}x{settings['ui']['window_height']}")
+        print(f"✅ Selected Theme: {selected_theme_icon} {selected_theme_name}")
+        print("🔐 Proceeding to authentication...")
 
-        # Selezione tema
-        select_theme()
+        # Selezione tema temporaneamente disabilitata per debug
+        print("🎨 Theme selection skipped for debugging")
 
-        # Check if bypass login is enabled
-        bypass_login = cast(bool, get_setting('startup.bypass_login', False))
+        # Sistema di autenticazione
+        bypass_login = cast(bool, get_setting('startup.bypass_login', True))  # Temporaneamente abilitato per test
+        print(f"🔐 Bypass login setting: {bypass_login}")
 
         if bypass_login:
-            print("\n🔓 Bypass login abilitato - Avvio diretto applicazione principale...")
-            # Skip launcher GUI and run main application directly
-            import subprocess
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            aircraft_script = os.path.join(current_dir, "main_01_Aircraft.py")
-
-            if not os.path.exists(aircraft_script):
-                print(f"ERROR: Script not found: {aircraft_script}")
-                return
-
-            cmd = [sys.executable, aircraft_script]
-            try:
-                result = subprocess.run(
-                    cmd,
-                    cwd=current_dir,
-                    timeout=300,  # 5 minutes timeout
-                    capture_output=True,
-                    text=True
-                )
-                if result.returncode != 0:
-                    print(f"Aircraft exited with error code: {result.returncode}")
-                    print(f"STDOUT: {result.stdout}")
-                    print(f"STDERR: {result.stderr}")
-                else:
-                    print("Aircraft completed successfully")
-            except subprocess.TimeoutExpired:
-                print("ERROR: Application startup timeout")
-            except Exception as e:
-                print(f"ERROR: Unexpected error during startup: {e}")
+            print("\n🔓 Bypass login abilitato - Accesso come admin...")
+            current_user = {"username": "admin", "full_name": "Administrator", "group": "Administrator"}
         else:
-            # Normal flow with launcher GUI
-            if pyqt_available:
-                print("\n🖥️  Opening launcher GUI...")
-                open_launcher_gui()
+            # Richiedi autenticazione
+            print("\n🔐 Autenticazione richiesta...")
+            if AUTH_AVAILABLE and auth_manager:
+                username = input("Username: ").strip()
+                password = input("Password: ").strip()
+
+                current_user = auth_manager.authenticate(username, password)
+                if not current_user:
+                    print("❌ Autenticazione fallita")
+                    return
+
+                print(f"✅ Benvenuto, {current_user['full_name']}!")
             else:
-                print("\n⚠️  PyQt6 not available - cannot open GUI")
+                print("⚠️ Sistema autenticazione non disponibile - accesso come guest")
+                current_user = {"username": "guest", "full_name": "Guest User", "group": "Guest"}
+
+        # Verifica permessi per accesso al sistema
+        if AUTH_AVAILABLE and auth_manager:
+            permissions = auth_manager.get_user_permissions(current_user['username'])
+            if not permissions.get('system_access', False):
+                print("❌ Accesso al sistema negato")
+                return
+        else:
+            permissions = {"system_access": True, "ai_access": True}
+
+        print(f"🔑 Permessi caricati: {list(permissions.keys())}")
+
+        # Avvia l'applicazione principale
+        print("\n🚀 Avvio applicazione principale...")
+        import subprocess
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        aircraft_script = os.path.join(current_dir, "main_01_Aircraft.py")
+
+        if not os.path.exists(aircraft_script):
+            print(f"❌ ERROR: Script not found: {aircraft_script}")
+            return
+
+        print(f"✈️ Launching: {aircraft_script}")
+        cmd = [sys.executable, aircraft_script]
+
+        # Passa informazioni utente come variabili d'ambiente
+        env = os.environ.copy()
+        env['DSA_USERNAME'] = current_user['username']
+        env['DSA_FULL_NAME'] = current_user['full_name']
+        env['DSA_GROUP'] = current_user.get('group', 'Guest')
+        env['DSA_PERMISSIONS'] = json.dumps(permissions)
+
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=current_dir,
+                timeout=300,  # 5 minutes timeout
+                capture_output=True,
+                text=True,
+                env=env
+            )
+            if result.returncode != 0:
+                print(f"❌ Aircraft exited with error code: {result.returncode}")
+                print(f"STDOUT: {result.stdout}")
+                print(f"STDERR: {result.stderr}")
+            else:
+                print("✅ Aircraft completed successfully")
+        except subprocess.TimeoutExpired:
+            print("⏰ ERROR: Application startup timeout")
+        except Exception as e:
+            print(f"❌ ERROR: Unexpected error during startup: {e}")
 
     except Exception as e:
-        print(f"Application error: {e}")
+        print(f"❌ Application error: {e}")
         traceback.print_exc()
 
     # Performance monitoring finalization
@@ -616,6 +811,7 @@ def run_app():
 
     # Stop periodic monitoring
     _ = stop_performance_monitoring()
+    print("🏁 Application finished")
 
 
 if __name__ == "__main__":

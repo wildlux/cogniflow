@@ -31,7 +31,9 @@ class DetectionHandlers:
             elif detection_system == 'mediapipe':
                 # Inizializza MediaPipe per il rilevamento
                 try:
-                    from Video.mediapipe.mediapipe_detector import MediaPipeHandDetector
+                    # TODO: Create MediaPipeHandDetector class
+                    # from .mediapipe.detector.mediapipe_detector import MediaPipeHandDetector
+                    raise ImportError("MediaPipe detector not yet implemented")
                     self.main_window.hand_detector = MediaPipeHandDetector()
                     self.main_window.face_detector = None  # MediaPipe non ha rilevamento facciale in questo file
                     logging.info("Sistema di rilevamento MediaPipe inizializzato")

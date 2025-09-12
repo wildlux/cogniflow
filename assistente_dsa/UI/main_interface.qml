@@ -343,19 +343,61 @@ ApplicationWindow {
 
 
 
-                onDetectionOptionChanged: {
+                 onDetectionOptionChanged: {
 
-                    if (typeof mediaPipeBridge !== "undefined") {
+                     if (typeof mediaPipeBridge !== "undefined") {
 
-                        mediaPipeBridge.changeDetectionOption(option)
+                         mediaPipeBridge.changeDetectionOption(option)
 
-                    } else {
+                     } else {
 
-                        LogFunctions.addLogMessage("ERROR", "MediaPipe bridge non disponibile")
+                         LogFunctions.addLogMessage("ERROR", "MediaPipe bridge non disponibile")
 
-                    }
+                     }
 
-                }
+                 }
+
+                 onToggleHands: {
+
+                     if (typeof mediaPipeBridge !== "undefined") {
+
+                         mediaPipeBridge.toggleHands()
+
+                     } else {
+
+                         LogFunctions.addLogMessage("ERROR", "MediaPipe bridge non disponibile")
+
+                     }
+
+                 }
+
+                 onToggleGestures: {
+
+                     if (typeof mediaPipeBridge !== "undefined") {
+
+                         mediaPipeBridge.toggleGestures()
+
+                     } else {
+
+                         LogFunctions.addLogMessage("ERROR", "MediaPipe bridge non disponibile")
+
+                     }
+
+                 }
+
+                 onToggleExpressions: {
+
+                     if (typeof mediaPipeBridge !== "undefined") {
+
+                         mediaPipeBridge.toggleExpressions()
+
+                     } else {
+
+                         LogFunctions.addLogMessage("ERROR", "MediaPipe bridge non disponibile")
+
+                     }
+
+                 }
 
 
                     // Tema aggiornato automaticamente tramite binding
@@ -916,11 +958,35 @@ ApplicationWindow {
 
 
 
-        function onHumanPositionChanged(x, y) {
+         function onHumanPositionChanged(x, y) {
 
-            console.log("Posizione umana: " + x + ", " + y)
+             console.log("Posizione umana: " + x + ", " + y)
 
-        }
+         }
+
+         function onHandsToggled(enabled) {
+
+             controlPanel.handsEnabled = enabled
+
+             LogFunctions.addLogMessage("INFO", "Rilevamento mani " + (enabled ? "attivato" : "disattivato"))
+
+         }
+
+         function onGesturesToggled(enabled) {
+
+             controlPanel.gesturesEnabled = enabled
+
+             LogFunctions.addLogMessage("INFO", "Rilevamento gesti " + (enabled ? "attivato" : "disattivato"))
+
+         }
+
+         function onExpressionsToggled(enabled) {
+
+             controlPanel.expressionsEnabled = enabled
+
+             LogFunctions.addLogMessage("INFO", "Rilevamento espressioni " + (enabled ? "attivato" : "disattivato"))
+
+         }
 
     }
 

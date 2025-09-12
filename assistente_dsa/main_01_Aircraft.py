@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import sys
+import importlib.util
 from datetime import datetime
 from PyQt6.QtCore import Qt, QTimer, QEvent, QPropertyAnimation, QEasingCurve, QDateTime, pyqtSignal
 from PyQt6.QtGui import QFontDatabase, QFont, QColor, QShortcut, QKeySequence
@@ -124,6 +125,16 @@ class WebcamTestWindow(QMainWindow):
         # Visual feedback
         self.hover_highlight = False
 
+        # Detection control states
+        self.hands_enabled = False
+        self.gestures_enabled = False
+        self.expressions_enabled = False
+
+        # Backend selection state
+        self.current_backend = "opencv"  # "opencv" or "mediapipe"
+        self.mediapipe_available = False
+        self.vm_mode = False  # Se usare MediaPipe in VM
+
         self.setup_ui()
         self.setup_connections()
 
@@ -134,6 +145,31 @@ class WebcamTestWindow(QMainWindow):
         # Connect human detection signals (LIDAR-like)
         self.human_detected_signal.connect(self.on_human_detected)
         self.human_position_signal.connect(self.on_human_position_update)
+
+        # RITARDA L'AVVIO AUTOMATICO PER ASSICURARE CHE TUTTO SIA PRONTO
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(100, self.start_webcam_automatically)  # Avvia dopo 100ms
+
+        # ASSICURA CHE TUTTI I PULSANTI DI TRACCIAMENTO SIANO VISUALMENTE DISABILITATI
+        self.face_tracking_btn.setChecked(False)
+        self.left_hand_tracking_btn.setChecked(False)
+        self.right_hand_tracking_btn.setChecked(False)
+        self.human_detection_btn.setChecked(False)
+
+        # Aggiorna l'aspetto dei pulsanti per riflettere lo stato disabilitato
+        self.face_tracking_btn.repaint()
+        self.left_hand_tracking_btn.repaint()
+        self.right_hand_tracking_btn.repaint()
+        self.human_detection_btn.repaint()
+
+    def start_webcam_automatically(self):
+        """Avvia automaticamente la webcam con tutti i tracciamenti disabilitati."""
+        try:
+            self.start_webcam_test()
+            print("📹 Webcam avviata automaticamente con tracciamenti disabilitati")
+        except Exception as e:
+            print(f"❌ Errore avvio automatico webcam: {e}")
+            self.status_label.setText("Status: Errore avvio automatico webcam")
 
     def setup_ui(self):
         """Configura l'interfaccia utente della finestra di test."""
@@ -294,6 +330,134 @@ class WebcamTestWindow(QMainWindow):
         """)
         controls_layout.addWidget(self.capture_btn)
 
+        # Pulsanti controllo rilevamento
+        self.hands_btn = QPushButton("🤚 Mani OFF")
+        self.hands_btn.setMinimumHeight(35)
+        self.hands_btn.setEnabled(False)
+        self.hands_btn.setStyleSheet("""
+            QPushButton {
+                background: #17a2b8;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: bold;
+                padding: 6px 12px;
+            }
+            QPushButton:hover {
+                background: #138496;
+            }
+            QPushButton:pressed {
+                background: #117a8b;
+            }
+            QPushButton:disabled {
+                background: #6c757d;
+            }
+        """)
+        controls_layout.addWidget(self.hands_btn)
+
+        self.gestures_btn = QPushButton("👋 Gesti OFF")
+        self.gestures_btn.setMinimumHeight(35)
+        self.gestures_btn.setEnabled(False)
+        self.gestures_btn.setStyleSheet("""
+            QPushButton {
+                background: #ffc107;
+                color: black;
+                border: none;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: bold;
+                padding: 6px 12px;
+            }
+            QPushButton:hover {
+                background: #e0a800;
+            }
+            QPushButton:pressed {
+                background: #d39e00;
+            }
+            QPushButton:disabled {
+                background: #6c757d;
+            }
+        """)
+        controls_layout.addWidget(self.gestures_btn)
+
+        self.expressions_btn = QPushButton("😊 Espressioni OFF")
+        self.expressions_btn.setMinimumHeight(35)
+        self.expressions_btn.setEnabled(False)
+        self.expressions_btn.setStyleSheet("""
+            QPushButton {
+                background: #fd7e14;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: bold;
+                padding: 6px 12px;
+            }
+            QPushButton:hover {
+                background: #e8590c;
+            }
+            QPushButton:pressed {
+                background: #d8430b;
+            }
+            QPushButton:disabled {
+                background: #6c757d;
+            }
+        """)
+        controls_layout.addWidget(self.expressions_btn)
+
+        # Pulsante selezione backend
+        self.backend_btn = QPushButton("🔄 OpenCV")
+        self.backend_btn.setMinimumHeight(35)
+        self.backend_btn.setEnabled(False)
+        self.backend_btn.setStyleSheet("""
+            QPushButton {
+                background: #6f42c1;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: bold;
+                padding: 6px 12px;
+            }
+            QPushButton:hover {
+                background: #5a359a;
+            }
+            QPushButton:pressed {
+                background: #4c2d85;
+            }
+            QPushButton:disabled {
+                background: #6c757d;
+            }
+        """)
+        controls_layout.addWidget(self.backend_btn)
+
+        # Pulsante modalità VM
+        self.vm_btn = QPushButton("🖥️ VM OFF")
+        self.vm_btn.setMinimumHeight(35)
+        self.vm_btn.setEnabled(False)
+        self.vm_btn.setStyleSheet("""
+            QPushButton {
+                background: #20c997;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: bold;
+                padding: 6px 12px;
+            }
+            QPushButton:hover {
+                background: #17a2b8;
+            }
+            QPushButton:pressed {
+                background: #138496;
+            }
+            QPushButton:disabled {
+                background: #6c757d;
+            }
+        """)
+        controls_layout.addWidget(self.vm_btn)
+
         controls_layout.addStretch()
         layout.addLayout(controls_layout)
 
@@ -370,7 +534,7 @@ class WebcamTestWindow(QMainWindow):
         # Pulsante traccia mano destra
         self.right_hand_tracking_btn = QPushButton("✋ DX Traccia Mano")
         self.right_hand_tracking_btn.setCheckable(True)
-        self.right_hand_tracking_btn.setChecked(True)  # Abilitato di default
+        self.right_hand_tracking_btn.setChecked(False)  # Disabilitato di default
         self.right_hand_tracking_btn.setMinimumHeight(30)
         self.right_hand_tracking_btn.setStyleSheet("""
             QPushButton {
@@ -397,7 +561,7 @@ class WebcamTestWindow(QMainWindow):
         # Pulsante rilevamento umano (LIDAR-like)
         self.human_detection_btn = QPushButton("👤 Rilevamento Umano")
         self.human_detection_btn.setCheckable(True)
-        self.human_detection_btn.setChecked(True)  # Abilitato di default
+        self.human_detection_btn.setChecked(False)  # Disabilitato di default
         self.human_detection_btn.setMinimumHeight(30)
         self.human_detection_btn.setStyleSheet("""
             QPushButton {
@@ -472,6 +636,17 @@ class WebcamTestWindow(QMainWindow):
         self.left_hand_tracking_btn.clicked.connect(self.toggle_left_hand_tracking)
         self.right_hand_tracking_btn.clicked.connect(self.toggle_right_hand_tracking)
         self.human_detection_btn.clicked.connect(self.toggle_human_detection)
+
+        # Connessioni controlli rilevamento
+        self.hands_btn.clicked.connect(self.toggle_hands)
+        self.gestures_btn.clicked.connect(self.toggle_gestures)
+        self.expressions_btn.clicked.connect(self.toggle_expressions)
+
+        # Connessione selezione backend
+        self.backend_btn.clicked.connect(self.toggle_backend)
+
+        # Connessione modalità VM
+        self.vm_btn.clicked.connect(self.toggle_vm_mode)
 
     def on_hand_position_update(self, webcam_x, webcam_y):
         """Gestisce l'aggiornamento della posizione della mano."""
@@ -575,6 +750,11 @@ class WebcamTestWindow(QMainWindow):
             status = "ON" if enabled else "OFF"
             self.status_label.setText(f"Status: Tracciamento viso {status}")
             print(f"👤 Tracciamento viso: {status}")
+        else:
+            # Se video_thread non è disponibile, disabilita il pulsante e mostra messaggio
+            self.face_tracking_btn.setChecked(False)
+            self.status_label.setText("Status: Avvia prima la webcam per abilitare i tracciamenti")
+            print("⚠️ Webcam non attiva - impossibile abilitare tracciamento viso")
 
     def toggle_left_hand_tracking(self):
         """Attiva/disattiva il tracciamento della mano sinistra."""
@@ -584,6 +764,11 @@ class WebcamTestWindow(QMainWindow):
             status = "ON" if enabled else "OFF"
             self.status_label.setText(f"Status: Tracciamento mano sinistra {status}")
             print(f"✋ SX Tracciamento mano sinistra: {status}")
+        else:
+            # Se video_thread non è disponibile, disabilita il pulsante e mostra messaggio
+            self.left_hand_tracking_btn.setChecked(False)
+            self.status_label.setText("Status: Avvia prima la webcam per abilitare i tracciamenti")
+            print("⚠️ Webcam non attiva - impossibile abilitare tracciamento mano sinistra")
 
     def toggle_right_hand_tracking(self):
         """Attiva/disattiva il tracciamento della mano destra."""
@@ -593,6 +778,11 @@ class WebcamTestWindow(QMainWindow):
             status = "ON" if enabled else "OFF"
             self.status_label.setText(f"Status: Tracciamento mano destra {status}")
             print(f"✋ DX Tracciamento mano destra: {status}")
+        else:
+            # Se video_thread non è disponibile, disabilita il pulsante e mostra messaggio
+            self.right_hand_tracking_btn.setChecked(False)
+            self.status_label.setText("Status: Avvia prima la webcam per abilitare i tracciamenti")
+            print("⚠️ Webcam non attiva - impossibile abilitare tracciamento mano destra")
 
     def toggle_human_detection(self):
         """Attiva/disattiva il rilevamento umano (LIDAR-like)."""
@@ -602,6 +792,11 @@ class WebcamTestWindow(QMainWindow):
             status = "ON" if enabled else "OFF"
             self.status_label.setText(f"Status: Rilevamento umano {status}")
             print(f"👤 Rilevamento umano (LIDAR): {status}")
+        else:
+            # Se video_thread non è disponibile, disabilita il pulsante e mostra messaggio
+            self.human_detection_btn.setChecked(False)
+            self.status_label.setText("Status: Avvia prima la webcam per abilitare i tracciamenti")
+            print("⚠️ Webcam non attiva - impossibile abilitare rilevamento umano")
 
     def on_gesture_detected(self, gesture):
         """Gestisce il rilevamento di un gesto."""
@@ -818,9 +1013,17 @@ class WebcamTestWindow(QMainWindow):
             self.start_test_btn.setEnabled(False)
             self.stop_test_btn.setEnabled(True)
             self.capture_btn.setEnabled(True)
+            # I nuovi pulsanti verranno abilitati in finalize_webcam_startup
 
             # Initialize VideoThread with gesture recognition enabled
             self.video_thread = VideoThread(main_window=self)
+
+            # Verifica che il VideoThread sia stato creato correttamente
+            if self.video_thread is None:
+                self.status_label.setText("Status: Errore creazione VideoThread")
+                self.video_area.setText("❌ Errore creazione VideoThread")
+                return
+
             self.video_thread.change_pixmap_signal.connect(self.update_webcam_feed_pixmap)
             self.video_thread.status_signal.connect(self.on_video_thread_status)
             self.video_thread.human_position_signal.connect(self.on_hand_position_update)
@@ -830,19 +1033,23 @@ class WebcamTestWindow(QMainWindow):
             self.video_thread.human_detected_signal.connect(self.human_detected_signal)
             self.video_thread.human_position_signal.connect(self.human_position_signal)
 
-            # Enable gesture recognition features
-            self.video_thread.hand_detection_enabled = True
-            self.video_thread.gesture_recognition_enabled = True
-            self.video_thread.human_detection_enabled = True  # Enable LIDAR-like human detection
+            # TUTTI I TRACCIAMENTI DISABILITATI PER DEFAULT
+            self.video_thread.hand_detection_enabled = False
+            self.video_thread.gesture_recognition_enabled = False
+            self.video_thread.human_detection_enabled = False  # Rilevamento umano disabilitato
 
-            # Sincronizza i controlli di tracciamento con i pulsanti
-            self.video_thread.face_detection_enabled = self.face_tracking_btn.isChecked()
-            self.video_thread.left_hand_tracking_enabled = self.left_hand_tracking_btn.isChecked()
-            self.video_thread.right_hand_tracking_enabled = self.right_hand_tracking_btn.isChecked()
-            self.video_thread.human_detection_enabled = self.human_detection_btn.isChecked()
+            # Forza tutti i controlli di tracciamento come disabilitati
+            self.video_thread.face_detection_enabled = False
+            self.video_thread.left_hand_tracking_enabled = False
+            self.video_thread.right_hand_tracking_enabled = False
+            self.video_thread.human_detection_enabled = False
 
             # Start the video thread
             self.video_thread.start()
+
+            # Piccolo ritardo per assicurarsi che il thread sia operativo
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(500, self.finalize_webcam_startup)  # 500ms di attesa
 
             self.status_label.setText("Status: Webcam attiva con gesture recognition")
             self.video_area.clear()  # Remove text, show video
@@ -850,13 +1057,35 @@ class WebcamTestWindow(QMainWindow):
             print("🧪 Test webcam avviato con VideoThread e gesture recognition")
 
         except Exception as e:
-            print(f"❌ Errore avvio test webcam: {e}")
-            self.status_label.setText(f"Status: Errore - {str(e)}")
-            if self.parent_window:
-                try:
-                    show_user_friendly_error(self.parent_window, e, "webcam_test")
-                except:
-                    QMessageBox.critical(self, "Errore", f"Errore avvio test webcam: {str(e)}")
+            self.status_label.setText(f"Status: Errore avvio webcam - {str(e)}")
+            self.video_area.setText(f"❌ Errore avvio webcam:\n{str(e)}")
+            print(f"❌ Errore avvio webcam: {e}")
+
+    def finalize_webcam_startup(self):
+        """Finalizza l'avvio della webcam dopo che il thread è operativo."""
+        if self.video_thread and self.video_thread.isRunning():
+            self.status_label.setText("Status: Webcam attiva - tutti i tracciamenti disabilitati")
+            print("✅ Webcam completamente operativa - tutti i tracciamenti disabilitati")
+
+            # Sincronizza i pulsanti con lo stato attuale
+            self.face_tracking_btn.setChecked(False)
+            self.left_hand_tracking_btn.setChecked(False)
+            self.right_hand_tracking_btn.setChecked(False)
+            self.human_detection_btn.setChecked(False)
+
+            # Abilita i nuovi pulsanti di controllo rilevamento
+            self.hands_btn.setEnabled(True)
+            self.gestures_btn.setEnabled(True)
+            self.expressions_btn.setEnabled(True)
+
+            # Abilita il pulsante selezione backend
+            self.backend_btn.setEnabled(True)
+
+            # Abilita il pulsante modalità VM
+            self.vm_btn.setEnabled(True)
+        else:
+            self.status_label.setText("Status: Webcam non avviata correttamente")
+            print("⚠️ Webcam thread non è operativo")
 
     def stop_webcam_test(self):
         """Ferma il test della webcam con VideoThread."""
@@ -865,6 +1094,16 @@ class WebcamTestWindow(QMainWindow):
             self.start_test_btn.setEnabled(True)
             self.stop_test_btn.setEnabled(False)
             self.capture_btn.setEnabled(False)
+            # Disabilita i nuovi pulsanti di controllo rilevamento
+            self.hands_btn.setEnabled(False)
+            self.gestures_btn.setEnabled(False)
+            self.expressions_btn.setEnabled(False)
+
+            # Disabilita il pulsante selezione backend
+            self.backend_btn.setEnabled(False)
+
+            # Disabilita il pulsante modalità VM
+            self.vm_btn.setEnabled(False)
 
             # Stop and cleanup VideoThread
             if self.video_thread:
@@ -1044,6 +1283,337 @@ class WebcamTestWindow(QMainWindow):
         print("🧪 Finestra test webcam chiusa")
         if a0:
             a0.accept()
+
+    def toggle_hands(self):
+        """Attiva/disattiva il rilevamento delle mani."""
+        if not self.webcam_active:
+            return
+
+        self.hands_enabled = not self.hands_enabled
+        if self.hands_enabled:
+            self.hands_btn.setText("🤚 Mani ON")
+            self.hands_btn.setStyleSheet("""
+                QPushButton {
+                    background: #17a2b8;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    padding: 6px 12px;
+                }
+                QPushButton:hover {
+                    background: #138496;
+                }
+                QPushButton:pressed {
+                    background: #117a8b;
+                }
+            """)
+            print("🤚 Rilevamento mani attivato")
+        else:
+            self.hands_btn.setText("🤚 Mani OFF")
+            self.hands_btn.setStyleSheet("""
+                QPushButton {
+                    background: #6c757d;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    padding: 6px 12px;
+                }
+                QPushButton:hover {
+                    background: #5a6268;
+                }
+                QPushButton:pressed {
+                    background: #545b62;
+                }
+            """)
+            print("🤚 Rilevamento mani disattivato")
+
+        # TODO: Integrazione con VideoThread per toggle mani
+        # if self.video_thread and hasattr(self.video_thread, 'toggle_hands'):
+        #     self.video_thread.toggle_hands(self.hands_enabled)
+
+    def toggle_gestures(self):
+        """Attiva/disattiva il rilevamento dei gesti."""
+        if not self.webcam_active:
+            return
+
+        self.gestures_enabled = not self.gestures_enabled
+        if self.gestures_enabled:
+            self.gestures_btn.setText("👋 Gesti ON")
+            self.gestures_btn.setStyleSheet("""
+                QPushButton {
+                    background: #ffc107;
+                    color: black;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    padding: 6px 12px;
+                }
+                QPushButton:hover {
+                    background: #e0a800;
+                }
+                QPushButton:pressed {
+                    background: #d39e00;
+                }
+            """)
+            print("👋 Rilevamento gesti attivato")
+        else:
+            self.gestures_btn.setText("👋 Gesti OFF")
+            self.gestures_btn.setStyleSheet("""
+                QPushButton {
+                    background: #6c757d;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    padding: 6px 12px;
+                }
+                QPushButton:hover {
+                    background: #5a6268;
+                }
+                QPushButton:pressed {
+                    background: #545b62;
+                }
+            """)
+            print("👋 Rilevamento gesti disattivato")
+
+        # TODO: Integrazione con VideoThread per toggle gesti
+        # if self.video_thread and hasattr(self.video_thread, 'toggle_gestures'):
+        #     self.video_thread.toggle_gestures(self.gestures_enabled)
+
+    def toggle_expressions(self):
+        """Attiva/disattiva il rilevamento delle espressioni."""
+        if not self.webcam_active:
+            return
+
+        self.expressions_enabled = not self.expressions_enabled
+        if self.expressions_enabled:
+            self.expressions_btn.setText("😊 Espressioni ON")
+            self.expressions_btn.setStyleSheet("""
+                QPushButton {
+                    background: #fd7e14;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    padding: 6px 12px;
+                }
+                QPushButton:hover {
+                    background: #e8590c;
+                }
+                QPushButton:pressed {
+                    background: #d8430b;
+                }
+            """)
+            print("😊 Rilevamento espressioni attivato")
+        else:
+            self.expressions_btn.setText("😊 Espressioni OFF")
+            self.expressions_btn.setStyleSheet("""
+                QPushButton {
+                    background: #6c757d;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    padding: 6px 12px;
+                }
+                QPushButton:hover {
+                    background: #5a6268;
+                }
+                QPushButton:pressed {
+                    background: #545b62;
+                }
+            """)
+            print("😊 Rilevamento espressioni disattivato")
+
+        # TODO: Integrazione con VideoThread per toggle espressioni
+        # if self.video_thread and hasattr(self.video_thread, 'toggle_expressions'):
+        #     self.video_thread.toggle_expressions(self.expressions_enabled)
+
+    def toggle_backend(self):
+        """Alterna tra backend OpenCV e MediaPipe."""
+        if not self.webcam_active:
+            return
+
+        # Verifica disponibilità MediaPipe
+        mediapipe_available = False
+        try:
+            import mediapipe as mp  # type: ignore
+            mediapipe_available = True
+        except ImportError:
+            pass
+
+        if self.current_backend == "opencv":
+            if mediapipe_available:
+                self.current_backend = "mediapipe"
+                self.backend_btn.setText("🔄 MediaPipe")
+                self.backend_btn.setStyleSheet("""
+                    QPushButton {
+                        background: #e83e8c;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        font-size: 12px;
+                        font-weight: bold;
+                        padding: 6px 12px;
+                    }
+                    QPushButton:hover {
+                        background: #d63384;
+                    }
+                    QPushButton:pressed {
+                        background: #c8237c;
+                    }
+                """)
+                print("🔄 Backend cambiato: MediaPipe")
+                self.status_label.setText("Status: Backend MediaPipe attivo")
+            else:
+                print("❌ MediaPipe non disponibile")
+                self.status_label.setText("Status: MediaPipe non disponibile")
+                return
+        else:
+            self.current_backend = "opencv"
+            self.backend_btn.setText("🔄 OpenCV")
+            self.backend_btn.setStyleSheet("""
+                QPushButton {
+                    background: #6f42c1;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    padding: 6px 12px;
+                }
+                QPushButton:hover {
+                    background: #5a359a;
+                }
+                QPushButton:pressed {
+                    background: #4c2d85;
+                }
+            """)
+            print("🔄 Backend cambiato: OpenCV")
+            self.status_label.setText("Status: Backend OpenCV attivo")
+
+        # Applica il cambio di backend al VideoThread
+        if self.video_thread:
+            self.video_thread.current_backend = self.current_backend
+            if hasattr(self.video_thread, 'set_backend'):
+                self.video_thread.set_backend(self.current_backend)
+
+    def toggle_vm_mode(self):
+        """Attiva/disattiva la modalità macchina virtuale per MediaPipe."""
+        if not self.webcam_active:
+            return
+
+        self.vm_mode = not self.vm_mode
+
+        if self.vm_mode:
+            self.vm_btn.setText("🖥️ VM ON")
+            self.vm_btn.setStyleSheet("""
+                QPushButton {
+                    background: #dc3545;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    padding: 6px 12px;
+                }
+                QPushButton:hover {
+                    background: #c82333;
+                }
+                QPushButton:pressed {
+                    background: #bd2130;
+                }
+            """)
+            print("🖥️ Modalità VM attivata per MediaPipe")
+            self.status_label.setText("Status: Modalità VM attiva")
+
+            # Inizializza la configurazione VM
+            vm_config_path = os.path.join(os.path.dirname(__file__), 'Artificial_Intelligence', 'Video', 'mediapipe', 'config', 'mediapipe_vm_config.py')
+            if os.path.exists(vm_config_path):
+                try:
+                    spec = importlib.util.spec_from_file_location("mediapipe_vm_config", vm_config_path)
+                    if spec and spec.loader:
+                        mediapipe_vm_config = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(mediapipe_vm_config)
+                        mediapipe_vm = mediapipe_vm_config.mediapipe_vm
+
+                        if mediapipe_vm.is_vm_available():
+                            if mediapipe_vm.start_vm_service():
+                                print("✅ Servizio MediaPipe VM avviato")
+                                self.status_label.setText("Status: VM MediaPipe attiva")
+                            else:
+                                print("❌ Errore avvio servizio VM")
+                                self.status_label.setText("Status: Errore VM")
+                                self.vm_mode = False
+                                self.vm_btn.setText("🖥️ VM OFF")
+                                return
+                        else:
+                            print("⚠️ VM MediaPipe non configurata")
+                            self.status_label.setText("Status: VM non configurata")
+                            self.vm_mode = False
+                            self.vm_btn.setText("🖥️ VM OFF")
+                            return
+                except Exception as e:
+                    print(f"❌ Errore caricamento configurazione VM: {e}")
+                    self.status_label.setText("Status: Errore VM config")
+                    self.vm_mode = False
+                    self.vm_btn.setText("🖥️ VM OFF")
+                    return
+            else:
+                print("⚠️ File configurazione VM non trovato")
+                self.status_label.setText("Status: VM config mancante")
+                self.vm_mode = False
+                self.vm_btn.setText("🖥️ VM OFF")
+                return
+        else:
+            self.vm_btn.setText("🖥️ VM OFF")
+            self.vm_btn.setStyleSheet("""
+                QPushButton {
+                    background: #20c997;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    padding: 6px 12px;
+                }
+                QPushButton:hover {
+                    background: #17a2b8;
+                }
+                QPushButton:pressed {
+                    background: #138496;
+                }
+            """)
+            print("🖥️ Modalità VM disattivata")
+
+            # Ferma il servizio VM
+            vm_config_path = os.path.join(os.path.dirname(__file__), 'Artificial_Intelligence', 'Video', 'mediapipe', 'config', 'mediapipe_vm_config.py')
+            if os.path.exists(vm_config_path):
+                try:
+                    spec = importlib.util.spec_from_file_location("mediapipe_vm_config", vm_config_path)
+                    if spec and spec.loader:
+                        mediapipe_vm_config = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(mediapipe_vm_config)
+                        mediapipe_vm_config.mediapipe_vm.stop_vm_service()
+                        print("✅ Servizio MediaPipe VM fermato")
+                except Exception as e:
+                    print(f"Errore arresto servizio VM: {e}")
+
+            self.status_label.setText("Status: VM disattivata")
+
+        # Aggiorna il VideoThread con la modalità VM
+        if self.video_thread:
+            self.video_thread.vm_mode = self.vm_mode
+            if hasattr(self.video_thread, 'set_vm_mode'):
+                self.video_thread.set_vm_mode(self.vm_mode)
 
 # Import per OCR
 try:
