@@ -1,0 +1,96 @@
+Metadata-Version: 2.4
+Name: cogniflow
+Version: 1.0.0
+Summary: Assistente DSA con AI locale e interfaccia accessibile
+Home-page: https://github.com/yourusername/cogniflow
+Author: DSA Developer
+Author-email: DSA Developer <your.email@example.com>
+Maintainer-email: DSA Developer <your.email@example.com>
+License: MIT
+Keywords: DSA,accessibility,AI,speech,education
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Education
+Classifier: Topic :: Multimedia :: Sound/Audio :: Speech
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: PyQt6>=6.5.0
+Requires-Dist: psutil>=5.9.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: Pillow>=10.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: flake8>=6.0.0; extra == "dev"
+Requires-Dist: mypy>=1.5.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Provides-Extra: ocr
+Requires-Dist: pytesseract>=0.3.10; extra == "ocr"
+Provides-Extra: speech
+Requires-Dist: pyaudio>=0.2.13; extra == "speech"
+Dynamic: author
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# CogniFlow - Assistente DSA
+
+Questo software si chiama CogniFlow perché usa "cogni" (cognizione) e "flow" (come una freccia che indica direzione).
+
+Sono dislessico e ho creato questo software per aiutare altre persone con:
+
+## 🎯 Funzionalità Principali
+
+1. ✅ **Lettura testo** - Sintesi vocale per testi
+2. ✅ **Input vocale** - Riconoscimento vocale per input testo
+3. ✅ **AI locale** - Chat con AI (100% privacy, nessun cloud)
+4. 🔄 **Visione artificiale** - [In sviluppo] OpenCV + webcam + riconoscimento facciale + gesti mano
+5. ✅ **Setup personalizzato** - Configurazione adattata per ogni utente
+6. ✅ **Salvataggio/caricamento** - Gestione documenti e progetti
+7. 🔄 **Menu aiuto** - [In sviluppo] Snippet codice, aiuto matematica, workflow automatizzati
+8. 🔄 **OCR** - [In sviluppo] Riconoscimento ottico caratteri
+
+Il punto 7 serve per migliorare workflow anche per persone non dislessiche, automatizzando processi comuni.
+
+## 🏗️ Architettura
+
+Il software è ispirato a interfacce futuristiche come "Minority Report" o "Iron Man con Jarvis" - senza mouse o tastiera.
+
+## 🚀 Installazione
+
+```bash
+# Clona il repository
+git clone <repository-url>
+cd CogniFlow
+
+# Installa dipendenze
+pip install -r requirements.txt
+
+# Avvia l'applicazione
+python assistente_dsa/main_00_launcher.py
+```
+
+## 📋 Prerequisiti
+
+- Python 3.8+
+- PyQt6
+- Ollama (per funzionalità AI)
+- Tesseract OCR (opzionale, per OCR)
+
+## 🛠️ Sviluppo
+
+Se vuoi contribuire, sentiti libero di migliorare il codice! Cita il mio nome nel tuo branch.
+
+Grazie per aver provato e letto questo README. Presto il codice sarà ancora più completo.
+
+Happy coding! 🚀

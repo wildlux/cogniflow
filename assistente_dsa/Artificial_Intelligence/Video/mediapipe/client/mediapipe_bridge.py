@@ -18,11 +18,13 @@ sys.path.append(
 try:
     # Prova importazione relativa
     from ...visual_background import VideoThread
+
     VIDEO_THREAD_AVAILABLE = True
 except ImportError:
     try:
         # Fallback: importazione assoluta
         from Artificial_Intelligence.Video.visual_background import VideoThread
+
         VIDEO_THREAD_AVAILABLE = True
     except ImportError:
         VideoThread = None

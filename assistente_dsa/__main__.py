@@ -16,8 +16,7 @@ from pathlib import Path
 
 # Configurazione logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -25,6 +24,7 @@ logger = logging.getLogger(__name__)
 current_dir = Path(__file__).parent
 if str(current_dir) not in sys.path:
     sys.path.insert(0, str(current_dir))
+
 
 def test_critical_imports():
     """Testa le importazioni critiche prima dell'avvio."""
@@ -58,6 +58,7 @@ def test_critical_imports():
     logger.info("✅ Tutte le importazioni critiche riuscite")
     return True
 
+
 def start_application():
     """Avvia l'applicazione principale."""
     try:
@@ -65,6 +66,7 @@ def start_application():
 
         # Import e avvio dell'interfaccia principale
         from main_01_Aircraft import main
+
         logger.info("✅ Interfaccia principale importata con successo")
         main()
 
@@ -79,6 +81,7 @@ def start_application():
         return False
 
     return True
+
 
 def main():
     """Funzione principale."""
@@ -101,6 +104,7 @@ def main():
     else:
         logger.error("❌ Errore durante l'avvio dell'applicazione")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

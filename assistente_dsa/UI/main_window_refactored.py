@@ -42,11 +42,13 @@ from .settings_dialog import SettingsDialog
 try:
     # Prova importazione relativa
     from ..controllers.cogniflow_controller import CogniFlowController
+
     CONTROLLER_AVAILABLE = True
 except ImportError:
     try:
         # Fallback: importazione assoluta
         from controllers.cogniflow_controller import CogniFlowController
+
         CONTROLLER_AVAILABLE = True
     except ImportError:
         CogniFlowController = None
@@ -56,11 +58,15 @@ except ImportError:
 try:
     # Prova importazione relativa
     from ..Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager import TTSThread
+
     TTS_AVAILABLE = True
 except ImportError:
     try:
         # Fallback: importazione assoluta
-        from Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager import TTSThread
+        from Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager import (
+            TTSThread,
+        )
+
         TTS_AVAILABLE = True
     except ImportError:
         TTSThread = None

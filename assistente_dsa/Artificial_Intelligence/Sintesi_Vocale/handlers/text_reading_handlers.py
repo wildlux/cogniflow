@@ -10,7 +10,9 @@ try:
 except ImportError:
     try:
         # Fallback: importazione assoluta
-        from Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager import TTSThread
+        from Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager import (
+            TTSThread,
+        )
     except ImportError:
         TTSThread = None
         logging.warning("TTS Manager non disponibile")
