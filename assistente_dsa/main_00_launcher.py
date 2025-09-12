@@ -696,7 +696,7 @@ def test_imports():
         # Test degli import critici
         try:
             # Test import del modulo principale
-            _ = importlib.import_module('.main_01_Aircraft', package=__name__)
+            _ = importlib.import_module('assistente_dsa.main_01_Aircraft')
             print("✅ Main module (main_01_Aircraft) imported successfully")
 
         except ImportError as e:
