@@ -5587,44 +5587,49 @@ class MainWindow(QMainWindow):
         if text and text.strip():
             logging.info("📝 Testo valido ricevuto: '{text.strip()}'")
 
+            # Verifica che l'UI sia completamente inizializzata
+            if not hasattr(self, 'pensierini_layout'):
+                logging.warning("⚠️ pensierini_layout non ancora inizializzato - ritento più tardi")
+                # Ritarda l'operazione di 100ms per permettere l'inizializzazione dell'UI
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(100, lambda: self._add_recognized_text_to_pensierini(text.strip()))
+                return
+
             # Inserisci il testo direttamente nella colonna dei pensierini
-            if hasattr(self, "pensierini_layout") and self.pensierini_layout:
+            if self.pensierini_layout:
                 logging.info("✅ pensierini_layout disponibile")
-
-                # Crea un nuovo pensierino con il testo riconosciuto
-                if DraggableTextWidget:
-                    try:
-                        widget = DraggableTextWidget(
-                            f"🎤 {text.strip()}", self.settings
-                        )
-                        self.pensierini_layout.addWidget(widget)
-                        logging.info(
-                            f"✅ Widget creato e aggiunto ai pensierini: {text[:50]}..."
-                        )
-                    except Exception as e:
-                        logging.error(f"❌ Errore creazione widget: {e}")
-                        # Fallback: mostra in un messaggio (sezione pensierini rimossa)
-                        QMessageBox.information(
-                            self, "Testo Riconosciuto", f"Testo: {text.strip()}"
-                        )
-                else:
-                    logging.warning(
-                        "⚠️ DraggableTextWidget non disponibile, uso fallback"
-                    )
-                    # Fallback: mostra in un messaggio (sezione pensierini rimossa)
-                    QMessageBox.information(
-                        self, "Testo Riconosciuto", f"Testo: {text.strip()}"
-                    )
+                self._add_recognized_text_to_pensierini(text.strip())
             else:
-                logging.error("❌ pensierini_layout non disponibile")
+                logging.error("❌ pensierini_layout è None")
+                # Fallback: mostra in un messaggio
+                QMessageBox.information(
+                    self, "Testo Riconosciuto", f"Testo: {text.strip()}"
+                )
 
-            # Mostra notifica di successo
+    def _add_recognized_text_to_pensierini(self, text):
+        """Aggiunge il testo riconosciuto ai pensierini in modo thread-safe."""
+        try:
+            # Crea un nuovo pensierino con il testo riconosciuto
+            if DraggableTextWidget:
+                widget = DraggableTextWidget(f"🎤 {text}", self.settings)
+                self.pensierini_layout.addWidget(widget)
+                logging.info(f"✅ Widget creato e aggiunto ai pensierini: {text[:50]}...")
+
+                # Scroll automatico alla fine della colonna pensierini
+                if hasattr(self, "pensierini_scroll") and self.pensierini_scroll:
+                    scroll_bar = self.pensierini_scroll.verticalScrollBar()
+                    if scroll_bar:
+                        scroll_bar.setValue(scroll_bar.maximum())
+            else:
+                logging.error("❌ DraggableTextWidget non disponibile")
+                QMessageBox.information(
+                    self, "Testo Riconosciuto", f"Testo: {text}"
+                )
+        except Exception as e:
+            logging.error(f"❌ Errore aggiunta testo ai pensierini: {e}")
+            # Fallback: mostra in un messaggio
             QMessageBox.information(
-                self,
-                "Testo Riconosciuto",
-                f"✅ Testo riconosciuto con successo!\n\n"
-                f"📝 \"{text.strip()[:100]}{'...' if len(text.strip()) > 100 else ''}\"\n\n"
-                f"💭 Aggiunto ai pensierini!",
+                self, "Testo Riconosciuto", f"Testo: {text.strip()}"
             )
         else:
             logging.warning("⚠️ Testo vuoto o None ricevuto: '{text}'")
