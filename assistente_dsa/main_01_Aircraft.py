@@ -9,12 +9,12 @@ import logging
 import os
 import sys
 from datetime import datetime
-from PyQt6.QtCore import Qt, QTimer, QEvent, QPropertyAnimation, QEasingCurve
+from PyQt6.QtCore import Qt, QTimer, QEvent, QPropertyAnimation, QEasingCurve, QDateTime
 from PyQt6.QtGui import QFontDatabase, QFont, QColor, QShortcut, QKeySequence
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel,
     QPushButton, QHBoxLayout, QLineEdit, QTextEdit, QGroupBox,
-    QScrollArea, QMessageBox, QFileDialog, QSlider, QDialog, QSplitter, QGridLayout, QFrame, QToolBox
+    QScrollArea, QMessageBox, QFileDialog, QSlider, QDialog, QSplitter, QGridLayout, QFrame, QToolBox, QInputDialog
 )
 
 # Import TTS per la pronuncia IPA
@@ -267,6 +267,180 @@ class MainWindow(QMainWindow):
         # Log delle metriche iniziali dopo che l'UI è stata configurata
         QTimer.singleShot(1000, lambda: self.log_ui_metrics("INITIAL_SETUP"))
 
+    def update_project_name_input_style(self):
+        """Aggiorna lo stile del campo nome progetto in base al contenuto."""
+        if self.project_name_input.text().strip():
+            # Campo con contenuto: placeholder diverso e sfondo semi-trasparente
+            self.project_name_input.setPlaceholderText("Inserisci nome progetto")
+            self.project_name_input.setStyleSheet("""
+                QLineEdit {
+                    background: rgba(40, 167, 69, 0.1);
+                    border: 1px solid #28a745;
+                    border-radius: 4px;
+                    padding: 4px 8px;
+                    color: #155724;
+                    font-weight: bold;
+                }
+            """)
+        else:
+            # Campo vuoto: placeholder originale e sfondo normale
+            self.project_name_input.setPlaceholderText("Nome progetto...")
+            self.project_name_input.setStyleSheet("""
+                QLineEdit {
+                    background: rgba(255, 255, 255, 0.95);
+                    border: 1px solid #dee2e6;
+                    border-radius: 4px;
+                    padding: 4px 8px;
+                    color: #495057;
+                }
+            """)
+
+    def send_footer_pensierino(self):
+        """Invia un pensierino dalla sezione footer alla colonna A (pensierini)."""
+        try:
+            # Ottieni il testo dal campo footer
+            text = self.footer_pensierini_input.text().strip()
+
+            if not text:
+                # Campo vuoto, mostra messaggio informativo
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.information(self, "Campo Vuoto", "Scrivi qualcosa nel campo prima di inviare! 💭")
+                return
+
+            # Crea il nuovo widget pensierino
+            from UI.draggable_text_widget import DraggableTextWidget
+            if DraggableTextWidget:
+                widget = DraggableTextWidget(text, self.settings)
+
+                # Aggiungi alla colonna A (pensierini)
+                if hasattr(self, 'pensierini_widget') and self.pensierini_widget and hasattr(self.pensierini_widget, 'pensierini_layout'):
+                    self.pensierini_widget.pensierini_layout.addWidget(widget)
+
+                    # Scroll automatico alla fine della colonna pensierini
+                    if hasattr(self, 'pensierini_scroll') and self.pensierini_scroll:
+                        scroll_bar = self.pensierini_scroll.verticalScrollBar()
+                        if scroll_bar:
+                            QTimer.singleShot(100, lambda: scroll_bar.setValue(scroll_bar.maximum()))
+
+                # Svuota il campo dopo l'invio
+                self.footer_pensierini_input.clear()
+
+                # Feedback visivo
+                print(f"💭 Pensierino inviato: {text[:50]}...")
+
+                # Log metriche
+                self.log_ui_metrics("FOOTER_PENSIERINO_SENT")
+
+            else:
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.warning(self, "Errore", "Sistema di pensierini non disponibile.")
+
+        except Exception as e:
+            print(f"❌ Errore invio pensierino footer: {e}")
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Errore", f"Errore durante l'invio del pensierino:\n{str(e)}")
+
+    def show_quick_help(self):
+        """Mostra la guida rapida dell'applicazione."""
+        help_text = """
+        <h2>🚀 Guida Rapida CogniFlow</h2>
+
+        <h3>💭 Pensierini</h3>
+        <ul>
+            <li><b>Campo footer:</b> Scrivi pensierini rapidi e premi Invio o clicca "📤 Invia"</li>
+            <li><b>Sezione pensierini:</b> Usa l'area di creazione pensierini per testi più lunghi</li>
+            <li><b>Trascina & rilascia:</b> Trascina pensierini tra colonne</li>
+        </ul>
+
+        <h3>🎯 Colonne</h3>
+        <ul>
+            <li><b>Colonna A:</b> Pensierini creativi</li>
+            <li><b>Colonna B:</b> Area di lavoro</li>
+            <li><b>Colonna C:</b> Lavagna risposte AI</li>
+        </ul>
+
+        <h3>🛠️ Cassetta Attrezzi</h3>
+        <ul>
+            <li><b>Trascrizione:</b> Voce → Testo, Audio → Testo, OCR</li>
+            <li><b>AI & Media:</b> Chiedi all'AI, riconoscimento facce/gesti</li>
+            <li><b>Materie:</b> Strumenti per tutte le materie scolastiche</li>
+            <li><b>Utilità:</b> Carica media, pulizia, log</li>
+            <li><b>IoT:</b> Arduino, circuiti, condivisione schermo</li>
+        </ul>
+
+        <h3>💾 Salvataggio</h3>
+        <ul>
+            <li><b>Salva:</b> Salva pensierini e area di lavoro</li>
+            <li><b>Carica:</b> Ripristina progetti salvati</li>
+            <li><b>Nome progetto:</b> Campo in alto per identificare il progetto</li>
+        </ul>
+
+        <h3>🎨 Webcam & Controlli</h3>
+        <ul>
+            <li><b>Webcam:</b> Attiva/disattiva modalità speculare</li>
+            <li><b>Fullscreen:</b> F11 per schermo intero</li>
+            <li><b>Opzioni:</b> Personalizza colori, font e impostazioni</li>
+        </ul>
+
+        <h3>⌨️ Scorciatoie</h3>
+        <ul>
+            <li><b>Ctrl+Z:</b> Annulla ultima azione</li>
+            <li><b>Invio:</b> Invia pensierino dal campo footer</li>
+            <li><b>F11:</b> Schermo intero</li>
+        </ul>
+
+        <p><b>💡 Suggerimento:</b> Usa il trascinamento per organizzare i tuoi pensierini!</p>
+        """
+
+        from PyQt6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QTextEdit, QPushButton, QHBoxLayout
+
+        # Crea dialog personalizzato per la guida
+        dialog = QDialog(self)
+        dialog.setWindowTitle("❓ Guida Rapida CogniFlow")
+        dialog.resize(600, 500)
+
+        layout = QVBoxLayout(dialog)
+
+        # Area di testo con HTML
+        help_display = QTextEdit()
+        help_display.setHtml(help_text)
+        help_display.setReadOnly(True)
+        help_display.setStyleSheet("""
+            QTextEdit {
+                background: rgba(255, 255, 255, 0.95);
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                padding: 10px;
+                font-size: 12px;
+            }
+        """)
+        layout.addWidget(help_display)
+
+        # Pulsanti
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
+
+        ok_button = QPushButton("✅ Capito!")
+        ok_button.clicked.connect(dialog.accept)
+        ok_button.setStyleSheet("""
+            QPushButton {
+                background: #28a745;
+                border: 1px solid #1e7e34;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-weight: bold;
+                color: white;
+            }
+            QPushButton:hover {
+                background: #218838;
+            }
+        """)
+        buttons_layout.addWidget(ok_button)
+
+        layout.addLayout(buttons_layout)
+
+        dialog.exec()
+
     def log_ui_metrics(self, context=""):
         """Registra le metriche dell'interfaccia per il debug."""
         try:
@@ -403,73 +577,7 @@ class MainWindow(QMainWindow):
         unified_layout.addWidget(tools_splitter)
         return unified_section
 
-    def create_pensierini_input_section(self):
-        """Crea la sezione input pensierini con layout orizzontale"""
-        pensierini_group = QGroupBox("✏️ Creazione Pensierini")
-        pensierini_group.setMinimumHeight(100)  # Aumentato per layout a due righe
-        pensierini_group.setMaximumHeight(120)  # Aumentato per layout a due righe
 
-        layout = QHBoxLayout(pensierini_group)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(10)
-
-        # Campo di testo principale a sinistra (60% dello spazio)
-        self.input_text_area.setMinimumHeight(50)  # Altezza minima per usabilità
-        self.input_text_area.setMaximumHeight(70)  # Altezza massima
-        layout.addWidget(self.input_text_area, 6)  # Stretch factor 6 (60%)
-
-        # Sezione pulsanti a destra (40% dello spazio)
-        buttons_section = QVBoxLayout()
-        buttons_section.setSpacing(8)
-
-        # Prima riga: Nuovo campo input + pulsante inserisci
-        first_row = QHBoxLayout()
-        first_row.setSpacing(8)
-
-        # Nuovo campo di input (70% della prima riga)
-        self.quick_input = QLineEdit()
-        self.quick_input.setPlaceholderText("Testo rapido...")
-        self.quick_input.setMinimumHeight(35)
-        self.quick_input.setMaximumHeight(45)
-        self.quick_input.setObjectName("quick_input")
-        first_row.addWidget(self.quick_input, 7)  # 70% della riga
-
-        # Pulsante aggiungi pensierino (30% della prima riga)
-        self.add_pensierino_button.setText("➕ Aggiungi pensierino")
-        self.add_pensierino_button.setMinimumHeight(35)
-        self.add_pensierino_button.setMaximumHeight(45)
-        self.add_pensierino_button.setMinimumWidth(150)
-        first_row.addWidget(self.add_pensierino_button, 3)  # 30% della riga
-
-        buttons_section.addLayout(first_row)
-
-        # Seconda riga: Pulsanti di controllo
-        second_row = QHBoxLayout()
-        second_row.setSpacing(8)
-
-        # Pulsante cancella testo inserito
-        self.clear_input_button = QPushButton("🧽 Cancella testo")
-        self.clear_input_button.setMinimumHeight(35)
-        self.clear_input_button.setMaximumHeight(45)
-        self.clear_input_button.setMinimumWidth(140)
-        self.clear_input_button.setObjectName("clear_input_button")
-        self.clear_input_button.clicked.connect(self.clear_input_text)
-        second_row.addWidget(self.clear_input_button)
-
-        # Pulsante cancella tutto
-        self.clear_all_button = QPushButton("🗑️ Cancella tutto")
-        self.clear_all_button.setMinimumHeight(35)
-        self.clear_all_button.setMaximumHeight(45)
-        self.clear_all_button.setMinimumWidth(140)
-        self.clear_all_button.setObjectName("clear_all_button")
-        self.clear_all_button.clicked.connect(self.clear_all_pensierini_with_confirmation)
-        second_row.addWidget(self.clear_all_button)
-
-        buttons_section.addLayout(second_row)
-
-        layout.addLayout(buttons_section, 4)  # Stretch factor 4 (40%)
-
-        return pensierini_group
 
     def clear_column_a(self):
         """Pulisce la colonna A (pensierini)"""
@@ -518,28 +626,17 @@ class MainWindow(QMainWindow):
     def clear_input_text(self):
         """Pulisce i campi di input testo"""
         cleared = False
-        if hasattr(self, 'input_text_area'):
-            self.input_text_area.clear()
-            cleared = True
-        if hasattr(self, 'quick_input'):
-            self.quick_input.clear()
+        # Nota: input_text_area e quick_input sono stati rimossi con la sezione pensierini
+        if hasattr(self, 'footer_pensierini_input'):
+            self.footer_pensierini_input.clear()
             cleared = True
         if cleared:
             print("✅ Campi di input testo puliti")
 
     def undo_last_action(self):
         """Annulla l'ultima azione nei campi di testo"""
-        if hasattr(self, 'quick_input') and self.quick_input.hasFocus():
-            # Se il focus è sul campo rapido, annulla lì
-            self.quick_input.undo()
-            print("✅ Azione annullata nel campo di input rapido")
-        elif hasattr(self, 'input_text_area'):
-            # Altrimenti annulla nell'area di testo principale
-            if self.input_text_area.isUndoRedoEnabled():
-                self.input_text_area.undo()
-                print("✅ Azione annullata nell'area di testo principale")
-            else:
-                print("⚠️ Undo non disponibile nell'area di testo")
+        # Nota: quick_input e input_text_area sono stati rimossi con la sezione pensierini
+        print("ℹ️ Undo non disponibile - sezione pensierini rimossa")
 
     def clear_all_pensierini_with_confirmation(self):
         """Pulisce tutto (input + colonne A, B, C) con conferma"""
@@ -770,25 +867,7 @@ class MainWindow(QMainWindow):
 
         return main_widget
 
-    def toggle_pensierini_section(self):
-        """Mostra/nasconde la sezione creazione pensierini (INDIPENDENTE dal pannello strumenti)"""
-        if hasattr(self, 'pensierini_input_section'):
-            is_visible = self.pensierini_input_section.isVisible()
-            self.pensierini_input_section.setVisible(not is_visible)
 
-            # Aggiorna il testo del pulsante
-            if not is_visible:
-                self.toggle_pensierini_button.setText("✏️ Nascondi Pensierini")
-            else:
-                self.toggle_pensierini_button.setText("✏️ Mostra Pensierini")
-
-            # Salva nelle preferenze (indipendente dalle preferenze del pannello strumenti)
-            self.settings['ui'] = self.settings.get('ui', {})
-            self.settings['ui']['pensierini_section_visible'] = not is_visible
-
-            # Salva le impostazioni
-            from main_03_configurazione_e_opzioni import save_settings
-            save_settings(self.settings)
 
     def create_transcription_tab(self):
         """Crea la scheda Trascrizione con stile unificato"""
@@ -991,7 +1070,7 @@ class MainWindow(QMainWindow):
         self.collab_button.clicked.connect(self.handle_collab_button)
 
     def toggle_tools_panel(self):
-        """Mostra/nasconde il pannello degli strumenti (INDIPENDENTE dalla sezione pensierini)"""
+        """Mostra/nasconde il pannello degli strumenti"""
         # Log metriche PRIMA del toggle
         self.log_ui_metrics("BEFORE_TOGGLE")
 
@@ -999,22 +1078,14 @@ class MainWindow(QMainWindow):
             # Nasconde la sezione unificata strumenti
             self.tools_group.setVisible(False)
 
-            # Ricalcola le proporzioni considerando tutte e 3 le sezioni
+            # Ricalcola le proporzioni con 2 sezioni
             current_sizes = self.vertical_splitter.sizes()
             main_content_size = current_sizes[0]  # Contenuto principale
-            pensierini_size = current_sizes[1]    # Sezione pensierini
-            tools_size = current_sizes[2]         # Sezione strumenti
+            tools_size = current_sizes[1]         # Sezione strumenti
 
-            # Ridistribuisci lo spazio liberato
+            # Tutto lo spazio va al contenuto principale
             total_available = main_content_size + tools_size
-            if hasattr(self, 'pensierini_input_section') and self.pensierini_input_section.isVisible():
-                # Se pensierini è visibile, ridistribuisci tra main e pensierini
-                main_new = int(total_available * 0.75)
-                pensierini_new = total_available - main_new
-                self.vertical_splitter.setSizes([main_new, pensierini_new, 0])
-            else:
-                # Se pensierini è nascosto, tutto allo spazio main
-                self.vertical_splitter.setSizes([total_available, 0, 0])
+            self.vertical_splitter.setSizes([total_available, 0])
 
             # Aggiorna il testo del pulsante
             if hasattr(self, 'toggle_tools_button'):
@@ -1027,24 +1098,14 @@ class MainWindow(QMainWindow):
             # Mostra la sezione unificata strumenti
             self.tools_group.setVisible(True)
 
-            # Ricalcola le proporzioni considerando tutte e 3 le sezioni
+            # Ricalcola le proporzioni con 2 sezioni
             current_sizes = self.vertical_splitter.sizes()
             main_content_size = current_sizes[0]  # Contenuto principale
-            pensierini_size = current_sizes[2]    # Sezione pensierini
 
-            # Calcola il nuovo spazio disponibile
-            total_available = main_content_size
-            if hasattr(self, 'pensierini_input_section') and self.pensierini_input_section.isVisible():
-                # Entrambi visibili: main 60%, pensierini 15%, tools 25%
-                main_new = int(total_available * 0.6)
-                pensierini_new = int(total_available * 0.15)
-                tools_new = total_available - main_new - pensierini_new
-                self.vertical_splitter.setSizes([main_new, pensierini_new, tools_new])
-            else:
-                # Solo tools visibile: main 70%, tools 30%
-                main_new = int(total_available * 0.7)
-                tools_new = total_available - main_new
-                self.vertical_splitter.setSizes([main_new, 0, tools_new])
+            # Distribuisci spazio: main 70%, tools 30%
+            main_new = int(main_content_size * 0.7)
+            tools_new = main_content_size - main_new
+            self.vertical_splitter.setSizes([main_new, tools_new])
 
             # Aggiorna il testo del pulsante
             if hasattr(self, 'toggle_tools_button'):
@@ -1121,6 +1182,216 @@ class MainWindow(QMainWindow):
         self.original_height = 0  # Per salvare l'altezza originale
         self.original_x = 0       # Per salvare la posizione X originale
         self.original_y = 0       # Per salvare la posizione Y originale
+
+        # Stato webcam
+        self.webcam_active = False
+        self.webcam_window = None
+
+    def toggle_webcam(self):
+        """Attiva/disattiva la webcam in modalità speculare."""
+        try:
+            if self.webcam_active:
+                # Disattiva webcam
+                self._stop_webcam()
+                self.webcam_button.setText("📹 Webcam")
+                self.webcam_button.setChecked(False)
+                self.webcam_active = False
+                print("📹 Webcam disattivata")
+            else:
+                # Attiva webcam
+                self._start_webcam()
+                self.webcam_button.setText("📹 Webcam ON")
+                self.webcam_button.setChecked(True)
+                self.webcam_active = True
+                print("📹 Webcam attivata in modalità speculare")
+        except Exception as e:
+            print(f"❌ Errore toggle webcam: {e}")
+            show_user_friendly_error(self, e, "webcam")
+
+    def _start_webcam(self):
+        """Avvia la webcam come sfondo della finestra principale con modalità speculare."""
+        try:
+            # Per ora usiamo un'implementazione semplificata con placeholder
+            # In futuro potrà essere estesa con QCamera reale
+            self._start_webcam_background()
+
+        except Exception as e:
+            print(f"❌ Errore avvio webcam: {e}")
+            # Fallback al placeholder
+            self._start_webcam_background()
+
+    def _start_webcam_background(self):
+        """Crea il widget di sfondo per la webcam come fullscreen background."""
+        try:
+            from PyQt6.QtWidgets import QLabel
+            from PyQt6.QtCore import QTimer
+
+            # Crea widget placeholder come sfondo dinamico fullscreen
+            self.webcam_background = QLabel("📹 Webcam Attiva\nModalità Speculare")
+            self.webcam_background.setObjectName("webcam_background")
+
+            # Stile per fullscreen background
+            self.webcam_background.setStyleSheet("""
+                QLabel#webcam_background {
+                    font-size: 24px;
+                    color: rgba(73, 80, 87, 0.4);
+                    text-align: center;
+                    padding: 50px;
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 rgba(248, 249, 250, 0.8), stop:1 rgba(233, 236, 239, 0.8));
+                    border-radius: 20px;
+                    border: 2px solid rgba(222, 226, 230, 0.3);
+                }
+            """)
+            self.webcam_background.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+            # Rendi il widget trasparente per permettere interazione con elementi sopra
+            self.webcam_background.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+
+            # Aggiungi come sfondo al central widget
+            if hasattr(self, 'centralWidget') and self.centralWidget():
+                central_widget = self.centralWidget()
+                if central_widget:
+                    # Imposta il widget come figlio del central widget
+                    self.webcam_background.setParent(central_widget)
+
+                    # Posiziona il widget per coprire l'intera area
+                    self.webcam_background.move(0, 0)
+                    self.webcam_background.resize(central_widget.size())
+
+                    # Assicura che sia visibile
+                    self.webcam_background.show()
+
+                    # Assicura che sia dietro tutti gli altri elementi
+                    self.webcam_background.lower()
+
+                    # Nota: il widget è già stato aggiunto come figlio, non serve aggiungerlo al layout
+
+                    # Connetti il resize del central widget per ridimensionare lo sfondo
+                    central_widget.resizeEvent = lambda a0: self._on_central_widget_resize(a0)
+
+            # Timer per animare l'effetto specchio
+            self.flip_timer = QTimer()
+            self.flip_timer.timeout.connect(self._animate_mirror_effect)
+            self.flip_timer.start(1500)  # Cambia ogni 1.5 secondi
+
+            print("📹 Webcam avviata come sfondo fullscreen della finestra principale")
+
+        except Exception as e:
+            print(f"❌ Errore creazione sfondo webcam: {e}")
+
+    def _animate_mirror_effect(self):
+        """Anima l'effetto specchio cambiando leggermente l'aspetto."""
+        try:
+            if hasattr(self, 'webcam_background') and self.webcam_background:
+                import random
+                # Cambia leggermente il gradiente per simulare movimento
+                variation = random.randint(0, 20)
+                self.webcam_background.setStyleSheet(f"""
+                    QLabel#webcam_background {{
+                        font-size: 20px;
+                        color: rgba(73, 80, 87, 0.6);
+                        text-align: center;
+                        padding: 30px;
+                        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                            stop:0 rgba({248 + variation//2}, {249 + variation//3}, {250 + variation//4}, 0.7),
+                            stop:1 rgba({233 + variation//3}, {236 + variation//2}, {239 + variation//5}, 0.7));
+                        border-radius: 15px;
+                        border: 2px solid rgba(222, 226, 230, 0.4);
+                        position: absolute;
+                        z-index: -1;
+                    }}
+                """)
+        except Exception as e:
+            print(f"Errore animazione effetto specchio: {e}")
+
+    def _on_central_widget_resize(self, a0):
+        """Gestisce il ridimensionamento del central widget per adattare lo sfondo webcam."""
+        try:
+            if hasattr(self, 'webcam_background') and self.webcam_background:
+                # Ridimensiona lo sfondo per coprire l'intera area del central widget
+                self.webcam_background.resize(a0.size())
+                # Assicura che rimanga dietro tutti gli altri elementi
+                self.webcam_background.lower()
+                # Assicura che sia ancora visibile
+                self.webcam_background.show()
+        except Exception as e:
+            print(f"Errore nel ridimensionamento dello sfondo webcam: {e}")
+        # Chiama il metodo originale se esiste
+        if hasattr(a0, 'accept'):
+            a0.accept()
+
+    def create_new_pensierino(self):
+        """Crea un nuovo pensierino tramite dialogo."""
+        try:
+            from PyQt6.QtWidgets import QInputDialog
+
+            # Dialogo per inserire il testo del pensierino
+            text, ok = QInputDialog.getMultiLineText(
+                self,
+                "💭 Crea Nuovo Pensierino",
+                "Inserisci il testo del pensierino:",
+                ""
+            )
+
+            if ok and text and text.strip():
+                # Crea il nuovo widget pensierino
+                from UI.draggable_text_widget import DraggableTextWidget
+                widget = DraggableTextWidget(text.strip(), self.settings)
+
+                # Aggiungi alla colonna A (pensierini)
+                if hasattr(self, 'pensierini_widget') and self.pensierini_widget and hasattr(self.pensierini_widget, 'pensierini_layout'):
+                    self.pensierini_widget.pensierini_layout.addWidget(widget)
+
+                print(f"💭 Nuovo pensierino creato: {text.strip()[:50]}...")
+
+        except Exception as e:
+            print(f"Errore nella creazione del pensierino: {e}")
+            show_user_friendly_error(self, e, "creazione pensierino")
+
+    def _update_time_labels(self):
+        """Aggiorna le etichette degli orari in basso a sinistra e destra."""
+        try:
+            from datetime import datetime
+
+            # Ottieni la data e ora corrente
+            now = datetime.now()
+            time_str = now.strftime("⌚️ %d/%m/%Y %H:%M")
+
+            # Aggiorna entrambe le etichette
+            if hasattr(self, 'unified_time_label'):
+                self.unified_time_label.setText(time_str)
+
+        except Exception as e:
+            print(f"Errore nell'aggiornamento degli orari: {e}")
+
+    def _stop_webcam(self):
+        """Ferma la webcam e chiude la finestra."""
+        try:
+            if hasattr(self, 'flip_timer') and self.flip_timer:
+                self.flip_timer.stop()
+
+            if hasattr(self, 'webcam_window') and self.webcam_window:
+                self.webcam_window.close()
+                self.webcam_window = None
+
+        except Exception as e:
+            print(f"Errore chiusura webcam: {e}")
+
+    def _apply_mirror_effect(self):
+        """Applica l'effetto specchio alla webcam (placeholder)."""
+        try:
+            # Placeholder per l'effetto specchio
+            # In futuro: applicare trasformazione di flip orizzontale al video
+            if hasattr(self, 'webcam_window') and self.webcam_window:
+                # Simula un leggero effetto visivo ogni secondo
+                current_time = datetime.now().strftime("%S")
+                if int(current_time) % 2 == 0:
+                    self.webcam_window.setStyleSheet("QWidget { background: rgba(240, 248, 255, 0.1); }")
+                else:
+                    self.webcam_window.setStyleSheet("QWidget { background: rgba(255, 248, 240, 0.1); }")
+        except Exception as e:
+            print(f"Errore effetto specchio: {e}")
 
     def _on_ai_response_received(self, prompt, response):
         """Gestisce la risposta ricevuta da Ollama."""
@@ -1212,6 +1483,7 @@ class MainWindow(QMainWindow):
         top_layout.addStretch()
         self.project_name_input = QLineEdit()
         self.project_name_input.setPlaceholderText("Nome progetto...")
+        self.project_name_input.textChanged.connect(self.update_project_name_input_style)
         top_layout.addWidget(self.project_name_input)
         top_layout.addStretch()
 
@@ -1294,79 +1566,7 @@ class MainWindow(QMainWindow):
 
         # main_splitter will be added to vertical_splitter later
 
-        # Accordion per la creazione pensierini
-        self.pensierini_toolbox = QToolBox()
-        self.pensierini_toolbox.setObjectName("pensierini_toolbox")
-        self.pensierini_toolbox.setMinimumHeight(120)  # Ottimizzato per compattezza
-        self.pensierini_toolbox.setMaximumHeight(160)  # Limite ragionevole per evitare spreco
-        self.pensierini_toolbox.setStyleSheet("""
-            QToolBox {
-                background: rgba(255, 255, 255, 0.95);
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                font-weight: bold;
-                font-size: 12px;
-            }
 
-            QToolBox::tab {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #ffffff, stop:1 #f8f9fa);
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 6px 12px;
-                margin: 1px;
-                color: #495057;
-                font-weight: bold;
-                min-height: 16px;
-                font-size: 12px;
-            }
-
-            QToolBox::tab:selected {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #e8f5e8, stop:1 #c8e6c9);
-                border-color: #4caf50;
-                color: #2e7d32;
-            }
-
-            QToolBox::tab:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #f8fff8, stop:1 #e8f5e8);
-                border-color: #81c784;
-            }
-        """)
-
-        # Crea la pagina per l'input dei pensierini
-        pensierini_page = QWidget()
-        pensierini_page.setObjectName("pensierini_page")
-        pensierini_layout = QVBoxLayout(pensierini_page)
-        pensierini_layout.setContentsMargins(10, 15, 10, 10)
-
-        # Riga input testo + pulsante aggiungi pensierino
-        input_row_layout = QHBoxLayout()
-        input_row_layout.setSpacing(10)  # Spazio tra elementi
-
-        self.input_text_area = QTextEdit()
-        self.input_text_area.setPlaceholderText("Scrivi qui, ( premi INVIO per creare un pensierino - Premi INVIO di destra per tornare a capo )")
-        self.input_text_area.setFixedHeight(35)  # Altezza esatta del pulsante "Aggiungi Pensierino"
-        # Rimuovi limite di larghezza massima per permettere espansione
-        # Installa event filter per intercettare Invio e Ctrl+Z
-        self.input_text_area.installEventFilter(self)
-
-        # Abilita undo nell'area di testo
-        self.input_text_area.setUndoRedoEnabled(True)
-        input_row_layout.addWidget(self.input_text_area, 4)  # Stretch factor 4 (80% circa)
-
-        self.add_pensierino_button = QPushButton("➕ Aggiungi pensierino")
-        self.add_pensierino_button.setObjectName("add_pensierino_button")
-        self.add_pensierino_button.setMaximumWidth(150)  # Larghezza massima ridotta
-        self.add_pensierino_button.clicked.connect(self.add_text_from_input_area)
-        input_row_layout.addWidget(self.add_pensierino_button, 1)  # Stretch factor 1 (20% circa)
-
-        pensierini_layout.addLayout(input_row_layout)
-
-        # Aggiungi la pagina al QToolBox (mantenuto per compatibilità ma non utilizzato nel nuovo layout)
-        self.pensierini_toolbox.addItem(pensierini_page, "✏️ Crea Pensierini")
-        self.pensierini_toolbox.setCurrentIndex(0)  # Espandi per default
 
         # ===========================================
         # === SEZIONE STRUMENTI AVANZATI ===
@@ -1653,15 +1853,13 @@ class MainWindow(QMainWindow):
         # ROW 1: Main content (columns A, B, C)
         vertical_splitter.addWidget(self.main_splitter)
 
-        # Create pensierini input section
-        self.pensierini_input_section = self.create_pensierini_input_section()
-
-        # ROW 2: Pensierini section
-        vertical_splitter.addWidget(self.pensierini_input_section)
-
-        # ROW 3: Unified tools section
+        # Create unified tools section
         unified_tools_section = self.create_unified_tools_section()
+
+        # ROW 2: Tools section
         vertical_splitter.addWidget(unified_tools_section)
+
+
 
         # Save reference to vertical_splitter
         self.vertical_splitter = vertical_splitter
@@ -1672,49 +1870,47 @@ class MainWindow(QMainWindow):
 
         # Check preferences for initial tools panel state
         tools_visible = self.settings.get('ui', {}).get('tools_panel_visible', True)
-        pensierini_visible = self.settings.get('ui', {}).get('pensierini_section_visible', True)
 
-        if tools_visible and pensierini_visible:
-            vertical_splitter.setSizes([400, 100, 300])  # Main content, pensierini, tools
-        elif tools_visible and not pensierini_visible:
-            vertical_splitter.setSizes([500, 0, 400])  # Main content, pensierini hidden, tools
-        elif not tools_visible and pensierini_visible:
-            vertical_splitter.setSizes([600, 200, 0])  # Main content, pensierini, tools hidden
+        if tools_visible:
+            vertical_splitter.setSizes([500, 300])  # Main content, tools
         else:
-            vertical_splitter.setSizes([800, 0, 0])  # Main content only
+            vertical_splitter.setSizes([800, 0])  # Main content only
 
         # Set initial visibility states
         self.tools_group.setVisible(tools_visible)
-        self.pensierini_input_section.setVisible(pensierini_visible)
 
         # Update button states
         if hasattr(self, 'toggle_tools_button'):
             self.toggle_tools_button.setChecked(tools_visible)
             self.toggle_tools_button.setText("🔧 Nascondi cassetta degli attrezzi" if tools_visible else "🔧 Visualizza cassetta degli attrezzi")
 
-        if hasattr(self, 'toggle_pensierini_button'):
-            self.toggle_pensierini_button.setChecked(pensierini_visible)
-            self.toggle_pensierini_button.setText("✏️ Nascondi Pensierini" if pensierini_visible else "✏️ Mostra Pensierini")
-
-        # Check preferences for initial pensierini section state
-        pensierini_visible = self.settings.get('ui', {}).get('pensierini_section_visible', True)
-        if hasattr(self, 'pensierini_input_section'):
-            self.pensierini_input_section.setVisible(pensierini_visible)
-        if hasattr(self, 'toggle_pensierini_button'):
-            self.toggle_pensierini_button.setChecked(pensierini_visible)
-            if pensierini_visible:
-                self.toggle_pensierini_button.setText("✏️ Nascondi Pensierini")
-            else:
-                self.toggle_pensierini_button.setText("✏️ Mostra Pensierini")
-
-        # Create pensierini input section
-        self.pensierini_input_section = self.create_pensierini_input_section()
-
         # Add vertical splitter to main layout
         main_layout.addWidget(vertical_splitter, 1)
 
+        # Inizializza lo stile del campo nome progetto
+        self.update_project_name_input_style()
+
         # Footer con informazioni di stato
         footer_layout = QHBoxLayout()
+
+        # Orario in basso a sinistra
+        self.left_time_label = QLabel("⌚️")
+        self.left_time_label.setObjectName("left_time_label")
+        time_font_size = self.settings.get('fonts', {}).get('main_font_size', 13) - 1
+        self.left_time_label.setStyleSheet(f"""
+            QLabel#left_time_label {{
+                color: #495057;
+                font-size: {time_font_size}px;
+                padding: 5px 10px;
+                background: rgba(255, 255, 255, 0.9);
+                border-radius: 8px;
+                border: 1px solid #dee2e6;
+                font-weight: bold;
+                text-align: center;
+                min-height: 20px;
+                max-width: 150px;
+            }}
+        """)
 
         # Catturatore eventi mouse (click_status_label) in basso a sinistra
         self.click_status_label = QLabel("Clicca su un elemento...")
@@ -1735,6 +1931,148 @@ class MainWindow(QMainWindow):
             }}
         """)
 
+        # Pulsante webcam in basso a destra
+        self.webcam_button = QPushButton("📹 Webcam")
+        self.webcam_button.setObjectName("webcam_button")
+        self.webcam_button.setCheckable(True)
+        self.webcam_button.setMinimumHeight(32)
+        self.webcam_button.setMaximumWidth(100)
+        self.webcam_button.clicked.connect(self.toggle_webcam)
+        self.webcam_button.setToolTip("Attiva/disattiva webcam in modalità speculare")
+        webcam_font_size = self.settings.get('fonts', {}).get('main_font_size', 13) - 1
+        self.webcam_button.setStyleSheet(f"""
+            QPushButton#webcam_button {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(255, 255, 255, 0.95), stop:1 rgba(248, 249, 250, 0.95));
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                padding: 6px 8px;
+                font-size: {webcam_font_size}px;
+                font-weight: bold;
+                color: #495057;
+                min-height: 20px;
+            }}
+            QPushButton#webcam_button:hover {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(248, 249, 250, 0.95), stop:1 rgba(241, 243, 244, 0.95));
+                border-color: #adb5bd;
+            }}
+            QPushButton#webcam_button:checked {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(40, 167, 69, 0.1), stop:1 rgba(34, 197, 94, 0.1));
+                border-color: #28a745;
+                color: #155724;
+            }}
+        """)
+
+        # === CAMPO PENSERINI NEL FOOTER ===
+        # Layout orizzontale per campo pensierini + pulsante invio
+        pensierini_footer_layout = QHBoxLayout()
+        pensierini_footer_layout.setSpacing(8)
+
+        # Campo di testo per pensierini nel footer
+        self.footer_pensierini_input = QLineEdit()
+        self.footer_pensierini_input.setPlaceholderText("💭 Scrivi pensierino rapido...")
+        self.footer_pensierini_input.setMinimumWidth(200)
+        self.footer_pensierini_input.setMaximumWidth(300)
+        self.footer_pensierini_input.setMinimumHeight(28)
+        self.footer_pensierini_input.setStyleSheet("""
+            QLineEdit {
+                background: rgba(255, 255, 255, 0.95);
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                padding: 4px 8px;
+                font-size: 12px;
+                color: #495057;
+            }
+            QLineEdit:focus {
+                border-color: #4a90e2;
+                background: rgba(255, 255, 255, 1.0);
+            }
+        """)
+        # Connetti il tasto Invio per inviare il pensierino
+        self.footer_pensierini_input.returnPressed.connect(self.send_footer_pensierino)
+        pensierini_footer_layout.addWidget(self.footer_pensierini_input)
+
+        # Pulsante invio per pensierini
+        self.footer_send_pensierino_button = QPushButton("📤 Invia")
+        self.footer_send_pensierino_button.setMinimumHeight(28)
+        self.footer_send_pensierino_button.setMinimumWidth(60)
+        self.footer_send_pensierino_button.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #4a90e2, stop:1 #357abd);
+                border: 1px solid #2e5c8a;
+                border-radius: 6px;
+                padding: 4px 8px;
+                font-size: 11px;
+                font-weight: bold;
+                color: white;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #357abd, stop:1 #2e5c8a);
+            }
+            QPushButton:pressed {
+                background: #2e5c8a;
+            }
+        """)
+        self.footer_send_pensierino_button.clicked.connect(self.send_footer_pensierino)
+        pensierini_footer_layout.addWidget(self.footer_send_pensierino_button)
+
+        # Pulsante cancella testo (spostato dal pannello principale)
+        self.clear_input_button = QPushButton("🧽 Cancella testo")
+        self.clear_input_button.setMinimumHeight(28)
+        self.clear_input_button.setMinimumWidth(100)
+        self.clear_input_button.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #f8f9fa, stop:1 #e9ecef);
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                padding: 4px 8px;
+                font-size: 10px;
+                color: #495057;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #e9ecef, stop:1 #dee2e6);
+            }
+            QPushButton:pressed {
+                background: #dee2e6;
+            }
+        """)
+        self.clear_input_button.clicked.connect(self.clear_input_text)
+        pensierini_footer_layout.addWidget(self.clear_input_button)
+
+        # Pulsante cancella tutto (spostato dal pannello principale)
+        self.clear_all_button = QPushButton("🗑️ Cancella tutto")
+        self.clear_all_button.setMinimumHeight(28)
+        self.clear_all_button.setMinimumWidth(100)
+        self.clear_all_button.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #f8f9fa, stop:1 #e9ecef);
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                padding: 4px 8px;
+                font-size: 10px;
+                color: #495057;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #e9ecef, stop:1 #dee2e6);
+            }
+            QPushButton:pressed {
+                background: #dee2e6;
+            }
+        """)
+        self.clear_all_button.clicked.connect(self.clear_all_pensierini_with_confirmation)
+        pensierini_footer_layout.addWidget(self.clear_all_button)
+
+        # Aggiungi il layout pensierini al footer
+        footer_layout.addLayout(pensierini_footer_layout)
+
         # Pulsante per mostrare/nascondere il pannello strumenti (spostato più a destra)
         self.toggle_tools_button = QPushButton("🔧 Visualizza cassetta degli attrezzi")
         self.toggle_tools_button.setObjectName("toggle_tools_button")
@@ -1743,50 +2081,68 @@ class MainWindow(QMainWindow):
         self.toggle_tools_button.clicked.connect(self.toggle_tools_panel)
         footer_layout.addWidget(self.toggle_tools_button)
 
-        # Pulsante per mostrare/nascondere la sezione creazione pensierini
-        self.toggle_pensierini_button = QPushButton("✏️ Mostra Pensierini")
-        self.toggle_pensierini_button.setObjectName("toggle_pensierini_button")
-        self.toggle_pensierini_button.setCheckable(True)
-        self.toggle_pensierini_button.setMinimumHeight(32)
-        self.toggle_pensierini_button.clicked.connect(self.toggle_pensierini_section)
-        footer_layout.addWidget(self.toggle_pensierini_button)
+
 
         footer_layout.addStretch()  # Spazio centrale
+
+        # Orario a sinistra
+        footer_layout.addWidget(self.left_time_label)
 
         # Click status label moved here from left side
         footer_layout.addWidget(self.click_status_label)
 
-        # Pulsante per informazioni di stato (data etc.) in basso a destra - cliccabile per aiuto
-        self.status_footer_label = QPushButton()
-        self.status_footer_label.setObjectName("status_footer_label")
-        self.status_footer_label.setFlat(True)  # Rimuove l'aspetto pulsante
-        self.status_footer_label.clicked.connect(self._show_help)  # Collega al click per mostrare aiuto
+        # Pulsante webcam aggiunto qui
+        footer_layout.addWidget(self.webcam_button)
 
-        # Usa dimensione font dalle preferenze per il footer (un po' più piccola)
-        footer_font_size = self.settings.get('fonts', {}).get('main_font_size', 13) - 2
-        self.status_footer_label.setStyleSheet(f"""
-            QPushButton#status_footer_label {{
+        # Orologio unificato in basso a destra (ultima implementazione)
+        self.unified_time_label = QLabel("⌚️")
+        self.unified_time_label.setObjectName("unified_time_label")
+        self.unified_time_label.setStyleSheet("""
+            QLabel#unified_time_label {
                 color: #495057;
-                font-size: {footer_font_size}px;
-                padding: 6px 12px;
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(255, 255, 255, 0.95), stop:1 rgba(248, 249, 250, 0.95));
+                font-size: 12px;
+                padding: 5px 10px;
+                background: rgba(255, 255, 255, 0.9);
                 border-radius: 8px;
                 border: 1px solid #dee2e6;
                 font-weight: bold;
+                min-width: 140px;
                 text-align: center;
-                min-height: 20px;
-            }}
-            QPushButton#status_footer_label:hover {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(248, 249, 250, 0.95), stop:1 rgba(241, 243, 244, 0.95));
-                border: 1px solid #adb5bd;
-            }}
+            }
         """)
-        # Aggiungi tooltip per il suggerimento di aiuto
-        self.status_footer_label.setToolTip("Cliccami per l'aiuto!")
-        self.update_footer_status()  # Aggiorna le informazioni di stato
-        footer_layout.addWidget(self.status_footer_label)
+        # Rendi cliccabile per mostrare aiuto
+        self.unified_time_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.unified_time_label.setToolTip("Cliccami per l'aiuto! ⌚️")
+        # Installa event filter per gestire il click
+        self.unified_time_label.installEventFilter(self)
+        footer_layout.addWidget(self.unified_time_label)
+
+        # === GUIDA RAPIDA IN BASSO A DESTRA ===
+        self.quick_help_button = QPushButton("❓ Guida")
+        self.quick_help_button.setMinimumHeight(28)
+        self.quick_help_button.setMinimumWidth(70)
+        self.quick_help_button.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #17a2b8, stop:1 #138496);
+                border: 1px solid #117a8b;
+                border-radius: 6px;
+                padding: 4px 8px;
+                font-size: 11px;
+                font-weight: bold;
+                color: white;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #138496, stop:1 #117a8b);
+            }
+            QPushButton:pressed {
+                background: #117a8b;
+            }
+        """)
+        self.quick_help_button.setToolTip("Mostra guida rapida dell'applicazione")
+        self.quick_help_button.clicked.connect(self.show_quick_help)
+        footer_layout.addWidget(self.quick_help_button)
 
         main_layout.addLayout(footer_layout)
 
@@ -1795,6 +2151,14 @@ class MainWindow(QMainWindow):
 
         # Apply modern UI improvements
         QTimer.singleShot(200, self._apply_modern_ui_styles)
+
+        # Timer per aggiornare gli orari ogni minuto
+        self.time_update_timer = QTimer()
+        self.time_update_timer.timeout.connect(self._update_time_labels)
+        self.time_update_timer.start(60000)  # Aggiorna ogni minuto
+
+        # Aggiorna immediatamente gli orari
+        self._update_time_labels()
 
     def _apply_modern_ui_styles(self):
         """Applica stili moderni e miglioramenti all'interfaccia utente."""
@@ -2138,10 +2502,7 @@ class MainWindow(QMainWindow):
                 self.load_button.setToolTip("📂 Carica un progetto salvato\n"
                                           "Ripristina pensierini e impostazioni precedenti")
 
-            # Tooltip per i pulsanti di input
-            if hasattr(self, 'add_pensierino_button'):
-                self.add_pensierino_button.setToolTip("➕ Aggiungi un nuovo pensierino\n"
-                                                    "Crea un elemento trascinabile con il testo inserito")
+            # Tooltip per i pulsanti di input - rimosso con la sezione pensierini
 
             # Tooltip per i pulsanti degli strumenti
             if hasattr(self, 'voice_button'):
@@ -2232,11 +2593,7 @@ class MainWindow(QMainWindow):
                 self.rephrase_button.setToolTip("🧠 Riformula intensamente\n"
                                               "Usa AI per migliorare e riformulare il testo")
 
-            # Tooltip per le aree di input
-            if hasattr(self, 'input_text_area'):
-                self.input_text_area.setToolTip("Scrivi qui il testo per creare pensierini\n"
-                                              "Premi INVIO per creare un pensierino\n"
-                                              "Premi Shift+INVIO per andare a capo")
+            # Tooltip per le aree di input - input_text_area rimosso con la sezione pensierini
 
             if hasattr(self, 'project_name_input'):
                 self.project_name_input.setToolTip("Nome del progetto corrente\n"
@@ -2359,9 +2716,9 @@ class MainWindow(QMainWindow):
             self.log_button.click()
 
     def _focus_input_area(self):
-        """Imposta il focus sull'area di input."""
-        if hasattr(self, 'input_text_area'):
-            self.input_text_area.setFocus()
+        """Imposta il focus sull'area di input - area rimossa con la sezione pensierini."""
+        # La sezione pensierini è stata rimossa
+        pass
 
     def _focus_search(self):
         """Imposta il focus sulla barra di ricerca (se presente)."""
@@ -2383,9 +2740,9 @@ class MainWindow(QMainWindow):
     def _clear_all_pensierini(self):
         """Pulisce tutti i pensierini dalla colonna A."""
         try:
-            if hasattr(self, 'pensierini_layout') and self.pensierini_layout:
-                while self.pensierini_layout.count():
-                    item = self.pensierini_layout.takeAt(0)
+            if hasattr(self, 'pensierini_widget') and self.pensierini_widget and hasattr(self.pensierini_widget, 'pensierini_layout'):
+                while self.pensierini_widget.pensierini_layout.count():
+                    item = self.pensierini_widget.pensierini_layout.takeAt(0)
                     if item:
                         widget = item.widget()
                         if widget and hasattr(widget, 'deleteLater'):
@@ -2652,6 +3009,12 @@ class MainWindow(QMainWindow):
     def eventFilter(self, a0, a1):
         """Event filter per intercettare eventi della tastiera e del mouse."""
         from PyQt6.QtCore import Qt, QEvent
+        from PyQt6.QtGui import QMouseEvent
+
+        # Gestione specifica per l'orologio unificato
+        if hasattr(self, 'unified_time_label') and a0 == self.unified_time_label and a1 and a1.type() == QEvent.Type.MouseButtonPress:
+            self._show_help()
+            return True
 
         # Handle all mouse events for tracking
         try:
@@ -2684,36 +3047,7 @@ class MainWindow(QMainWindow):
         except Exception:
             logging.error("Errore in eventFilter mouse handling: {e}")
 
-        # Gestisci solo eventi della tastiera per l'area di testo
-        try:
-            if (a0 == self.input_text_area
-                    and a1 and hasattr(a1, 'type') and hasattr(a1, 'key') and hasattr(a1, 'modifiers')):
-
-                # Se è Invio senza Shift, aggiungi pensierino
-                try:
-                    # Usa getattr per accedere ai metodi in modo sicuro
-                    event_type = getattr(a1, 'type', lambda: None)()
-                    event_key = getattr(a1, 'key', lambda: None)()
-                    event_modifiers = getattr(a1, 'modifiers', lambda: None)()
-
-                    if (event_type == QEvent.Type.KeyPress
-                        and event_key == Qt.Key.Key_Return
-                        and event_modifiers is not None
-                            and not event_modifiers & Qt.KeyboardModifier.ShiftModifier):
-                        if hasattr(self, 'input_text_area') and self.input_text_area:
-                            text = self.input_text_area.toPlainText().strip()
-                            if text:
-                                self.add_text_from_input_area()
-                        return True  # Consuma l'evento (non propagarlo)
-                except (AttributeError, TypeError):
-                    pass  # Se l'evento non ha i metodi richiesti, ignora
-                    if hasattr(self, 'input_text_area') and self.input_text_area:
-                        text = self.input_text_area.toPlainText().strip()
-                        if text:
-                            self.add_text_from_input_area()
-                    return True  # Consuma l'evento (non propagarlo)
-        except Exception:
-            logging.error("Errore in eventFilter keyboard handling: {e}")
+        # Gestisci solo eventi della tastiera - sezione pensierini rimossa
 
         # Per tutti gli altri casi, lascia che l'evento venga gestito normalmente
         return super().eventFilter(a0, a1)
@@ -2852,26 +3186,17 @@ class MainWindow(QMainWindow):
         self._handle_mouse_event(widget, "PRESS", Qt.MouseButton.LeftButton)
 
     def add_text_from_input_area(self):
-        """Aggiunge testo dall'area di input come pensierino."""
-        # Prima controlla il campo di input rapido
-        text = ""
-        if hasattr(self, 'quick_input') and self.quick_input.text().strip():
-            text = self.quick_input.text().strip()
-            self.quick_input.clear()
-        elif self.input_text_area.toPlainText().strip():
-            text = self.input_text_area.toPlainText().strip()
-            self.input_text_area.clear()
-
-        if text and DraggableTextWidget:
-            widget = DraggableTextWidget(text, self.settings)
-            self.pensierini_layout.addWidget(widget)
-            logging.info(f"Aggiunto pensierino: {text[:50]}...")
+        """Aggiunge testo dall'area di input come pensierino - sezione pensierini rimossa."""
+        # La sezione pensierini è stata completamente rimossa
+        logging.info("Funzione add_text_from_input_area non disponibile - sezione pensierini rimossa")
 
     def handle_ai_button(self):
         """Gestisce la funzione AI: invia richiesta a Ollama e mostra risposta."""
-        text = self.input_text_area.toPlainText().strip()
-        if not text:
+        # La sezione pensierini è stata rimossa, usa un dialogo per l'input
+        text, ok = QInputDialog.getText(self, "Richiesta AI", "Inserisci la tua richiesta per l'AI:")
+        if not ok or not text.strip():
             return
+        text = text.strip()
 
         # Controlla se il bridge Ollama è disponibile
         if not self.ollama_bridge:
@@ -2904,8 +3229,7 @@ class MainWindow(QMainWindow):
             logging.error("Errore nell'invio richiesta AI: {e}")
             return
 
-        # Pulisci area di input solo dopo aver inviato con successo
-        self.input_text_area.clear()
+        # La sezione pensierini è stata rimossa - niente da pulire
 
     def show_text_in_details(self, full_text):
         """Mostra il testo completo nei dettagli con paginazione di 250 caratteri."""
@@ -3320,33 +3644,25 @@ class MainWindow(QMainWindow):
                 # Crea un nuovo pensierino con il testo riconosciuto
                 if DraggableTextWidget:
                     try:
-                        widget = DraggableTextWidget("🎤 {text.strip()}", self.settings)
+                        widget = DraggableTextWidget(f"🎤 {text.strip()}", self.settings)
                         self.pensierini_layout.addWidget(widget)
-                        logging.info("✅ Widget creato e aggiunto ai pensierini: {text[:50]}...")
-                    except Exception:
-                        logging.error("❌ Errore creazione widget: {e}")
-                        # Fallback: inserisci nell'area di testo
-                        current_text = self.input_text_area.toPlainText()
-                        if current_text:
-                            self.input_text_area.setPlainText("{current_text}\n{text.strip()}")
-                        else:
-                            self.input_text_area.setPlainText(text.strip())
+                        logging.info(f"✅ Widget creato e aggiunto ai pensierini: {text[:50]}...")
+                    except Exception as e:
+                        logging.error(f"❌ Errore creazione widget: {e}")
+                        # Fallback: mostra in un messaggio (sezione pensierini rimossa)
+                        QMessageBox.information(self, "Testo Riconosciuto", f"Testo: {text.strip()}")
                 else:
                     logging.warning("⚠️ DraggableTextWidget non disponibile, uso fallback")
-                    # Fallback: inserisci nell'area di testo
-                    current_text = self.input_text_area.toPlainText()
-                    if current_text:
-                        self.input_text_area.setPlainText("{current_text}\n{text.strip()}")
-                    else:
-                        self.input_text_area.setPlainText(text.strip())
+                    # Fallback: mostra in un messaggio (sezione pensierini rimossa)
+                    QMessageBox.information(self, "Testo Riconosciuto", f"Testo: {text.strip()}")
             else:
                 logging.error("❌ pensierini_layout non disponibile")
 
             # Mostra notifica di successo
             QMessageBox.information(self, "Testo Riconosciuto",
-                                    "✅ Testo riconosciuto con successo!\n\n"
-                                    "📝 \"{text.strip()[:100]}{'...' if len(text.strip()) > 100 else ''}\"\n\n"
-                                    "💭 Aggiunto ai pensierini!")
+                                    f"✅ Testo riconosciuto con successo!\n\n"
+                                    f"📝 \"{text.strip()[:100]}{'...' if len(text.strip()) > 100 else ''}\"\n\n"
+                                    f"💭 Aggiunto ai pensierini!")
         else:
             logging.warning("⚠️ Testo vuoto o None ricevuto: '{text}'")
 
@@ -5126,6 +5442,8 @@ ESEMPI:
             # Imposta nome progetto
             project_name = project_data.get('metadata', {}).get('name', 'Progetto Caricato')
             self.project_name_input.setText(project_name)
+            # Aggiorna lo stile del campo nome progetto
+            self.update_project_name_input_style()
 
             # Pulisci colonne esistenti
             self._clear_columns()
@@ -5228,13 +5546,22 @@ ESEMPI:
             else:
                 status_text = f"🕐 {current_time} | 🎨 CogniFlow pronto | Premi F1 per aiuto | {ai_status} AI | {voice_status} Voce | {ocr_status} OCR"
 
-            if hasattr(self, 'status_footer_label'):
-                self.status_footer_label.setText(status_text)
+            if hasattr(self, 'unified_time_label'):
+                # Mantieni l'orario e aggiungi informazioni di stato
+                current_time = self.unified_time_label.text().split(' ')[1] if len(self.unified_time_label.text().split(' ')) > 1 else ""
+                if current_time:
+                    self.unified_time_label.setText(f"⌚️ {current_time} | {status_text}")
+                else:
+                    self.unified_time_label.setText(f"⌚️ {status_text}")
 
         except Exception as e:
             logging.error(f"Errore nell'aggiornamento del footer: {e}")
-            if hasattr(self, 'status_footer_label'):
-                self.status_footer_label.setText("🕐 Sistema attivo | Premi F1 per aiuto")
+            if hasattr(self, 'unified_time_label'):
+                current_time = self.unified_time_label.text().split(' ')[1] if len(self.unified_time_label.text().split(' ')) > 1 else ""
+                if current_time:
+                    self.unified_time_label.setText(f"⌚️ {current_time} | Sistema attivo")
+                else:
+                    self.unified_time_label.setText("⌚️ Sistema attivo")
 
     def set_tutor_session_status(self, active: bool):
         """Imposta lo stato della sessione tutor e aggiorna il footer."""

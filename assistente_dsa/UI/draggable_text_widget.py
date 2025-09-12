@@ -72,9 +72,9 @@ class DraggableTextWidget(QFrame):
         button_layout = QVBoxLayout()
 
         # Read button (now visible with orange color)
-        self.read_button = QPushButton("📖")
+        self.read_button = QPushButton("💬🔊")
         self.read_button.setFixedSize(*BUTTON_DEFAULT_SIZE)
-        self.read_button.setToolTip("Leggi")
+        self.read_button.setToolTip("Leggi ad alta voce")
         self.read_button.clicked.connect(self.start_reading)
         self.read_button.setStyleSheet("background-color: #ff6600; color: white; border: 2px solid #ffaa00;")
         self.read_button.show()

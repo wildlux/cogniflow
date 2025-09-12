@@ -79,13 +79,15 @@ except Exception as e:
 try:
     from assistente_dsa.main_03_configurazione_e_opzioni import (
         load_settings,
-        get_setting
+        get_setting,
+        set_setting
     )
 except ImportError:
     # Fallback for direct execution
     from assistente_dsa.main_03_configurazione_e_opzioni import (
         load_settings,
-        get_setting
+        get_setting,
+        set_setting
     )
 
 
@@ -258,6 +260,38 @@ def test_imports():
 
 
 
+def select_theme():
+    """Allow user to select a theme from available options."""
+    print("\n🎨 Selezione Tema:")
+    themes = get_setting('themes.available', [])
+    if not themes:
+        print("Nessun tema disponibile")
+        return
+
+    for i, theme in enumerate(themes, 1):
+        print(f"{i}. {theme['icon']} {theme['name']} - {theme['description']}")
+
+    current_selected = get_setting('themes.selected', 'Professionale')
+    print(f"\nTema attuale: {current_selected}")
+
+    while True:
+        try:
+            choice = input("Scegli un tema (numero) o premi Enter per mantenere attuale: ").strip()
+            if not choice:
+                print(f"Tema mantenuto: {current_selected}")
+                return
+            choice_num = int(choice)
+            if 1 <= choice_num <= len(themes):
+                selected_theme = themes[choice_num - 1]['name']
+                set_setting('themes.selected', selected_theme)
+                print(f"✅ Tema selezionato: {selected_theme}")
+                return
+            else:
+                print("Scelta non valida. Riprova.")
+        except ValueError:
+            print("Inserisci un numero valido.")
+
+
 @conditional_decorator(measure_function_time, "run_app")
 def run_app():
     """Run the application by calling main_01_Aircraft.py"""
@@ -283,8 +317,16 @@ def run_app():
         # Verifica che le impostazioni siano accessibili globalmente
         settings = load_settings()
 
+        selected_theme_name = get_setting('themes.selected', 'Professionale')
+        themes = get_setting('themes.available', [])
+        selected_theme_icon = next((t['icon'] for t in themes if t['name'] == selected_theme_name), '🎨')
+
         print(f"Global settings loaded - Theme: {settings['application']['theme']}")
         print(f"UI Size: {settings['ui']['window_width']}x{settings['ui']['window_height']}")
+        print(f"Selected Theme: {selected_theme_icon} {selected_theme_name}")
+
+        # Selezione tema
+        select_theme()
 
         # Import and run main_01_Aircraft
         import subprocess

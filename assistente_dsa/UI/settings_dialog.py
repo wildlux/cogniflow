@@ -530,11 +530,7 @@ class SettingsDialog(QDialog):
         instructions.setStyleSheet("color: #666; font-style: italic; padding: 5px;")
         preview_layout.addWidget(instructions)
 
-        # Pulsante per applicare modifiche
-        apply_changes_button = QPushButton("✅ Applica Modifiche alla Demo")
-        apply_changes_button.setStyleSheet("QPushButton { background-color: #28a745; color: white; font-weight: bold; padding: 10px 20px; } QPushButton:hover { background-color: #218838; }")
-        apply_changes_button.clicked.connect(self.apply_demo_changes)
-        preview_layout.addWidget(apply_changes_button)
+
 
         scroll_layout.addWidget(preview_group)
 
@@ -699,10 +695,7 @@ class SettingsDialog(QDialog):
             return f"#{r:02x}{g:02x}{b:02x}"
         return color_hex
 
-    def apply_demo_changes(self):
-        """Applica le modifiche dalla demo alle impostazioni."""
-        # Per ora, semplice messaggio
-        QMessageBox.information(self, "Modifiche Demo", "Le modifiche dalla finestra demo sono state applicate!")
+
 
     def apply_personalizations(self):
         """Applica le personalizzazioni all'interfaccia principale e salva nel file settings.json."""

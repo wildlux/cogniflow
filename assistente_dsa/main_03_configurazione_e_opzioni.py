@@ -52,6 +52,22 @@ class ConfigManager:
                 "interface_language": "Italiano",
                 "version": "1.0.0"
             },
+            "themes": {
+                "available": [
+                    {"name": "Professionale", "icon": "💼", "description": "Per professionisti e studenti universitari"},
+                    {"name": "Studente", "icon": "🎒", "description": "Per ragazzi che vanno a scuola"},
+                    {"name": "Chimico", "icon": "🥽", "description": "Per chimici o subacquei"},
+                    {"name": "Donna", "icon": "👝", "description": "Per donne che hanno tutto in borsa"},
+                    {"name": "Artigiano", "icon": "🧰", "description": "Per artigiani, cassetta degli attrezzi"},
+                    {"name": "Specchio", "icon": "🪞", "description": "Tema specchio"},
+                    {"name": "Magico", "icon": "🪄", "description": "Tema magico"},
+                    {"name": "Pensieri", "icon": "💭", "description": "Tema pensieri"},
+                    {"name": "Nuvola", "icon": "🗯", "description": "Tema nuvola"},
+                    {"name": "Audio", "icon": "🔊", "description": "Tema audio"},
+                    {"name": "Chat", "icon": "💬", "description": "Tema chat"}
+                ],
+                "selected": "Professionale"
+            },
             "ui": {
                 "window_width": 1200,
                 "window_height": 800,
