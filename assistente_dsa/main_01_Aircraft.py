@@ -81,6 +81,275 @@ except ImportError:
     QVideoWidget = None
     MULTIMEDIA_AVAILABLE = False
 
+
+class WebcamTestWindow(QMainWindow):
+    """Finestra separata per il test della webcam."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.setWindowTitle("🧪 Test Webcam - CogniFlow")
+        self.setGeometry(100, 100, 800, 600)
+        # Icona della finestra (semplificata)
+        try:
+            from PyQt6.QtGui import QIcon
+            # Usa un'icona semplice se disponibile
+            pass
+        except:
+            pass
+
+        # Inizializza componenti
+        self.webcam_active = False
+        self.test_timer = None
+
+        self.setup_ui()
+        self.setup_connections()
+
+    def setup_ui(self):
+        """Configura l'interfaccia utente della finestra di test."""
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+
+        layout = QVBoxLayout(central_widget)
+        layout.setSpacing(10)
+        layout.setContentsMargins(15, 15, 15, 15)
+
+        # Titolo
+        title_label = QLabel("🧪 Webcam Test Window")
+        title_label.setStyleSheet("""
+            QLabel {
+                font-size: 18px;
+                font-weight: bold;
+                color: #2c3e50;
+                margin-bottom: 10px;
+            }
+        """)
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label)
+
+        # Area video (placeholder per ora)
+        self.video_area = QLabel("📹 Webcam Feed\n\nClicca 'Avvia Test' per iniziare")
+        self.video_area.setMinimumHeight(400)
+        self.video_area.setStyleSheet("""
+            QLabel {
+                background: #f8f9fa;
+                border: 2px dashed #dee2e6;
+                border-radius: 8px;
+                font-size: 16px;
+                color: #6c757d;
+                padding: 20px;
+            }
+        """)
+        self.video_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.video_area)
+
+        # Controlli
+        controls_layout = QHBoxLayout()
+        controls_layout.setSpacing(10)
+
+        # Pulsante avvia test
+        self.start_test_btn = QPushButton("▶️ Avvia Test")
+        self.start_test_btn.setMinimumHeight(35)
+        self.start_test_btn.setStyleSheet("""
+            QPushButton {
+                background: #28a745;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 8px 16px;
+            }
+            QPushButton:hover {
+                background: #218838;
+            }
+            QPushButton:pressed {
+                background: #1e7e34;
+            }
+        """)
+        controls_layout.addWidget(self.start_test_btn)
+
+        # Pulsante ferma test
+        self.stop_test_btn = QPushButton("⏹️ Ferma Test")
+        self.stop_test_btn.setMinimumHeight(35)
+        self.stop_test_btn.setEnabled(False)
+        self.stop_test_btn.setStyleSheet("""
+            QPushButton {
+                background: #dc3545;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 8px 16px;
+            }
+            QPushButton:hover {
+                background: #c82333;
+            }
+            QPushButton:pressed {
+                background: #bd2130;
+            }
+            QPushButton:disabled {
+                background: #6c757d;
+            }
+        """)
+        controls_layout.addWidget(self.stop_test_btn)
+
+        # Pulsante cattura
+        self.capture_btn = QPushButton("📸 Cattura")
+        self.capture_btn.setMinimumHeight(35)
+        self.capture_btn.setEnabled(False)
+        self.capture_btn.setStyleSheet("""
+            QPushButton {
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 8px 16px;
+            }
+            QPushButton:hover {
+                background: #0056b3;
+            }
+            QPushButton:pressed {
+                background: #004085;
+            }
+            QPushButton:disabled {
+                background: #6c757d;
+            }
+        """)
+        controls_layout.addWidget(self.capture_btn)
+
+        controls_layout.addStretch()
+        layout.addLayout(controls_layout)
+
+        # Status e informazioni
+        self.status_label = QLabel("Status: Pronto per il test")
+        self.status_label.setStyleSheet("""
+            QLabel {
+                font-size: 12px;
+                color: #6c757d;
+                padding: 5px;
+                background: #f8f9fa;
+                border-radius: 4px;
+            }
+        """)
+        layout.addWidget(self.status_label)
+
+        # Pulsante chiudi
+        close_btn = QPushButton("❌ Chiudi Finestra")
+        close_btn.setMinimumHeight(35)
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background: #6c757d;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 8px 16px;
+            }
+            QPushButton:hover {
+                background: #5a6268;
+            }
+            QPushButton:pressed {
+                background: #545b62;
+            }
+        """)
+        layout.addWidget(close_btn)
+        close_btn.clicked.connect(self.close)
+
+    def setup_connections(self):
+        """Configura le connessioni dei segnali."""
+        self.start_test_btn.clicked.connect(self.start_webcam_test)
+        self.stop_test_btn.clicked.connect(self.stop_webcam_test)
+        self.capture_btn.clicked.connect(self.capture_frame)
+
+    def start_webcam_test(self):
+        """Avvia il test della webcam."""
+        try:
+            self.webcam_active = True
+            self.start_test_btn.setEnabled(False)
+            self.stop_test_btn.setEnabled(True)
+            self.capture_btn.setEnabled(True)
+
+            # Simula l'avvio della webcam con un timer per aggiornamenti
+            self.test_timer = QTimer()
+            self.test_timer.timeout.connect(self.update_webcam_feed)
+            self.test_timer.start(100)  # Aggiorna ogni 100ms
+
+            self.status_label.setText("Status: Test webcam attivo - Simulazione in corso")
+            self.video_area.setText("📹 Webcam Attiva\n\nTest in corso...\nFrame simulati")
+
+            print("🧪 Test webcam avviato nella finestra separata")
+
+        except Exception as e:
+            print(f"❌ Errore avvio test webcam: {e}")
+            self.status_label.setText(f"Status: Errore - {str(e)}")
+            if self.parent_window:
+                try:
+                    show_user_friendly_error(self.parent_window, e, "webcam_test")
+                except:
+                    QMessageBox.critical(self, "Errore", f"Errore avvio test webcam: {str(e)}")
+
+    def stop_webcam_test(self):
+        """Ferma il test della webcam."""
+        try:
+            self.webcam_active = False
+            self.start_test_btn.setEnabled(True)
+            self.stop_test_btn.setEnabled(False)
+            self.capture_btn.setEnabled(False)
+
+            if self.test_timer:
+                self.test_timer.stop()
+                self.test_timer = None
+
+            self.status_label.setText("Status: Test fermato")
+            self.video_area.setText("📹 Webcam Fermata\n\nClicca 'Avvia Test' per ricominciare")
+
+            print("🧪 Test webcam fermato")
+
+        except Exception as e:
+            print(f"❌ Errore arresto test webcam: {e}")
+            self.status_label.setText(f"Status: Errore arresto - {str(e)}")
+
+    def update_webcam_feed(self):
+        """Aggiorna il feed della webcam (simulazione)."""
+        if self.webcam_active:
+            # Simula aggiornamenti del frame
+            import random
+            frame_num = random.randint(1, 1000)
+            self.video_area.setText(f"📹 Webcam Attiva\n\nFrame: {frame_num}\nTest in corso...")
+
+    def capture_frame(self):
+        """Cattura un frame dalla webcam."""
+        try:
+            if self.webcam_active:
+                # Simula cattura frame
+                import random
+                frame_id = random.randint(1000, 9999)
+                self.status_label.setText(f"Status: Frame catturato - ID: {frame_id}")
+                print(f"📸 Frame catturato: {frame_id}")
+
+                # Mostra messaggio di successo
+                if self.parent_window:
+                    try:
+                        show_success_message(self.parent_window, "Cattura frame", f"Frame {frame_id} salvato")
+                    except:
+                        QMessageBox.information(self, "Successo", f"Frame {frame_id} catturato con successo")
+
+        except Exception as e:
+            print(f"❌ Errore cattura frame: {e}")
+            self.status_label.setText(f"Status: Errore cattura - {str(e)}")
+
+    def closeEvent(self, a0):
+        """Gestisce la chiusura della finestra."""
+        self.stop_webcam_test()
+        print("🧪 Finestra test webcam chiusa")
+        if a0:
+            a0.accept()
+
 # Import per OCR
 try:
     import pytesseract
@@ -1188,138 +1457,32 @@ class MainWindow(QMainWindow):
         self.webcam_window = None
 
     def toggle_webcam(self):
-        """Attiva/disattiva la webcam in modalità speculare."""
+        """Apre/chiude la finestra separata per il test della webcam."""
         try:
-            if self.webcam_active:
-                # Disattiva webcam
-                self._stop_webcam()
+            if self.webcam_active and self.webcam_window:
+                # Chiudi finestra webcam
+                self.webcam_window.close()
+                self.webcam_window = None
                 self.webcam_button.setText("📹 Webcam")
                 self.webcam_button.setChecked(False)
                 self.webcam_active = False
-                print("📹 Webcam disattivata")
+                print("📹 Finestra test webcam chiusa")
             else:
-                # Attiva webcam
-                self._start_webcam()
+                # Apri finestra separata per test webcam
+                self.webcam_window = WebcamTestWindow(self)
+                self.webcam_window.show()
                 self.webcam_button.setText("📹 Webcam ON")
                 self.webcam_button.setChecked(True)
                 self.webcam_active = True
-                print("📹 Webcam attivata in modalità speculare")
+                print("📹 Finestra test webcam aperta")
         except Exception as e:
             print(f"❌ Errore toggle webcam: {e}")
-            show_user_friendly_error(self, e, "webcam")
+            try:
+                show_user_friendly_error(self, e, "webcam")
+            except:
+                QMessageBox.critical(self, "Errore", f"Errore webcam: {str(e)}")
 
-    def _start_webcam(self):
-        """Avvia la webcam come sfondo della finestra principale con modalità speculare."""
-        try:
-            # Per ora usiamo un'implementazione semplificata con placeholder
-            # In futuro potrà essere estesa con QCamera reale
-            self._start_webcam_background()
 
-        except Exception as e:
-            print(f"❌ Errore avvio webcam: {e}")
-            # Fallback al placeholder
-            self._start_webcam_background()
-
-    def _start_webcam_background(self):
-        """Crea il widget di sfondo per la webcam come fullscreen background."""
-        try:
-            from PyQt6.QtWidgets import QLabel
-            from PyQt6.QtCore import QTimer
-
-            # Crea widget placeholder come sfondo dinamico fullscreen
-            self.webcam_background = QLabel("📹 Webcam Attiva\nModalità Speculare")
-            self.webcam_background.setObjectName("webcam_background")
-
-            # Stile per fullscreen background
-            self.webcam_background.setStyleSheet("""
-                QLabel#webcam_background {
-                    font-size: 24px;
-                    color: rgba(73, 80, 87, 0.4);
-                    text-align: center;
-                    padding: 50px;
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                        stop:0 rgba(248, 249, 250, 0.8), stop:1 rgba(233, 236, 239, 0.8));
-                    border-radius: 20px;
-                    border: 2px solid rgba(222, 226, 230, 0.3);
-                }
-            """)
-            self.webcam_background.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-            # Rendi il widget trasparente per permettere interazione con elementi sopra
-            self.webcam_background.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-
-            # Aggiungi come sfondo al central widget
-            if hasattr(self, 'centralWidget') and self.centralWidget():
-                central_widget = self.centralWidget()
-                if central_widget:
-                    # Imposta il widget come figlio del central widget
-                    self.webcam_background.setParent(central_widget)
-
-                    # Posiziona il widget per coprire l'intera area
-                    self.webcam_background.move(0, 0)
-                    self.webcam_background.resize(central_widget.size())
-
-                    # Assicura che sia visibile
-                    self.webcam_background.show()
-
-                    # Assicura che sia dietro tutti gli altri elementi
-                    self.webcam_background.lower()
-
-                    # Nota: il widget è già stato aggiunto come figlio, non serve aggiungerlo al layout
-
-                    # Connetti il resize del central widget per ridimensionare lo sfondo
-                    central_widget.resizeEvent = lambda a0: self._on_central_widget_resize(a0)
-
-            # Timer per animare l'effetto specchio
-            self.flip_timer = QTimer()
-            self.flip_timer.timeout.connect(self._animate_mirror_effect)
-            self.flip_timer.start(1500)  # Cambia ogni 1.5 secondi
-
-            print("📹 Webcam avviata come sfondo fullscreen della finestra principale")
-
-        except Exception as e:
-            print(f"❌ Errore creazione sfondo webcam: {e}")
-
-    def _animate_mirror_effect(self):
-        """Anima l'effetto specchio cambiando leggermente l'aspetto."""
-        try:
-            if hasattr(self, 'webcam_background') and self.webcam_background:
-                import random
-                # Cambia leggermente il gradiente per simulare movimento
-                variation = random.randint(0, 20)
-                self.webcam_background.setStyleSheet(f"""
-                    QLabel#webcam_background {{
-                        font-size: 20px;
-                        color: rgba(73, 80, 87, 0.6);
-                        text-align: center;
-                        padding: 30px;
-                        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                            stop:0 rgba({248 + variation//2}, {249 + variation//3}, {250 + variation//4}, 0.7),
-                            stop:1 rgba({233 + variation//3}, {236 + variation//2}, {239 + variation//5}, 0.7));
-                        border-radius: 15px;
-                        border: 2px solid rgba(222, 226, 230, 0.4);
-                        position: absolute;
-                        z-index: -1;
-                    }}
-                """)
-        except Exception as e:
-            print(f"Errore animazione effetto specchio: {e}")
-
-    def _on_central_widget_resize(self, a0):
-        """Gestisce il ridimensionamento del central widget per adattare lo sfondo webcam."""
-        try:
-            if hasattr(self, 'webcam_background') and self.webcam_background:
-                # Ridimensiona lo sfondo per coprire l'intera area del central widget
-                self.webcam_background.resize(a0.size())
-                # Assicura che rimanga dietro tutti gli altri elementi
-                self.webcam_background.lower()
-                # Assicura che sia ancora visibile
-                self.webcam_background.show()
-        except Exception as e:
-            print(f"Errore nel ridimensionamento dello sfondo webcam: {e}")
-        # Chiama il metodo originale se esiste
-        if hasattr(a0, 'accept'):
-            a0.accept()
 
     def create_new_pensierino(self):
         """Crea un nuovo pensierino tramite dialogo."""
