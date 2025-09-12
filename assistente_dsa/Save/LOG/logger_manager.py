@@ -50,7 +50,7 @@ class StructuredLogger:
         # Handler per console
         console_handler = logging.StreamHandler()
         console_formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         console_handler.setFormatter(console_formatter)
         console_handler.setLevel(logging.INFO)
@@ -60,10 +60,10 @@ class StructuredLogger:
         general_file_handler = logging.handlers.RotatingFileHandler(
             os.path.join(self.log_dir, "{self.app_name}.log"),
             maxBytes=10 * 1024 * 1024,  # 10MB
-            backupCount=5
+            backupCount=5,
         )
         general_formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s - %(pathname)s:%(lineno)d'
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s - %(pathname)s:%(lineno)d"
         )
         general_file_handler.setFormatter(general_formatter)
         general_file_handler.setLevel(logging.DEBUG)
@@ -73,14 +73,14 @@ class StructuredLogger:
         error_file_handler = logging.handlers.RotatingFileHandler(
             os.path.join(self.log_dir, "{self.app_name}_error.log"),
             maxBytes=5 * 1024 * 1024,  # 5MB
-            backupCount=3
+            backupCount=3,
         )
         error_formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s\n'
-            'File: %(pathname)s:%(lineno)d\n'
-            'Function: %(funcName)s\n'
-            'Traceback: %(exc_info)s\n'
-            '---'
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s\n"
+            "File: %(pathname)s:%(lineno)d\n"
+            "Function: %(funcName)s\n"
+            "Traceback: %(exc_info)s\n"
+            "---"
         )
         error_file_handler.setFormatter(error_formatter)
         error_file_handler.setLevel(logging.ERROR)
@@ -103,9 +103,14 @@ class StructuredLogger:
         self.loggers[component] = logger
         return logger
 
-    def log_event(self, component: str, level: str, message: str,
-                  data: Optional[Dict[str, Any]] = None,
-                  error: Optional[Exception] = None):
+    def log_event(
+        self,
+        component: str,
+        level: str,
+        message: str,
+        data: Optional[Dict[str, Any]] = None,
+        error: Optional[Exception] = None,
+    ):
         """
         Logga un evento strutturato.
 
@@ -120,28 +125,34 @@ class StructuredLogger:
 
         # Prepara i dati strutturati
         log_data = {
-            'timestamp': datetime.now().isoformat(),
-            'component': component,
-            'level': level,
-            'message': message,
-            'data': data or {}
+            "timestamp": datetime.now().isoformat(),
+            "component": component,
+            "level": level,
+            "message": message,
+            "data": data or {},
         }
 
         if error:
             import traceback
-            log_data['error'] = {
-                'type': type(error).__name__,
-                'message': str(error),
-                'traceback': traceback.format_exc()
+
+            log_data["error"] = {
+                "type": type(error).__name__,
+                "message": str(error),
+                "traceback": traceback.format_exc(),
             }
 
         # Logga in base al livello
         log_method = getattr(logger, level.lower(), logger.info)
         log_method(json.dumps(log_data, indent=2, default=str))
 
-    def log_performance(self, component: str, operation: str,
-                        duration: float, success: bool = True,
-                        details: Optional[Dict[str, Any]] = None):
+    def log_performance(
+        self,
+        component: str,
+        operation: str,
+        duration: float,
+        success: bool = True,
+        details: Optional[Dict[str, Any]] = None,
+    ):
         """
         Logga informazioni sulle performance.
 
@@ -153,20 +164,24 @@ class StructuredLogger:
             details (Optional[Dict[str, Any]]): Dettagli aggiuntivi
         """
         data = {
-            'operation': operation,
-            'duration': duration,
-            'success': success,
-            'performance_ms': duration * 1000
+            "operation": operation,
+            "duration": duration,
+            "success": success,
+            "performance_ms": duration * 1000,
         }
 
         if details:
             data.update(details)
 
-        level = 'INFO' if success else 'WARNING'
+        level = "INFO" if success else "WARNING"
         self.log_event(component, level, "Performance: {operation}", data)
 
-    def log_user_action(self, action: str, user_id: Optional[str] = None,
-                        details: Optional[Dict[str, Any]] = None):
+    def log_user_action(
+        self,
+        action: str,
+        user_id: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
+    ):
         """
         Logga un'azione dell'utente.
 
@@ -175,16 +190,17 @@ class StructuredLogger:
             user_id (Optional[str]): ID dell'utente
             details (Optional[Dict[str, Any]]): Dettagli aggiuntivi
         """
-        data = {'action': action}
+        data = {"action": action}
         if user_id:
-            data['user_id'] = user_id
+            data["user_id"] = user_id
         if details:
             data.update(details)
 
-        self.log_event('USER', 'INFO', "User action: {action}", data)
+        self.log_event("USER", "INFO", "User action: {action}", data)
 
-    def log_system_event(self, event_type: str, message: str,
-                         details: Optional[Dict[str, Any]] = None):
+    def log_system_event(
+        self, event_type: str, message: str, details: Optional[Dict[str, Any]] = None
+    ):
         """
         Logga un evento di sistema.
 
@@ -193,14 +209,20 @@ class StructuredLogger:
             message (str): Messaggio dell'evento
             details (Optional[Dict[str, Any]]): Dettagli aggiuntivi
         """
-        data = {'event_type': event_type}
+        data = {"event_type": event_type}
         if details:
             data.update(details)
 
-        self.log_event('SYSTEM', 'INFO', "System event: {event_type} - {message}", data)
+        self.log_event("SYSTEM", "INFO", "System event: {event_type} - {message}", data)
 
-    def log_ai_interaction(self, model: str, prompt: str, response: str,
-                           duration: float, success: bool = True):
+    def log_ai_interaction(
+        self,
+        model: str,
+        prompt: str,
+        response: str,
+        duration: float,
+        success: bool = True,
+    ):
         """
         Logga un'interazione con l'AI.
 
@@ -212,19 +234,24 @@ class StructuredLogger:
             success (bool): Se la richiesta è riuscita
         """
         data = {
-            'model': model,
-            'prompt_length': len(prompt),
-            'response_length': len(response),
-            'duration': duration,
-            'success': success
+            "model": model,
+            "prompt_length": len(prompt),
+            "response_length": len(response),
+            "duration": duration,
+            "success": success,
         }
 
-        level = 'INFO' if success else 'ERROR'
-        self.log_event('AI', level, "AI interaction with {model}", data)
+        level = "INFO" if success else "ERROR"
+        self.log_event("AI", level, "AI interaction with {model}", data)
 
-    def log_video_processing(self, operation: str, frame_count: int,
-                             processing_time: float, success: bool = True,
-                             details: Optional[Dict[str, Any]] = None):
+    def log_video_processing(
+        self,
+        operation: str,
+        frame_count: int,
+        processing_time: float,
+        success: bool = True,
+        details: Optional[Dict[str, Any]] = None,
+    ):
         """
         Logga operazioni di processamento video.
 
@@ -236,21 +263,26 @@ class StructuredLogger:
             details (Optional[Dict[str, Any]]): Dettagli aggiuntivi
         """
         data = {
-            'operation': operation,
-            'frame_count': frame_count,
-            'processing_time': processing_time,
-            'fps': frame_count / processing_time if processing_time > 0 else 0,
-            'success': success
+            "operation": operation,
+            "frame_count": frame_count,
+            "processing_time": processing_time,
+            "fps": frame_count / processing_time if processing_time > 0 else 0,
+            "success": success,
         }
 
         if details:
             data.update(details)
 
-        level = 'DEBUG' if success else 'WARNING'
-        self.log_event('VIDEO', level, "Video processing: {operation}", data)
+        level = "DEBUG" if success else "WARNING"
+        self.log_event("VIDEO", level, "Video processing: {operation}", data)
 
-    def log_audio_event(self, event_type: str, duration: Optional[float] = None,
-                        text: Optional[str] = None, success: bool = True):
+    def log_audio_event(
+        self,
+        event_type: str,
+        duration: Optional[float] = None,
+        text: Optional[str] = None,
+        success: bool = True,
+    ):
         """
         Logga eventi audio.
 
@@ -260,15 +292,15 @@ class StructuredLogger:
             text (Optional[str]): Testo associato
             success (bool): Se l'evento è riuscito
         """
-        data = {'event_type': event_type, 'success': success}
+        data = {"event_type": event_type, "success": success}
 
         if duration is not None:
-            data['duration'] = duration
+            data["duration"] = duration
         if text:
-            data['text_length'] = len(text)
+            data["text_length"] = len(text)
 
-        level = 'INFO' if success else 'ERROR'
-        self.log_event('AUDIO', level, "Audio event: {event_type}", data)
+        level = "INFO" if success else "ERROR"
+        self.log_event("AUDIO", level, "Audio event: {event_type}", data)
 
     def create_session_log(self, session_id: str) -> logging.Logger:
         """
@@ -286,10 +318,10 @@ class StructuredLogger:
         session_handler = logging.handlers.RotatingFileHandler(
             os.path.join(self.log_dir, "session_{session_id}.log"),
             maxBytes=5 * 1024 * 1024,  # 5MB
-            backupCount=2
+            backupCount=2,
         )
         session_formatter = logging.Formatter(
-            '%(asctime)s - SESSION:%(name)s - %(levelname)s - %(message)s'
+            "%(asctime)s - SESSION:%(name)s - %(levelname)s - %(message)s"
         )
         session_handler.setFormatter(session_formatter)
         session_handler.setLevel(logging.DEBUG)
@@ -338,8 +370,13 @@ def get_component_logger(component: str) -> logging.Logger:
     return global_logger.get_logger(component)
 
 
-def log_performance(component: str, operation: str, duration: float,
-                    success: bool = True, details: Optional[Dict[str, Any]] = None):
+def log_performance(
+    component: str,
+    operation: str,
+    duration: float,
+    success: bool = True,
+    details: Optional[Dict[str, Any]] = None,
+):
     """
     Funzione di utilità per loggare performance.
 
@@ -353,8 +390,12 @@ def log_performance(component: str, operation: str, duration: float,
     global_logger.log_performance(component, operation, duration, success, details)
 
 
-def log_error(component: str, message: str, error: Optional[Exception] = None,
-              data: Optional[Dict[str, Any]] = None):
+def log_error(
+    component: str,
+    message: str,
+    error: Optional[Exception] = None,
+    data: Optional[Dict[str, Any]] = None,
+):
     """
     Funzione di utilità per loggare errori.
 
@@ -364,4 +405,4 @@ def log_error(component: str, message: str, error: Optional[Exception] = None,
         error (Optional[Exception]): Eccezione
         data (Optional[Dict[str, Any]]): Dati aggiuntivi
     """
-    global_logger.log_event(component, 'ERROR', message, data, error)
+    global_logger.log_event(component, "ERROR", message, data, error)

@@ -8,15 +8,33 @@ import subprocess
 import sys
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QCheckBox,
-    QGroupBox, QTabWidget, QWidget, QMessageBox, QScrollArea, QGridLayout, QFrame,
-    QSlider, QColorDialog
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QLineEdit,
+    QComboBox,
+    QSpinBox,
+    QDoubleSpinBox,
+    QCheckBox,
+    QGroupBox,
+    QTabWidget,
+    QWidget,
+    QMessageBox,
+    QScrollArea,
+    QGridLayout,
+    QFrame,
+    QSlider,
+    QColorDialog,
 )
 
 # Import del sistema di configurazione globale
 from main_03_configurazione_e_opzioni import (
-    load_settings, save_settings, get_setting, set_setting
+    load_settings,
+    save_settings,
+    get_setting,
+    set_setting,
 )
 
 
@@ -27,11 +45,11 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.settings = load_settings()
 
-
         self.setModal(True)
 
         # Imposta sfondo bianco per tutto il dialog
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             QDialog {
                 background-color: white;
                 color: black;
@@ -72,7 +90,8 @@ class SettingsDialog(QDialog):
                 color: black;
                 border: 1px solid #cccccc;
             }
-        """)
+        """
+        )
 
         self.setup_ui()
         self.load_current_settings()
@@ -83,12 +102,14 @@ class SettingsDialog(QDialog):
 
         # Titolo
         title_label = QLabel("Impostazioni DSA Assistant")
-        title_label.setStyleSheet("""
+        title_label.setStyleSheet(
+            """
             font-size: 18px;
             font-weight: bold;
             color: #2c3e50;
             margin-bottom: 10px;
-        """)
+        """
+        )
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
 
@@ -110,12 +131,16 @@ class SettingsDialog(QDialog):
         buttons_layout.addStretch()
 
         save_button = QPushButton("💾 Salva Impostazioni")
-        save_button.setStyleSheet("QPushButton { background-color: #28a745; color: white; font-weight: bold; padding: 12px 24px; min-width: 180px; } QPushButton:hover { background-color: #218838; }")
+        save_button.setStyleSheet(
+            "QPushButton { background-color: #28a745; color: white; font-weight: bold; padding: 12px 24px; min-width: 180px; } QPushButton:hover { background-color: #218838; }"
+        )
         save_button.clicked.connect(self.save_settings)
         buttons_layout.addWidget(save_button)
 
         cancel_button = QPushButton("❌ Annulla")
-        cancel_button.setStyleSheet("QPushButton { background-color: #dc3545; color: white; font-weight: bold; padding: 12px 24px; min-width: 120px; } QPushButton:hover { background-color: #c82333; }")
+        cancel_button.setStyleSheet(
+            "QPushButton { background-color: #dc3545; color: white; font-weight: bold; padding: 12px 24px; min-width: 120px; } QPushButton:hover { background-color: #c82333; }"
+        )
         cancel_button.clicked.connect(self.reject)
         buttons_layout.addWidget(cancel_button)
 
@@ -147,7 +172,9 @@ class SettingsDialog(QDialog):
 
         # Checkbox per bypass login
         self.bypass_login_checkbox = QCheckBox("Bypass login")
-        self.bypass_login_checkbox.setToolTip("Se abilitato, salta la finestra di login e avvia direttamente l'applicazione")
+        self.bypass_login_checkbox.setToolTip(
+            "Se abilitato, salta la finestra di login e avvia direttamente l'applicazione"
+        )
         app_layout.addWidget(self.bypass_login_checkbox)
 
         layout.addWidget(app_group)
@@ -166,12 +193,16 @@ class SettingsDialog(QDialog):
 
         # Checkbox per bypassare login
         self.bypass_login_checkbox = QCheckBox("Bypass login e launcher")
-        self.bypass_login_checkbox.setToolTip("Se abilitato, salta la finestra di login e il launcher, avviando direttamente l'applicazione principale")
+        self.bypass_login_checkbox.setToolTip(
+            "Se abilitato, salta la finestra di login e il launcher, avviando direttamente l'applicazione principale"
+        )
         startup_layout.addWidget(self.bypass_login_checkbox)
 
         # Checkbox per avvio automatico applicazione principale
         self.auto_start_checkbox = QCheckBox("Avvio automatico applicazione principale")
-        self.auto_start_checkbox.setToolTip("Se abilitato, avvia automaticamente l'applicazione principale dopo il login")
+        self.auto_start_checkbox.setToolTip(
+            "Se abilitato, avvia automaticamente l'applicazione principale dopo il login"
+        )
         startup_layout.addWidget(self.auto_start_checkbox)
 
         layout.addWidget(startup_group)
@@ -231,9 +262,9 @@ class SettingsDialog(QDialog):
         model_layout = QHBoxLayout()
         model_layout.addWidget(QLabel("Modello AI selezionato:"))
         self.ai_model_combo = QComboBox()
-        self.ai_model_combo.addItems([
-            "gemma:2b", "llama2:7b", "llama2:13b", "codellama:7b"
-        ])
+        self.ai_model_combo.addItems(
+            ["gemma:2b", "llama2:7b", "llama2:13b", "codellama:7b"]
+        )
         model_layout.addWidget(self.ai_model_combo)
         ai_layout.addLayout(model_layout)
 
@@ -260,7 +291,9 @@ class SettingsDialog(QDialog):
 
         # Toggle per abilitare/disabilitare servizio MediaPipe
         self.mediapipe_service_enabled = QCheckBox("Usa servizio MediaPipe remoto")
-        self.mediapipe_service_enabled.setToolTip("Se abilitato, usa il servizio MediaPipe remoto invece del rilevamento locale")
+        self.mediapipe_service_enabled.setToolTip(
+            "Se abilitato, usa il servizio MediaPipe remoto invece del rilevamento locale"
+        )
         service_layout.addWidget(self.mediapipe_service_enabled)
 
         # URL del servizio MediaPipe
@@ -284,29 +317,41 @@ class SettingsDialog(QDialog):
         detection_type_layout.addWidget(QLabel("Tipo rilevamento:"))
         self.detection_type_combo = QComboBox()
         self.detection_type_combo.addItems(["Pose", "Hands", "Face", "Holistic"])
-        self.detection_type_combo.setToolTip("Seleziona il tipo di rilevamento da abilitare")
+        self.detection_type_combo.setToolTip(
+            "Seleziona il tipo di rilevamento da abilitare"
+        )
         detection_type_layout.addWidget(self.detection_type_combo)
         detection_layout.addLayout(detection_type_layout)
 
         # Toggle per tipi specifici
         self.pose_detection_enabled = QCheckBox("Rilevamento posa umana (Pose)")
-        self.pose_detection_enabled.setToolTip("Abilita rilevamento della posa corporea completa")
+        self.pose_detection_enabled.setToolTip(
+            "Abilita rilevamento della posa corporea completa"
+        )
         detection_layout.addWidget(self.pose_detection_enabled)
 
         self.hand_detection_enabled = QCheckBox("Rilevamento mani (Hands)")
-        self.hand_detection_enabled.setToolTip("Abilita rilevamento e tracciamento delle mani")
+        self.hand_detection_enabled.setToolTip(
+            "Abilita rilevamento e tracciamento delle mani"
+        )
         detection_layout.addWidget(self.hand_detection_enabled)
 
         self.face_detection_enabled = QCheckBox("Rilevamento volto (Face)")
-        self.face_detection_enabled.setToolTip("Abilita rilevamento dei volti e delle espressioni")
+        self.face_detection_enabled.setToolTip(
+            "Abilita rilevamento dei volti e delle espressioni"
+        )
         detection_layout.addWidget(self.face_detection_enabled)
 
         self.gesture_recognition_enabled = QCheckBox("Riconoscimento gesti")
-        self.gesture_recognition_enabled.setToolTip("Abilita riconoscimento dei gesti delle mani")
+        self.gesture_recognition_enabled.setToolTip(
+            "Abilita riconoscimento dei gesti delle mani"
+        )
         detection_layout.addWidget(self.gesture_recognition_enabled)
 
         self.facial_expression_enabled = QCheckBox("Rilevamento espressioni facciali")
-        self.facial_expression_enabled.setToolTip("Abilita analisi delle espressioni facciali")
+        self.facial_expression_enabled.setToolTip(
+            "Abilita analisi delle espressioni facciali"
+        )
         detection_layout.addWidget(self.facial_expression_enabled)
 
         scroll_layout.addWidget(detection_group)
@@ -334,7 +379,9 @@ class SettingsDialog(QDialog):
         self.hand_confidence_slider = QSlider(Qt.Orientation.Horizontal)
         self.hand_confidence_slider.setRange(1, 100)
         self.hand_confidence_slider.setValue(50)
-        self.hand_confidence_slider.setToolTip("Soglia minima di confidenza per il rilevamento delle mani")
+        self.hand_confidence_slider.setToolTip(
+            "Soglia minima di confidenza per il rilevamento delle mani"
+        )
         hand_confidence_layout.addWidget(self.hand_confidence_slider)
         self.hand_confidence_label = QLabel("50%")
         hand_confidence_layout.addWidget(self.hand_confidence_label)
@@ -353,7 +400,9 @@ class SettingsDialog(QDialog):
         self.face_confidence_slider = QSlider(Qt.Orientation.Horizontal)
         self.face_confidence_slider.setRange(1, 100)
         self.face_confidence_slider.setValue(50)
-        self.face_confidence_slider.setToolTip("Soglia minima di confidenza per il rilevamento dei volti")
+        self.face_confidence_slider.setToolTip(
+            "Soglia minima di confidenza per il rilevamento dei volti"
+        )
         face_confidence_layout.addWidget(self.face_confidence_slider)
         self.face_confidence_label = QLabel("50%")
         face_confidence_layout.addWidget(self.face_confidence_label)
@@ -388,7 +437,9 @@ class SettingsDialog(QDialog):
         self.gesture_sensitivity_slider = QSlider(Qt.Orientation.Horizontal)
         self.gesture_sensitivity_slider.setRange(1, 10)
         self.gesture_sensitivity_slider.setValue(5)
-        self.gesture_sensitivity_slider.setToolTip("Sensibilità del riconoscimento gesti (1=bassa, 10=alta)")
+        self.gesture_sensitivity_slider.setToolTip(
+            "Sensibilità del riconoscimento gesti (1=bassa, 10=alta)"
+        )
         gesture_sensitivity_layout.addWidget(self.gesture_sensitivity_slider)
         self.gesture_sensitivity_label = QLabel("5")
         gesture_sensitivity_layout.addWidget(self.gesture_sensitivity_label)
@@ -403,11 +454,15 @@ class SettingsDialog(QDialog):
 
         # Opzioni visuali
         self.show_hand_landmarks = QCheckBox("Mostra landmark mani")
-        self.show_hand_landmarks.setToolTip("Visualizza i punti di riferimento delle mani rilevate")
+        self.show_hand_landmarks.setToolTip(
+            "Visualizza i punti di riferimento delle mani rilevate"
+        )
         visual_layout.addWidget(self.show_hand_landmarks)
 
         self.show_pose_landmarks = QCheckBox("Mostra landmark posa")
-        self.show_pose_landmarks.setToolTip("Visualizza i punti di riferimento della posa corporea")
+        self.show_pose_landmarks.setToolTip(
+            "Visualizza i punti di riferimento della posa corporea"
+        )
         visual_layout.addWidget(self.show_pose_landmarks)
 
         self.show_expressions = QCheckBox("Mostra espressioni facciali")
@@ -415,7 +470,9 @@ class SettingsDialog(QDialog):
         visual_layout.addWidget(self.show_expressions)
 
         self.show_bounding_boxes = QCheckBox("Mostra rettangoli di delimitazione")
-        self.show_bounding_boxes.setToolTip("Visualizza i rettangoli attorno agli oggetti rilevati")
+        self.show_bounding_boxes.setToolTip(
+            "Visualizza i rettangoli attorno agli oggetti rilevati"
+        )
         self.show_bounding_boxes.setChecked(True)
         visual_layout.addWidget(self.show_bounding_boxes)
 
@@ -488,12 +545,14 @@ class SettingsDialog(QDialog):
 
         # Connetti gli slider ai label per aggiornare i valori in tempo reale
         self.hand_confidence_slider.valueChanged.connect(
-            lambda v: self.hand_confidence_label.setText(f"{v}%"))
+            lambda v: self.hand_confidence_label.setText(f"{v}%")
+        )
         self.face_confidence_slider.valueChanged.connect(
-            lambda v: self.face_confidence_label.setText(f"{v}%"))
+            lambda v: self.face_confidence_label.setText(f"{v}%")
+        )
         self.gesture_sensitivity_slider.valueChanged.connect(
-            lambda v: self.gesture_sensitivity_label.setText(str(v)))
-
+            lambda v: self.gesture_sensitivity_label.setText(str(v))
+        )
 
     def setup_test_tab(self):
         """Configura il tab di test per scopi di sviluppo."""
@@ -531,7 +590,9 @@ class SettingsDialog(QDialog):
         combo_layout = QHBoxLayout()
         combo_layout.addWidget(QLabel("Opzione test:"))
         self.test_combo = QComboBox()
-        self.test_combo.addItems(["Opzione 1", "Opzione 2", "Opzione 3", "Debug", "Release"])
+        self.test_combo.addItems(
+            ["Opzione 1", "Opzione 2", "Opzione 3", "Debug", "Release"]
+        )
         combo_layout.addWidget(self.test_combo)
         test_options_layout.addLayout(combo_layout)
 
@@ -548,12 +609,18 @@ class SettingsDialog(QDialog):
 
         # Pulsante di test
         test_button = QPushButton("🚀 Esegui Test")
-        test_button.setStyleSheet("QPushButton { background-color: #17a2b8; color: white; font-weight: bold; padding: 10px 20px; min-width: 140px; } QPushButton:hover { background-color: #138496; }")
-        test_button.clicked.connect(lambda: QMessageBox.information(self, "Test", "Test eseguito con successo!"))
+        test_button.setStyleSheet(
+            "QPushButton { background-color: #17a2b8; color: white; font-weight: bold; padding: 10px 20px; min-width: 140px; } QPushButton:hover { background-color: #138496; }"
+        )
+        test_button.clicked.connect(
+            lambda: QMessageBox.information(self, "Test", "Test eseguito con successo!")
+        )
         test_actions_layout.addWidget(test_button)
 
         # Label informativo
-        info_label = QLabel("Questa è una scheda di test per scopi di sviluppo.\nPuoi aggiungere qui nuovi widget e funzionalità.")
+        info_label = QLabel(
+            "Questa è una scheda di test per scopi di sviluppo.\nPuoi aggiungere qui nuovi widget e funzionalità."
+        )
         info_label.setStyleSheet("color: #666; font-style: italic;")
         test_actions_layout.addWidget(info_label)
 
@@ -587,21 +654,27 @@ class SettingsDialog(QDialog):
         system_fonts = []
         try:
             # Su Linux, usa fc-list per ottenere tutti i font disponibili
-            if sys.platform.startswith('linux'):
-                result = subprocess.run(['fc-list', ':family'], capture_output=True, text=True, timeout=10)
+            if sys.platform.startswith("linux"):
+                result = subprocess.run(
+                    ["fc-list", ":family"], capture_output=True, text=True, timeout=10
+                )
                 if result.returncode == 0:
                     raw_output = result.stdout.strip()
                     if raw_output:
                         # Parsing delle righe di output fc-list
-                        font_lines = raw_output.split('\n')
+                        font_lines = raw_output.split("\n")
                         for line in font_lines:
-                            if line.strip() and ':' in line:
+                            if line.strip() and ":" in line:
                                 # Formato: /path/to/font.ttf: Font Name, Font Name 2
                                 # Prendi solo la parte dopo i due punti
-                                font_part = line.split(':', 1)[1].strip()
+                                font_part = line.split(":", 1)[1].strip()
                                 if font_part:
                                     # Ogni riga può contenere più font separati da virgola
-                                    fonts_in_line = [f.strip() for f in font_part.split(',') if f.strip()]
+                                    fonts_in_line = [
+                                        f.strip()
+                                        for f in font_part.split(",")
+                                        if f.strip()
+                                    ]
                                     system_fonts.extend(fonts_in_line)
 
                         # Rimuovi duplicati e ordina alfabeticamente
@@ -610,35 +683,69 @@ class SettingsDialog(QDialog):
 
                         # Assicurati che OpenDyslexic sia nella lista (font per dislessia)
                         if "OpenDyslexic" not in system_fonts:
-                            system_fonts.insert(0, "OpenDyslexic")  # Inserisci all'inizio
+                            system_fonts.insert(
+                                0, "OpenDyslexic"
+                            )  # Inserisci all'inizio
 
-                        print("✅ Caricati {len(system_fonts)} font dal sistema Linux (solo nomi)")
-                        print("🎨 Font per dislessia disponibile: {'OpenDyslexic' in system_fonts}")
+                        print(
+                            "✅ Caricati {len(system_fonts)} font dal sistema Linux (solo nomi)"
+                        )
+                        print(
+                            "🎨 Font per dislessia disponibile: {'OpenDyslexic' in system_fonts}"
+                        )
                     else:
                         raise Exception("Nessun output da fc-list")
                 else:
                     raise Exception("fc-list fallito con codice {result.returncode}")
             else:
-                raise Exception("Sistema operativo non supportato per caricamento dinamico")
+                raise Exception(
+                    "Sistema operativo non supportato per caricamento dinamico"
+                )
 
         except Exception:
             print("⚠️ Errore caricamento font di sistema: {e}")
             # Fallback alla lista di font comuni (incluso OpenDyslexic per dislessia)
             system_fonts = [
                 "OpenDyslexic",  # Font per dislessia - PRIMA POSIZIONE
-                "Arial", "Helvetica", "Times New Roman", "Courier New",
-                "Verdana", "Georgia", "Palatino", "Garamond", "Bookman",
-                "Comic Sans MS", "Trebuchet MS", "Arial Black", "Calibri",
-                "Cambria", "Candara", "Consolas", "Constantia", "Corbel",
-                "DejaVu Sans", "DejaVu Seri", "FreeMono", "FreeSans", "FreeSerif",
-                "Liberation Mono", "Liberation Sans", "Liberation Serif",
-                "Lucida Console", "Lucida Sans", "Lucida Sans Unicode",
-                "Microsoft Sans Seri", "Monaco", "Segoe UI", "Tahoma", "Ubuntu"
+                "Arial",
+                "Helvetica",
+                "Times New Roman",
+                "Courier New",
+                "Verdana",
+                "Georgia",
+                "Palatino",
+                "Garamond",
+                "Bookman",
+                "Comic Sans MS",
+                "Trebuchet MS",
+                "Arial Black",
+                "Calibri",
+                "Cambria",
+                "Candara",
+                "Consolas",
+                "Constantia",
+                "Corbel",
+                "DejaVu Sans",
+                "DejaVu Seri",
+                "FreeMono",
+                "FreeSans",
+                "FreeSerif",
+                "Liberation Mono",
+                "Liberation Sans",
+                "Liberation Serif",
+                "Lucida Console",
+                "Lucida Sans",
+                "Lucida Sans Unicode",
+                "Microsoft Sans Seri",
+                "Monaco",
+                "Segoe UI",
+                "Tahoma",
+                "Ubuntu",
             ]
         self.font_family_combo.addItems(system_fonts)
 
         # Imposta il font corrente dalle impostazioni o usa Arial come default
-        current_font = get_setting('main_font_family', 'Arial')
+        current_font = get_setting("main_font_family", "Arial")
         if current_font in system_fonts:
             self.font_family_combo.setCurrentText(current_font)
         else:
@@ -655,7 +762,7 @@ class SettingsDialog(QDialog):
         self.font_size_spin = QSpinBox()
         self.font_size_spin.setRange(8, 24)
         # Carica la dimensione font dalle impostazioni esistenti
-        current_font_size = get_setting('main_font_size', 14)
+        current_font_size = get_setting("main_font_size", 14)
         self.font_size_spin.setValue(current_font_size)
         self.font_size_spin.setSuffix(" pt")
         font_size_layout.addWidget(self.font_size_spin)
@@ -665,16 +772,16 @@ class SettingsDialog(QDialog):
         font_weight_layout = QHBoxLayout()
         font_weight_layout.addWidget(QLabel("Spessore font:"))
         self.font_weight_combo = QComboBox()
-        self.font_weight_combo.addItems(["Normale", "Grassetto", "Corsivo", "Grassetto Corsivo"])
+        self.font_weight_combo.addItems(
+            ["Normale", "Grassetto", "Corsivo", "Grassetto Corsivo"]
+        )
         # Carica il peso font dalle impostazioni esistenti
-        current_font_weight = get_setting('main_font_weight', 'Normale')
+        current_font_weight = get_setting("main_font_weight", "Normale")
         self.font_weight_combo.setCurrentText(current_font_weight)
         font_weight_layout.addWidget(self.font_weight_combo)
         font_layout.addLayout(font_weight_layout)
 
         scroll_layout.addWidget(font_group)
-
-
 
         # === SEZIONE ANTEPRIMA (Stile Windows XP) ===
         preview_group = QGroupBox("👁️ Anteprima Finestra Demo")
@@ -684,13 +791,15 @@ class SettingsDialog(QDialog):
         # Finestra demo professionale (simula una finestra dell'app)
         demo_window = QFrame()
         demo_window.setFrameStyle(QFrame.Shape.Box)
-        demo_window.setStyleSheet("""
+        demo_window.setStyleSheet(
+            """
             QFrame {
                 background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f0f0f0, stop:1 #e0e0e0);
                 border: 2px solid #808080;
                 border-radius: 5px;
             }
-        """)
+        """
+        )
         demo_layout = QVBoxLayout(demo_window)
         demo_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -706,11 +815,15 @@ class SettingsDialog(QDialog):
         title_bar.addStretch()
         minimize_button = QPushButton("_")
         minimize_button.setFixedSize(25, 20)
-        minimize_button.setStyleSheet("QPushButton { background-color: #c0c0c0; border: 1px solid #808080; } QPushButton:hover { background-color: #d0d0d0; }")
+        minimize_button.setStyleSheet(
+            "QPushButton { background-color: #c0c0c0; border: 1px solid #808080; } QPushButton:hover { background-color: #d0d0d0; }"
+        )
         title_bar.addWidget(minimize_button)
         close_button = QPushButton("X")
         close_button.setFixedSize(25, 20)
-        close_button.setStyleSheet("QPushButton { background-color: #c0c0c0; border: 1px solid #808080; color: red; font-weight: bold; } QPushButton:hover { background-color: #ffcccc; }")
+        close_button.setStyleSheet(
+            "QPushButton { background-color: #c0c0c0; border: 1px solid #808080; color: red; font-weight: bold; } QPushButton:hover { background-color: #ffcccc; }"
+        )
         title_bar.addWidget(close_button)
         demo_layout.addLayout(title_bar)
 
@@ -718,15 +831,21 @@ class SettingsDialog(QDialog):
         menu_bar = QHBoxLayout()
         menu_bar.setContentsMargins(5, 0, 5, 0)
         file_menu = QPushButton("File")
-        file_menu.setStyleSheet("QPushButton { background-color: transparent; color: black; border: none; text-align: left; padding: 2px 10px; } QPushButton:hover { background-color: #e0e0e0; }")
+        file_menu.setStyleSheet(
+            "QPushButton { background-color: transparent; color: black; border: none; text-align: left; padding: 2px 10px; } QPushButton:hover { background-color: #e0e0e0; }"
+        )
         file_menu.clicked.connect(lambda: self.change_demo_color("menu"))
         menu_bar.addWidget(file_menu)
         edit_menu = QPushButton("Modifica")
-        edit_menu.setStyleSheet("QPushButton { background-color: transparent; color: black; border: none; text-align: left; padding: 2px 10px; } QPushButton:hover { background-color: #e0e0e0; }")
+        edit_menu.setStyleSheet(
+            "QPushButton { background-color: transparent; color: black; border: none; text-align: left; padding: 2px 10px; } QPushButton:hover { background-color: #e0e0e0; }"
+        )
         edit_menu.clicked.connect(lambda: self.change_demo_color("menu"))
         menu_bar.addWidget(edit_menu)
         view_menu = QPushButton("Visualizza")
-        view_menu.setStyleSheet("QPushButton { background-color: transparent; color: black; border: none; text-align: left; padding: 2px 10px; } QPushButton:hover { background-color: #e0e0e0; }")
+        view_menu.setStyleSheet(
+            "QPushButton { background-color: transparent; color: black; border: none; text-align: left; padding: 2px 10px; } QPushButton:hover { background-color: #e0e0e0; }"
+        )
         view_menu.clicked.connect(lambda: self.change_demo_color("menu"))
         menu_bar.addWidget(view_menu)
         menu_bar.addStretch()
@@ -737,17 +856,23 @@ class SettingsDialog(QDialog):
         toolbar.setContentsMargins(5, 0, 5, 5)
         self.toolbar_button1 = QPushButton("📂")
         self.toolbar_button1.setFixedSize(30, 30)
-        self.toolbar_button1.setStyleSheet("QPushButton { background-color: #f0f0f0; border: 1px solid #c0c0c0; } QPushButton:hover { background-color: #e0e0e0; }")
+        self.toolbar_button1.setStyleSheet(
+            "QPushButton { background-color: #f0f0f0; border: 1px solid #c0c0c0; } QPushButton:hover { background-color: #e0e0e0; }"
+        )
         self.toolbar_button1.clicked.connect(lambda: self.change_demo_color("toolbar"))
         toolbar.addWidget(self.toolbar_button1)
         self.toolbar_button2 = QPushButton("💾")
         self.toolbar_button2.setFixedSize(30, 30)
-        self.toolbar_button2.setStyleSheet("QPushButton { background-color: #f0f0f0; border: 1px solid #c0c0c0; } QPushButton:hover { background-color: #e0e0e0; }")
+        self.toolbar_button2.setStyleSheet(
+            "QPushButton { background-color: #f0f0f0; border: 1px solid #c0c0c0; } QPushButton:hover { background-color: #e0e0e0; }"
+        )
         self.toolbar_button2.clicked.connect(lambda: self.change_demo_color("toolbar"))
         toolbar.addWidget(self.toolbar_button2)
         self.toolbar_button3 = QPushButton("🔍")
         self.toolbar_button3.setFixedSize(30, 30)
-        self.toolbar_button3.setStyleSheet("QPushButton { background-color: #f0f0f0; border: 1px solid #c0c0c0; } QPushButton:hover { background-color: #e0e0e0; }")
+        self.toolbar_button3.setStyleSheet(
+            "QPushButton { background-color: #f0f0f0; border: 1px solid #c0c0c0; } QPushButton:hover { background-color: #e0e0e0; }"
+        )
         self.toolbar_button3.clicked.connect(lambda: self.change_demo_color("toolbar"))
         toolbar.addWidget(self.toolbar_button3)
         toolbar.addStretch()
@@ -760,15 +885,21 @@ class SettingsDialog(QDialog):
         # Pannello sinistro (albero o lista)
         left_panel = QVBoxLayout()
         left_label = QPushButton("Progetti")
-        left_label.setStyleSheet("font-weight: bold; color: black; padding: 5px; border: none; background: transparent; text-align: left;")
+        left_label.setStyleSheet(
+            "font-weight: bold; color: black; padding: 5px; border: none; background: transparent; text-align: left;"
+        )
         left_label.clicked.connect(lambda: self.change_demo_color("panel"))
         left_panel.addWidget(left_label)
         self.left_item1 = QPushButton("📄 Documento 1")
-        self.left_item1.setStyleSheet("color: black; padding: 2px 5px; border: none; background: transparent; text-align: left;")
+        self.left_item1.setStyleSheet(
+            "color: black; padding: 2px 5px; border: none; background: transparent; text-align: left;"
+        )
         self.left_item1.clicked.connect(lambda: self.change_demo_color("item"))
         left_panel.addWidget(self.left_item1)
         self.left_item2 = QPushButton("📄 Documento 2")
-        self.left_item2.setStyleSheet("color: black; padding: 2px 5px; border: none; background: transparent; text-align: left;")
+        self.left_item2.setStyleSheet(
+            "color: black; padding: 2px 5px; border: none; background: transparent; text-align: left;"
+        )
         self.left_item2.clicked.connect(lambda: self.change_demo_color("item"))
         left_panel.addWidget(self.left_item2)
         left_panel.addStretch()
@@ -783,12 +914,18 @@ class SettingsDialog(QDialog):
         # Area centrale (editor)
         center_area = QVBoxLayout()
         center_label = QPushButton("Editor di Testo")
-        center_label.setStyleSheet("font-weight: bold; color: black; padding: 5px; border: none; background: transparent; text-align: left;")
+        center_label.setStyleSheet(
+            "font-weight: bold; color: black; padding: 5px; border: none; background: transparent; text-align: left;"
+        )
         center_label.clicked.connect(lambda: self.change_demo_color("panel"))
         center_area.addWidget(center_label)
-        self.demo_text = QLabel("Questo è il contenuto dell'editor.\nClicca sui pulsanti per cambiare i colori.")
+        self.demo_text = QLabel(
+            "Questo è il contenuto dell'editor.\nClicca sui pulsanti per cambiare i colori."
+        )
         self.demo_text.setWordWrap(True)
-        self.demo_text.setStyleSheet("color: black; padding: 10px; background-color: white; border: 1px solid #c0c0c0; min-height: 60px;")
+        self.demo_text.setStyleSheet(
+            "color: black; padding: 10px; background-color: white; border: 1px solid #c0c0c0; min-height: 60px;"
+        )
         center_area.addWidget(self.demo_text)
         content_area.addLayout(center_area, 3)
 
@@ -797,12 +934,16 @@ class SettingsDialog(QDialog):
         # Barra di stato
         status_bar = QHBoxLayout()
         status_bar.setContentsMargins(5, 0, 5, 5)
-        self.status_label = QLabel("Pronto - Clicca sugli elementi per personalizzare i colori")
+        self.status_label = QLabel(
+            "Pronto - Clicca sugli elementi per personalizzare i colori"
+        )
         self.status_label.setStyleSheet("color: black; padding: 2px;")
         status_bar.addWidget(self.status_label)
         status_bar.addStretch()
         self.status_button = QPushButton("Info")
-        self.status_button.setStyleSheet("QPushButton { background-color: #f0f0f0; border: 1px solid #c0c0c0; padding: 2px 10px; } QPushButton:hover { background-color: #e0e0e0; }")
+        self.status_button.setStyleSheet(
+            "QPushButton { background-color: #f0f0f0; border: 1px solid #c0c0c0; padding: 2px 10px; } QPushButton:hover { background-color: #e0e0e0; }"
+        )
         self.status_button.clicked.connect(lambda: self.change_demo_color("status"))
         status_bar.addWidget(self.status_button)
         demo_layout.addLayout(status_bar)
@@ -810,11 +951,11 @@ class SettingsDialog(QDialog):
         preview_layout.addWidget(demo_window)
 
         # Istruzioni
-        instructions = QLabel("Clicca sugli elementi della finestra demo per cambiarne i colori!")
+        instructions = QLabel(
+            "Clicca sugli elementi della finestra demo per cambiarne i colori!"
+        )
         instructions.setStyleSheet("color: #666; font-style: italic; padding: 5px;")
         preview_layout.addWidget(instructions)
-
-
 
         scroll_layout.addWidget(preview_group)
 
@@ -823,13 +964,17 @@ class SettingsDialog(QDialog):
 
         # Pulsante per applicare le modifiche
         apply_button = QPushButton("✅ Applica Modifiche")
-        apply_button.setStyleSheet("QPushButton { background-color: #28a745; color: white; font-weight: bold; padding: 12px 24px; min-width: 200px; min-height: 45px; } QPushButton:hover { background-color: #218838; }")
+        apply_button.setStyleSheet(
+            "QPushButton { background-color: #28a745; color: white; font-weight: bold; padding: 12px 24px; min-width: 200px; min-height: 45px; } QPushButton:hover { background-color: #218838; }"
+        )
         apply_button.clicked.connect(self.apply_personalizations)
         actions_layout.addWidget(apply_button)
 
         # Pulsante per ripristinare i valori predefiniti
         reset_button = QPushButton("🔄 Ripristina Predefiniti")
-        reset_button.setStyleSheet("QPushButton { background-color: #fd7e14; color: white; font-weight: bold; padding: 12px 24px; min-width: 200px; min-height: 45px; } QPushButton:hover { background-color: #e8680f; }")
+        reset_button.setStyleSheet(
+            "QPushButton { background-color: #fd7e14; color: white; font-weight: bold; padding: 12px 24px; min-width: 200px; min-height: 45px; } QPushButton:hover { background-color: #e8680f; }"
+        )
         reset_button.clicked.connect(self.reset_personalizations)
         actions_layout.addWidget(reset_button)
 
@@ -848,11 +993,15 @@ class SettingsDialog(QDialog):
         from PyQt6.QtWidgets import QColorDialog
 
         current_color = button.palette().color(button.backgroundRole())
-        color = QColorDialog.getColor(current_color, self, f"Scegli colore per {category}")
+        color = QColorDialog.getColor(
+            current_color, self, f"Scegli colore per {category}"
+        )
 
         if color.isValid():
             color_hex = color.name()
-            button.setStyleSheet(f"background-color: {color_hex}; border: 1px solid #ccc;")
+            button.setStyleSheet(
+                f"background-color: {color_hex}; border: 1px solid #ccc;"
+            )
             # Aggiorna il colore del pulsante (senza salvare etichette)
 
     def choose_button_color(self, category, button, color_type):
@@ -860,32 +1009,40 @@ class SettingsDialog(QDialog):
         from PyQt6.QtWidgets import QColorDialog
 
         current_color = button.palette().color(button.backgroundRole())
-        color = QColorDialog.getColor(current_color, self, "Scegli colore {color_type} per {category}")
+        color = QColorDialog.getColor(
+            current_color, self, "Scegli colore {color_type} per {category}"
+        )
 
         if color.isValid():
             color_hex = color.name()
-            button.setStyleSheet("background-color: {color_hex}; color: white; border: none; border-radius: 4px;")
+            button.setStyleSheet(
+                "background-color: {color_hex}; color: white; border: none; border-radius: 4px;"
+            )
 
     def choose_button_text_color(self, button_id, button):
         """Permette di scegliere un colore del testo per un pulsante specifico."""
         from PyQt6.QtWidgets import QColorDialog
 
         current_color = button.palette().color(button.backgroundRole())
-        color = QColorDialog.getColor(current_color, self, f"Scegli colore testo per {button_id}")
+        color = QColorDialog.getColor(
+            current_color, self, f"Scegli colore testo per {button_id}"
+        )
 
         if color.isValid():
             color_hex = color.name()
-            button.setStyleSheet(f"background-color: {color_hex}; border: 2px solid #000000; border-radius: 4px;")
+            button.setStyleSheet(
+                f"background-color: {color_hex}; border: 2px solid #000000; border-radius: 4px;"
+            )
 
             # Trova la label corrispondente e aggiorna il testo
             # Cerca in tutti i dizionari di pulsanti
             all_button_dicts = [
-                getattr(self, 'main_button_color_buttons', {}),
-                getattr(self, 'transcription_button_colors', {}),
-                getattr(self, 'ai_button_colors', {}),
-                getattr(self, 'knowledge_button_colors', {}),
-                getattr(self, 'utility_button_colors', {}),
-                getattr(self, 'iot_button_colors', {})
+                getattr(self, "main_button_color_buttons", {}),
+                getattr(self, "transcription_button_colors", {}),
+                getattr(self, "ai_button_colors", {}),
+                getattr(self, "knowledge_button_colors", {}),
+                getattr(self, "utility_button_colors", {}),
+                getattr(self, "iot_button_colors", {}),
             ]
 
             for button_dict in all_button_dicts:
@@ -906,16 +1063,22 @@ class SettingsDialog(QDialog):
                 "Normale": "normal",
                 "Grassetto": "bold",
                 "Corsivo": "italic",
-                "Grassetto Corsivo": "bold italic"
+                "Grassetto Corsivo": "bold italic",
             }
 
             font_style = f"font-family: '{font_family}'; font-size: {font_size}pt; font-weight: {weight_map.get(font_weight, 'normal')};"
             self.demo_text.setStyleSheet(f"color: black; padding: 5px; {font_style}")
 
-            QMessageBox.information(self, "Anteprima", "Anteprima aggiornata con le impostazioni correnti!")
+            QMessageBox.information(
+                self, "Anteprima", "Anteprima aggiornata con le impostazioni correnti!"
+            )
 
         except Exception as e:
-            QMessageBox.warning(self, "Errore Anteprima", f"Errore nell'aggiornamento dell'anteprima:\n{str(e)}")
+            QMessageBox.warning(
+                self,
+                "Errore Anteprima",
+                f"Errore nell'aggiornamento dell'anteprima:\n{str(e)}",
+            )
 
     def change_demo_color(self, element):
         """Cambia il colore di un elemento della demo."""
@@ -923,16 +1086,28 @@ class SettingsDialog(QDialog):
 
         if element == "button":
             # Per pulsanti toolbar
-            current_color = self.toolbar_button1.palette().color(self.toolbar_button1.backgroundRole())
-            color = QColorDialog.getColor(current_color, self, "Scegli colore per pulsanti demo")
+            current_color = self.toolbar_button1.palette().color(
+                self.toolbar_button1.backgroundRole()
+            )
+            color = QColorDialog.getColor(
+                current_color, self, "Scegli colore per pulsanti demo"
+            )
             if color.isValid():
                 color_hex = color.name()
-                self.toolbar_button1.setStyleSheet(f"QPushButton {{ background-color: {color_hex}; border: 1px solid #c0c0c0; }} QPushButton:hover {{ background-color: {self.lighten_color(color_hex)}; }}")
-                self.toolbar_button2.setStyleSheet(f"QPushButton {{ background-color: {color_hex}; border: 1px solid #c0c0c0; }} QPushButton:hover {{ background-color: {self.lighten_color(color_hex)}; }}")
-                self.toolbar_button3.setStyleSheet(f"QPushButton {{ background-color: {color_hex}; border: 1px solid #c0c0c0; }} QPushButton:hover {{ background-color: {self.lighten_color(color_hex)}; }}")
+                self.toolbar_button1.setStyleSheet(
+                    f"QPushButton {{ background-color: {color_hex}; border: 1px solid #c0c0c0; }} QPushButton:hover {{ background-color: {self.lighten_color(color_hex)}; }}"
+                )
+                self.toolbar_button2.setStyleSheet(
+                    f"QPushButton {{ background-color: {color_hex}; border: 1px solid #c0c0c0; }} QPushButton:hover {{ background-color: {self.lighten_color(color_hex)}; }}"
+                )
+                self.toolbar_button3.setStyleSheet(
+                    f"QPushButton {{ background-color: {color_hex}; border: 1px solid #c0c0c0; }} QPushButton:hover {{ background-color: {self.lighten_color(color_hex)}; }}"
+                )
         elif element == "menu":
             # Per barra menu
-            color = QColorDialog.getColor(Qt.GlobalColor.white, self, "Scegli colore per barra menu")
+            color = QColorDialog.getColor(
+                Qt.GlobalColor.white, self, "Scegli colore per barra menu"
+            )
             if color.isValid():
                 color_hex = color.name()
                 # Aggiorna stili menu (simplificato)
@@ -942,34 +1117,48 @@ class SettingsDialog(QDialog):
             pass
         elif element == "panel":
             # Per pannelli
-            color = QColorDialog.getColor(Qt.GlobalColor.lightGray, self, "Scegli colore per pannelli")
+            color = QColorDialog.getColor(
+                Qt.GlobalColor.lightGray, self, "Scegli colore per pannelli"
+            )
             if color.isValid():
                 color_hex = color.name()
-                self.demo_text.setStyleSheet(f"color: black; padding: 10px; background-color: {color_hex}; border: 1px solid #c0c0c0; min-height: 60px;")
+                self.demo_text.setStyleSheet(
+                    f"color: black; padding: 10px; background-color: {color_hex}; border: 1px solid #c0c0c0; min-height: 60px;"
+                )
         elif element == "text":
             # Per testo
-            color = QColorDialog.getColor(Qt.GlobalColor.black, self, "Scegli colore per testo")
+            color = QColorDialog.getColor(
+                Qt.GlobalColor.black, self, "Scegli colore per testo"
+            )
             if color.isValid():
                 color_hex = color.name()
-                self.demo_text.setStyleSheet(f"color: {color_hex}; padding: 10px; background-color: white; border: 1px solid #c0c0c0; min-height: 60px;")
+                self.demo_text.setStyleSheet(
+                    f"color: {color_hex}; padding: 10px; background-color: white; border: 1px solid #c0c0c0; min-height: 60px;"
+                )
         elif element == "item":
             # Per elementi lista
-            color = QColorDialog.getColor(Qt.GlobalColor.black, self, "Scegli colore per elementi lista")
+            color = QColorDialog.getColor(
+                Qt.GlobalColor.black, self, "Scegli colore per elementi lista"
+            )
             if color.isValid():
                 color_hex = color.name()
                 self.left_item1.setStyleSheet(f"color: {color_hex}; padding: 2px 5px;")
                 self.left_item2.setStyleSheet(f"color: {color_hex}; padding: 2px 5px;")
         elif element == "status":
             # Per barra stato
-            color = QColorDialog.getColor(Qt.GlobalColor.white, self, "Scegli colore per barra stato")
+            color = QColorDialog.getColor(
+                Qt.GlobalColor.white, self, "Scegli colore per barra stato"
+            )
             if color.isValid():
                 color_hex = color.name()
-                self.status_label.setStyleSheet(f"color: black; padding: 2px; background-color: {color_hex};")
+                self.status_label.setStyleSheet(
+                    f"color: black; padding: 2px; background-color: {color_hex};"
+                )
 
     def lighten_color(self, color_hex):
         """Schiarisci un colore per hover."""
         # Semplice schiarimento (aggiungi offset)
-        if color_hex.startswith('#') and len(color_hex) == 7:
+        if color_hex.startswith("#") and len(color_hex) == 7:
             r = int(color_hex[1:3], 16)
             g = int(color_hex[3:5], 16)
             b = int(color_hex[5:7], 16)
@@ -978,8 +1167,6 @@ class SettingsDialog(QDialog):
             b = min(255, b + 20)
             return f"#{r:02x}{g:02x}{b:02x}"
         return color_hex
-
-
 
     def apply_personalizations(self):
         """Applica le personalizzazioni all'interfaccia principale e salva nel file settings.json."""
@@ -990,9 +1177,9 @@ class SettingsDialog(QDialog):
             font_weight = self.font_weight_combo.currentText()
 
             # Salva le impostazioni nel file settings.json
-            set_setting('main_font_family', font_family)
-            set_setting('main_font_size', font_size)
-            set_setting('main_font_weight', font_weight)
+            set_setting("main_font_family", font_family)
+            set_setting("main_font_size", font_size)
+            set_setting("main_font_weight", font_weight)
 
             # Salva i colori dei pulsanti
             button_text_colors = {}
@@ -1000,9 +1187,9 @@ class SettingsDialog(QDialog):
             # Per ora, non salvare colori pulsanti specifici (semplificato)
 
             # Salva i colori nel file settings.json
-            colors = get_setting('colors', {})
-            colors['button_text_colors'] = button_text_colors
-            set_setting('colors', colors)
+            colors = get_setting("colors", {})
+            colors["button_text_colors"] = button_text_colors
+            set_setting("colors", colors)
 
             print("✅ Impostazioni font salvate:")
             print("   - Font: {font_family}")
@@ -1011,32 +1198,44 @@ class SettingsDialog(QDialog):
             print("✅ Colori pulsanti salvati: {len(button_text_colors)} pulsanti")
 
             # Qui implementeremo la logica per applicare le modifiche all'interfaccia principale
-            QMessageBox.information(self, "Personalizzazioni Salvate",
-                                      "✅ Le personalizzazioni sono state salvate con successo!\n\n"
-                                      "🎨 Font: {font_family}\n"
-                                      "📏 Dimensione: {font_size}pt\n"
-                                      "💪 Peso: {font_weight}\n\n"
-                                      "⚠️ Riavvia l'applicazione per applicare le modifiche all'interfaccia principale.\n"
-                                      "Le impostazioni sono state salvate nel file settings.json.")
+            QMessageBox.information(
+                self,
+                "Personalizzazioni Salvate",
+                "✅ Le personalizzazioni sono state salvate con successo!\n\n"
+                "🎨 Font: {font_family}\n"
+                "📏 Dimensione: {font_size}pt\n"
+                "💪 Peso: {font_weight}\n\n"
+                "⚠️ Riavvia l'applicazione per applicare le modifiche all'interfaccia principale.\n"
+                "Le impostazioni sono state salvate nel file settings.json.",
+            )
 
         except Exception:
-            QMessageBox.critical(self, "Errore", "Errore nell'applicazione delle personalizzazioni:\n{str(e)}")
+            QMessageBox.critical(
+                self,
+                "Errore",
+                "Errore nell'applicazione delle personalizzazioni:\n{str(e)}",
+            )
 
     def reset_personalizations(self):
         """Ripristina tutte le personalizzazioni ai valori predefiniti dal settings_manager."""
         try:
             # Ripristina font ai valori di default (OpenDyslexic per dislessia)
-            default_font_family = 'OpenDyslexic'
+            default_font_family = "OpenDyslexic"
             default_font_size = 14
-            default_font_weight = 'Normale'
+            default_font_weight = "Normale"
 
             # Imposta i valori di default nei controlli
-            if default_font_family in [self.font_family_combo.itemText(i) for i in range(self.font_family_combo.count())]:
+            if default_font_family in [
+                self.font_family_combo.itemText(i)
+                for i in range(self.font_family_combo.count())
+            ]:
                 self.font_family_combo.setCurrentText(default_font_family)
             else:
                 # Se il font di default non è disponibile, usa il primo della lista
                 if self.font_family_combo.count() > 0:
-                    self.font_family_combo.setCurrentText(self.font_family_combo.itemText(0))
+                    self.font_family_combo.setCurrentText(
+                        self.font_family_combo.itemText(0)
+                    )
 
             self.font_size_spin.setValue(default_font_size)
             self.font_weight_combo.setCurrentText(default_font_weight)
@@ -1046,66 +1245,124 @@ class SettingsDialog(QDialog):
             print("   - Dimensione: {default_font_size}pt")
             print("   - Peso: {default_font_weight}")
 
-            QMessageBox.information(self, "Ripristino Completato",
-                                    "✅ Le personalizzazioni sono state ripristinate ai valori predefiniti!\n\n"
-                                    "🎨 Font: {default_font_family}\n"
-                                    "📏 Dimensione: {default_font_size}pt\n"
-                                    "💪 Peso: {default_font_weight}")
+            QMessageBox.information(
+                self,
+                "Ripristino Completato",
+                "✅ Le personalizzazioni sono state ripristinate ai valori predefiniti!\n\n"
+                "🎨 Font: {default_font_family}\n"
+                "📏 Dimensione: {default_font_size}pt\n"
+                "💪 Peso: {default_font_weight}",
+            )
 
             # Ripristino colori testo rimosso (semplificato)
 
             # Ripristino sfondi semplificato (rimosso)
 
-            QMessageBox.information(self, "Ripristino", "Tutte le personalizzazioni sono state ripristinate ai valori predefiniti!")
+            QMessageBox.information(
+                self,
+                "Ripristino",
+                "Tutte le personalizzazioni sono state ripristinate ai valori predefiniti!",
+            )
 
         except Exception:
-            QMessageBox.critical(self, "Errore", "Errore nel ripristino delle personalizzazioni:\n{str(e)}")
+            QMessageBox.critical(
+                self,
+                "Errore",
+                "Errore nel ripristino delle personalizzazioni:\n{str(e)}",
+            )
 
     def load_current_settings(self):
         """Carica le impostazioni attuali nei controlli."""
         try:
             # Generale
-            self.app_name_edit.setText(get_setting('application.app_name', 'CogniFlow'))
-            self.theme_combo.setCurrentText(get_setting('application.theme', 'Chiaro'))
-            self.bypass_login_checkbox.setChecked(get_setting('startup.bypass_login', False))
+            self.app_name_edit.setText(get_setting("application.app_name", "CogniFlow"))
+            self.theme_combo.setCurrentText(get_setting("application.theme", "Chiaro"))
+            self.bypass_login_checkbox.setChecked(
+                get_setting("startup.bypass_login", False)
+            )
 
             # UI
-            self.window_width_spin.setValue(get_setting('ui.window_width', 1200))
-            self.window_height_spin.setValue(get_setting('ui.window_height', 800))
+            self.window_width_spin.setValue(get_setting("ui.window_width", 1200))
+            self.window_height_spin.setValue(get_setting("ui.window_height", 800))
 
             # AI
-            self.ai_trigger_edit.setText(get_setting('ai.ai_trigger', '++++'))
-            self.ai_model_combo.setCurrentText(get_setting('ai.selected_ai_model', 'gemma:2b'))
+            self.ai_trigger_edit.setText(get_setting("ai.ai_trigger", "++++"))
+            self.ai_model_combo.setCurrentText(
+                get_setting("ai.selected_ai_model", "gemma:2b")
+            )
 
             # Test
-            self.test_text_edit.setText(get_setting('test.test_text', 'Test di sviluppo'))
-            self.test_number_spin.setValue(get_setting('test.test_number', 42))
-            self.test_combo.setCurrentText(get_setting('test.test_option', 'Opzione 1'))
-            self.test_checkbox.setChecked(get_setting('test.test_enabled', True))
-
+            self.test_text_edit.setText(
+                get_setting("test.test_text", "Test di sviluppo")
+            )
+            self.test_number_spin.setValue(get_setting("test.test_number", 42))
+            self.test_combo.setCurrentText(get_setting("test.test_option", "Opzione 1"))
+            self.test_checkbox.setChecked(get_setting("test.test_enabled", True))
 
             # MediaPipe
-            self.mediapipe_service_enabled.setChecked(get_setting("mediapipe.service_enabled", True))
-            self.mediapipe_service_url.setText(get_setting("mediapipe.service_url", "http://localhost:8001"))
-            self.detection_type_combo.setCurrentText(get_setting("mediapipe.detection_type", "Pose"))
-            self.pose_detection_enabled.setChecked(get_setting("mediapipe.pose_detection_enabled", True))
-            self.hand_detection_enabled.setChecked(get_setting("mediapipe.hand_detection_enabled", True))
-            self.face_detection_enabled.setChecked(get_setting("mediapipe.face_detection_enabled", False))
-            self.gesture_recognition_enabled.setChecked(get_setting("mediapipe.gesture_recognition_enabled", True))
-            self.facial_expression_enabled.setChecked(get_setting("mediapipe.facial_expression_enabled", False))
-            self.left_hand_tracking.setChecked(get_setting("mediapipe.left_hand_tracking_enabled", False))
-            self.right_hand_tracking.setChecked(get_setting("mediapipe.right_hand_tracking_enabled", True))
-            self.hand_confidence_slider.setValue(get_setting("mediapipe.hand_confidence", 50))
-            self.face_confidence_slider.setValue(get_setting("mediapipe.face_confidence", 50))
-            self.gesture_timeout_spin.setValue(get_setting("mediapipe.gesture_timeout", 3))
-            self.gesture_sensitivity_slider.setValue(get_setting("mediapipe.gesture_sensitivity", 5))
-            self.show_hand_landmarks.setChecked(get_setting("mediapipe.show_hand_landmarks", True))
-            self.show_pose_landmarks.setChecked(get_setting("mediapipe.show_pose_landmarks", True))
-            self.show_expressions.setChecked(get_setting("mediapipe.show_expressions", True))
-            self.show_bounding_boxes.setChecked(get_setting("mediapipe.show_bounding_boxes", True))
-            self.detect_glasses.setChecked(get_setting("mediapipe.detect_glasses", True))
-            self.human_min_area_spin.setValue(get_setting("mediapipe.human_min_area", 10000))
-            self.human_max_area_spin.setValue(get_setting("mediapipe.human_max_area", 300000))
+            self.mediapipe_service_enabled.setChecked(
+                get_setting("mediapipe.service_enabled", True)
+            )
+            self.mediapipe_service_url.setText(
+                get_setting("mediapipe.service_url", "http://localhost:8001")
+            )
+            self.detection_type_combo.setCurrentText(
+                get_setting("mediapipe.detection_type", "Pose")
+            )
+            self.pose_detection_enabled.setChecked(
+                get_setting("mediapipe.pose_detection_enabled", True)
+            )
+            self.hand_detection_enabled.setChecked(
+                get_setting("mediapipe.hand_detection_enabled", True)
+            )
+            self.face_detection_enabled.setChecked(
+                get_setting("mediapipe.face_detection_enabled", False)
+            )
+            self.gesture_recognition_enabled.setChecked(
+                get_setting("mediapipe.gesture_recognition_enabled", True)
+            )
+            self.facial_expression_enabled.setChecked(
+                get_setting("mediapipe.facial_expression_enabled", False)
+            )
+            self.left_hand_tracking.setChecked(
+                get_setting("mediapipe.left_hand_tracking_enabled", False)
+            )
+            self.right_hand_tracking.setChecked(
+                get_setting("mediapipe.right_hand_tracking_enabled", True)
+            )
+            self.hand_confidence_slider.setValue(
+                get_setting("mediapipe.hand_confidence", 50)
+            )
+            self.face_confidence_slider.setValue(
+                get_setting("mediapipe.face_confidence", 50)
+            )
+            self.gesture_timeout_spin.setValue(
+                get_setting("mediapipe.gesture_timeout", 3)
+            )
+            self.gesture_sensitivity_slider.setValue(
+                get_setting("mediapipe.gesture_sensitivity", 5)
+            )
+            self.show_hand_landmarks.setChecked(
+                get_setting("mediapipe.show_hand_landmarks", True)
+            )
+            self.show_pose_landmarks.setChecked(
+                get_setting("mediapipe.show_pose_landmarks", True)
+            )
+            self.show_expressions.setChecked(
+                get_setting("mediapipe.show_expressions", True)
+            )
+            self.show_bounding_boxes.setChecked(
+                get_setting("mediapipe.show_bounding_boxes", True)
+            )
+            self.detect_glasses.setChecked(
+                get_setting("mediapipe.detect_glasses", True)
+            )
+            self.human_min_area_spin.setValue(
+                get_setting("mediapipe.human_min_area", 10000)
+            )
+            self.human_max_area_spin.setValue(
+                get_setting("mediapipe.human_max_area", 300000)
+            )
             self.skin_min_hue.setValue(get_setting("mediapipe.skin_min_hue", 0))
             self.skin_min_sat.setValue(get_setting("mediapipe.skin_min_sat", 20))
             self.skin_min_val.setValue(get_setting("mediapipe.skin_min_val", 70))
@@ -1114,57 +1371,96 @@ class SettingsDialog(QDialog):
             self.skin_max_val.setValue(get_setting("mediapipe.skin_max_val", 255))
 
         except Exception as e:
-            QMessageBox.warning(self, "Errore", f"Errore nel caricamento delle impostazioni: {e}")
+            QMessageBox.warning(
+                self, "Errore", f"Errore nel caricamento delle impostazioni: {e}"
+            )
 
     def save_settings(self):
         """Salva le impostazioni modificate."""
         try:
             # Generale
-            set_setting('application.app_name', self.app_name_edit.text())
-            set_setting('application.theme', self.theme_combo.currentText())
-            set_setting('startup.bypass_login', self.bypass_login_checkbox.isChecked())
+            set_setting("application.app_name", self.app_name_edit.text())
+            set_setting("application.theme", self.theme_combo.currentText())
+            set_setting("startup.bypass_login", self.bypass_login_checkbox.isChecked())
 
             # UI
-            set_setting('ui.window_width', self.window_width_spin.value())
-            set_setting('ui.window_height', self.window_height_spin.value())
+            set_setting("ui.window_width", self.window_width_spin.value())
+            set_setting("ui.window_height", self.window_height_spin.value())
 
             # Font settings (aggiunto per salvare tipo, dimensione e spessore font)
-            if hasattr(self, 'font_family_combo'):
-                set_setting('main_font_family', self.font_family_combo.currentText())
-            if hasattr(self, 'font_size_spin'):
-                set_setting('main_font_size', self.font_size_spin.value())
-            if hasattr(self, 'font_weight_combo'):
-                set_setting('main_font_weight', self.font_weight_combo.currentText())
+            if hasattr(self, "font_family_combo"):
+                set_setting("main_font_family", self.font_family_combo.currentText())
+            if hasattr(self, "font_size_spin"):
+                set_setting("main_font_size", self.font_size_spin.value())
+            if hasattr(self, "font_weight_combo"):
+                set_setting("main_font_weight", self.font_weight_combo.currentText())
 
             # AI
-            set_setting('ai.ai_trigger', self.ai_trigger_edit.text())
-            set_setting('ai.selected_ai_model', self.ai_model_combo.currentText())
+            set_setting("ai.ai_trigger", self.ai_trigger_edit.text())
+            set_setting("ai.selected_ai_model", self.ai_model_combo.currentText())
 
             # Test
-            set_setting('test.test_text', self.test_text_edit.text())
-            set_setting('test.test_number', self.test_number_spin.value())
-            set_setting('test.test_option', self.test_combo.currentText())
-            set_setting('test.test_enabled', self.test_checkbox.isChecked())
+            set_setting("test.test_text", self.test_text_edit.text())
+            set_setting("test.test_number", self.test_number_spin.value())
+            set_setting("test.test_option", self.test_combo.currentText())
+            set_setting("test.test_enabled", self.test_checkbox.isChecked())
 
             # MediaPipe
-            set_setting("mediapipe.service_enabled", self.mediapipe_service_enabled.isChecked())
+            set_setting(
+                "mediapipe.service_enabled", self.mediapipe_service_enabled.isChecked()
+            )
             set_setting("mediapipe.service_url", self.mediapipe_service_url.text())
-            set_setting("mediapipe.detection_type", self.detection_type_combo.currentText())
-            set_setting("mediapipe.pose_detection_enabled", self.pose_detection_enabled.isChecked())
-            set_setting("mediapipe.hand_detection_enabled", self.hand_detection_enabled.isChecked())
-            set_setting("mediapipe.face_detection_enabled", self.face_detection_enabled.isChecked())
-            set_setting("mediapipe.gesture_recognition_enabled", self.gesture_recognition_enabled.isChecked())
-            set_setting("mediapipe.facial_expression_enabled", self.facial_expression_enabled.isChecked())
-            set_setting("mediapipe.left_hand_tracking_enabled", self.left_hand_tracking.isChecked())
-            set_setting("mediapipe.right_hand_tracking_enabled", self.right_hand_tracking.isChecked())
-            set_setting("mediapipe.hand_confidence", self.hand_confidence_slider.value())
-            set_setting("mediapipe.face_confidence", self.face_confidence_slider.value())
+            set_setting(
+                "mediapipe.detection_type", self.detection_type_combo.currentText()
+            )
+            set_setting(
+                "mediapipe.pose_detection_enabled",
+                self.pose_detection_enabled.isChecked(),
+            )
+            set_setting(
+                "mediapipe.hand_detection_enabled",
+                self.hand_detection_enabled.isChecked(),
+            )
+            set_setting(
+                "mediapipe.face_detection_enabled",
+                self.face_detection_enabled.isChecked(),
+            )
+            set_setting(
+                "mediapipe.gesture_recognition_enabled",
+                self.gesture_recognition_enabled.isChecked(),
+            )
+            set_setting(
+                "mediapipe.facial_expression_enabled",
+                self.facial_expression_enabled.isChecked(),
+            )
+            set_setting(
+                "mediapipe.left_hand_tracking_enabled",
+                self.left_hand_tracking.isChecked(),
+            )
+            set_setting(
+                "mediapipe.right_hand_tracking_enabled",
+                self.right_hand_tracking.isChecked(),
+            )
+            set_setting(
+                "mediapipe.hand_confidence", self.hand_confidence_slider.value()
+            )
+            set_setting(
+                "mediapipe.face_confidence", self.face_confidence_slider.value()
+            )
             set_setting("mediapipe.gesture_timeout", self.gesture_timeout_spin.value())
-            set_setting("mediapipe.gesture_sensitivity", self.gesture_sensitivity_slider.value())
-            set_setting("mediapipe.show_hand_landmarks", self.show_hand_landmarks.isChecked())
-            set_setting("mediapipe.show_pose_landmarks", self.show_pose_landmarks.isChecked())
+            set_setting(
+                "mediapipe.gesture_sensitivity", self.gesture_sensitivity_slider.value()
+            )
+            set_setting(
+                "mediapipe.show_hand_landmarks", self.show_hand_landmarks.isChecked()
+            )
+            set_setting(
+                "mediapipe.show_pose_landmarks", self.show_pose_landmarks.isChecked()
+            )
             set_setting("mediapipe.show_expressions", self.show_expressions.isChecked())
-            set_setting("mediapipe.show_bounding_boxes", self.show_bounding_boxes.isChecked())
+            set_setting(
+                "mediapipe.show_bounding_boxes", self.show_bounding_boxes.isChecked()
+            )
             set_setting("mediapipe.detect_glasses", self.detect_glasses.isChecked())
             set_setting("mediapipe.human_min_area", self.human_min_area_spin.value())
             set_setting("mediapipe.human_max_area", self.human_max_area_spin.value())
@@ -1175,10 +1471,13 @@ class SettingsDialog(QDialog):
             set_setting("mediapipe.skin_max_sat", self.skin_max_sat.value())
             set_setting("mediapipe.skin_max_val", self.skin_max_val.value())
 
-
             print("✅ Tutte le impostazioni salvate nel file settings.json")
-            QMessageBox.information(self, "Successo", "Impostazioni salvate con successo!")
+            QMessageBox.information(
+                self, "Successo", "Impostazioni salvate con successo!"
+            )
             self.accept()
 
         except Exception:
-            QMessageBox.critical(self, "Errore", "Errore nel salvataggio delle impostazioni: {e}")
+            QMessageBox.critical(
+                self, "Errore", "Errore nel salvataggio delle impostazioni: {e}"
+            )

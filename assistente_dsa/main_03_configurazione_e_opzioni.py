@@ -12,6 +12,7 @@ from typing import Any
 # Import del cache manager per ottimizzazioni
 try:
     from core.cache_manager import get_cache_manager
+
     cache_manager = get_cache_manager()
     CACHE_AVAILABLE = True
 except ImportError:
@@ -29,7 +30,9 @@ class ConfigManager:
     def __init__(self, config_dir: str | None = None):
         if config_dir is None:
             # Usa il percorso assoluto della cartella Save principale
-            self.config_dir: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "SETUP_TOOLS_&_Data")
+            self.config_dir: str = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)), "Save", "SETUP_TOOLS_&_Data"
+            )
         else:
             self.config_dir = config_dir
         self.settings_file: str = os.path.join(self.config_dir, "settings.json")
@@ -50,23 +53,43 @@ class ConfigManager:
                 "app_name": "CogniFlow",
                 "theme": "Chiaro",
                 "interface_language": "Italiano",
-                "version": "1.0.0"
+                "version": "1.0.0",
             },
             "themes": {
                 "available": [
-                    {"name": "Professionale", "icon": "💼", "description": "Per professionisti e studenti universitari"},
-                    {"name": "Studente", "icon": "🎒", "description": "Per ragazzi che vanno a scuola"},
-                    {"name": "Chimico", "icon": "🥽", "description": "Per chimici o subacquei"},
-                    {"name": "Donna", "icon": "👝", "description": "Per donne che hanno tutto in borsa"},
-                    {"name": "Artigiano", "icon": "🧰", "description": "Per artigiani, cassetta degli attrezzi"},
+                    {
+                        "name": "Professionale",
+                        "icon": "💼",
+                        "description": "Per professionisti e studenti universitari",
+                    },
+                    {
+                        "name": "Studente",
+                        "icon": "🎒",
+                        "description": "Per ragazzi che vanno a scuola",
+                    },
+                    {
+                        "name": "Chimico",
+                        "icon": "🥽",
+                        "description": "Per chimici o subacquei",
+                    },
+                    {
+                        "name": "Donna",
+                        "icon": "👝",
+                        "description": "Per donne che hanno tutto in borsa",
+                    },
+                    {
+                        "name": "Artigiano",
+                        "icon": "🧰",
+                        "description": "Per artigiani, cassetta degli attrezzi",
+                    },
                     {"name": "Specchio", "icon": "🪞", "description": "Tema specchio"},
                     {"name": "Magico", "icon": "🪄", "description": "Tema magico"},
                     {"name": "Pensieri", "icon": "💭", "description": "Tema pensieri"},
                     {"name": "Nuvola", "icon": "🗯", "description": "Tema nuvola"},
                     {"name": "Audio", "icon": "🔊", "description": "Tema audio"},
-                    {"name": "Chat", "icon": "💬", "description": "Tema chat"}
+                    {"name": "Chat", "icon": "💬", "description": "Tema chat"},
                 ],
-                "selected": "Professionale"
+                "selected": "Professionale",
             },
             "ui": {
                 "window_width": 1200,
@@ -78,7 +101,7 @@ class ConfigManager:
                 "button_min_height": 40,
                 "button_icon_position": "top-left",
                 "button_text_position": "right",
-                "tools_panel_visible": True
+                "tools_panel_visible": True,
             },
             "fonts": {
                 "main_font_family": "Arial",
@@ -86,7 +109,7 @@ class ConfigManager:
                 "pensierini_font_family": "Arial",
                 "pensierini_font_size": 10,
                 "default_font_size": 12,
-                "default_pensierini_font_size": 10
+                "default_pensierini_font_size": 10,
             },
             "colors": {
                 "button_text_colors": {
@@ -128,14 +151,14 @@ class ConfigManager:
                     "arduino_button": "#ffffff",
                     "circuit_button": "#ffffff",
                     "screen_share_button": "#ffffff",
-                    "collab_button": "#ffffff"
+                    "collab_button": "#ffffff",
                 },
                 "button_border_colors": {
                     "general_border": "#495057",
                     "toggle_tools_border": "#495057",
                     "save_border": "#495057",
                     "load_border": "#495057",
-                    "add_pensierino_border": "#495057"
+                    "add_pensierino_border": "#495057",
                 },
                 "button_background_colors": {
                     "general_background": "transparent",
@@ -143,29 +166,29 @@ class ConfigManager:
                     "save_background": "transparent",
                     "load_background": "transparent",
                     "add_pensierino_background": "transparent",
-                    "tools_background": "transparent"
+                    "tools_background": "transparent",
                 },
                 "button_hover_colors": {
                     "general_hover": "#e9ecef",
                     "toggle_tools_hover": "#e9ecef",
                     "save_hover": "#e9ecef",
                     "load_hover": "#e9ecef",
-                    "add_pensierino_hover": "#e9ecef"
+                    "add_pensierino_hover": "#e9ecef",
                 },
                 "button_pressed_colors": {
                     "general_pressed": "#dee2e6",
                     "toggle_tools_pressed": "#dee2e6",
                     "save_pressed": "#dee2e6",
                     "load_pressed": "#dee2e6",
-                    "add_pensierino_pressed": "#dee2e6"
-                }
+                    "add_pensierino_pressed": "#dee2e6",
+                },
             },
             "detection_systems": {
                 "hand_detection_system": "Auto (Migliore)",
                 "face_detection_system": "Auto (Migliore)",
                 "gesture_system": "Auto (Migliore)",
                 "hand_detection": True,
-                "face_detection": True
+                "face_detection": True,
             },
             "detection_parameters": {
                 "hand_confidence": 50,
@@ -174,7 +197,7 @@ class ConfigManager:
                 "show_expressions": True,
                 "detect_glasses": True,
                 "gesture_timeout": 3,
-                "gesture_sensitivity": 5
+                "gesture_sensitivity": 5,
             },
             "ai": {
                 "ai_trigger": "++++",
@@ -182,48 +205,68 @@ class ConfigManager:
                 "ollama_url": "http://localhost:11434",
                 "ollama_timeout": 30,
                 "ollama_temperature": 0.7,
-                "ollama_max_tokens": 2000
+                "ollama_max_tokens": 2000,
             },
             "tts": {
                 "tts_language": "it-IT",
                 "tts_engine": "pyttsx3",
                 "tts_speed": 1.0,
                 "tts_pitch": 1.0,
-                "tts_voice_or_lang": "it-IT"
+                "tts_voice_or_lang": "it-IT",
             },
             "gpu": {
                 "gpu_system": "Auto (Migliore)",
                 "gpu_memory_limit": 80,
-                "gpu_filters": True
+                "gpu_filters": True,
             },
             "cpu_monitoring": {
                 "cpu_monitoring_enabled": True,
                 "cpu_threshold_percent": 95.0,
                 "cpu_high_duration_seconds": 30,
                 "cpu_check_interval_seconds": 5,
-                "cpu_signal_type": "SIGTERM"
+                "cpu_signal_type": "SIGTERM",
             },
             "temperature_monitoring": {
                 "temperature_monitoring_enabled": True,
                 "temperature_threshold_celsius": 80.0,
                 "temperature_high_duration_seconds": 60,
-                "temperature_critical_threshold": 90.0
+                "temperature_critical_threshold": 90.0,
             },
             "files": {
-                "settings_file": os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "SETUP_TOOLS_&_Data", "settings.json"),
-                "log_file": os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "LOG", "app.log"),
-                "projects_dir": os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "mia_dispenda_progetti")
+                "settings_file": os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)),
+                    "Save",
+                    "SETUP_TOOLS_&_Data",
+                    "settings.json",
+                ),
+                "log_file": os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)), "Save", "LOG", "app.log"
+                ),
+                "projects_dir": os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)),
+                    "Save",
+                    "mia_dispenda_progetti",
+                ),
             },
             "paths": {
-                "save_dir": os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save"),
-                "log_dir": os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "LOG"),
-                "config_dir": os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "SETUP_TOOLS_&_Data"),
-                "projects_dir": os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "mia_dispenda_progetti")
+                "save_dir": os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)), "Save"
+                ),
+                "log_dir": os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)), "Save", "LOG"
+                ),
+                "config_dir": os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)),
+                    "Save",
+                    "SETUP_TOOLS_&_Data",
+                ),
+                "projects_dir": os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)),
+                    "Save",
+                    "mia_dispenda_progetti",
+                ),
             },
-            "startup": {
-                "bypass_login": False,
-                "auto_start_main_app": False
-            },
+            "startup": {"bypass_login": False, "auto_start_main_app": False},
             "mediapipe": {
                 "service_enabled": True,
                 "service_url": "http://localhost:8001",
@@ -251,9 +294,8 @@ class ConfigManager:
                 "skin_min_val": 70,
                 "skin_max_hue": 20,
                 "skin_max_sat": 255,
-                "skin_max_val": 255
+                "skin_max_val": 255,
             },
-
         }
 
     def load_settings(self) -> dict[str, Any]:
@@ -263,7 +305,7 @@ class ConfigManager:
 
         try:
             if os.path.exists(self.settings_file):
-                with open(self.settings_file, 'r', encoding='utf-8') as f:
+                with open(self.settings_file, "r", encoding="utf-8") as f:
                     settings = json.load(f)
                 logger.info(f"✓ Impostazioni caricate da: {self.settings_file}")
                 self._cached_settings = settings
@@ -298,7 +340,7 @@ class ConfigManager:
     def save_settings(self, settings: dict[str, Any]) -> bool:
         """Salva le impostazioni su file."""
         try:
-            with open(self.settings_file, 'w', encoding='utf-8') as f:
+            with open(self.settings_file, "w", encoding="utf-8") as f:
                 json.dump(settings, f, indent=4, ensure_ascii=False)
             logger.info("✓ Impostazioni salvate con successo")
             # Clear cache so next load_settings() will reload from disk
@@ -317,18 +359,20 @@ class ConfigManager:
             return default
 
         # Prevent path traversal attacks
-        if '..' in key_path or key_path.startswith('/') or '\\' in key_path:
+        if ".." in key_path or key_path.startswith("/") or "\\" in key_path:
             logger.error(f"Security violation: Suspicious key_path: {key_path}")
             return default
 
         settings = self.load_settings()
-        keys = key_path.split('.')
+        keys = key_path.split(".")
         value: Any = settings
 
         try:
             for key in keys:
                 if not isinstance(value, dict):
-                    logger.warning(f"Invalid path structure at key '{key}' in path '{key_path}'")
+                    logger.warning(
+                        f"Invalid path structure at key '{key}' in path '{key_path}'"
+                    )
                     return default
                 value = value[key]
             return value
@@ -344,19 +388,23 @@ class ConfigManager:
             return False
 
         # Prevent path traversal attacks
-        if '..' in key_path or key_path.startswith('/') or '\\' in key_path:
-            logger.error(f"Security violation: Suspicious key_path for set_setting: {key_path}")
+        if ".." in key_path or key_path.startswith("/") or "\\" in key_path:
+            logger.error(
+                f"Security violation: Suspicious key_path for set_setting: {key_path}"
+            )
             return False
 
         settings = self.load_settings()
-        keys = key_path.split('.')
+        keys = key_path.split(".")
         target: Any = settings
 
         try:
             # Naviga fino all'ultimo livello
             for key in keys[:-1]:
                 if not isinstance(target, dict):
-                    logger.error(f"Invalid path structure at key '{key}' in path '{key_path}'")
+                    logger.error(
+                        f"Invalid path structure at key '{key}' in path '{key_path}'"
+                    )
                     return False
                 if key not in target:
                     target[key] = {}
@@ -375,22 +423,26 @@ class ConfigManager:
         defaults = self.get_default_settings()
 
         # Validazione dimensioni finestra
-        if 'ui' not in validated:
-            validated['ui'] = defaults['ui']
+        if "ui" not in validated:
+            validated["ui"] = defaults["ui"]
 
-        ui_settings: Any = validated['ui']
-        if 'window_width' in ui_settings:
-            ui_settings['window_width'] = max(800, min(3000, ui_settings['window_width']))
-        if 'window_height' in ui_settings:
-            ui_settings['window_height'] = max(600, min(2000, ui_settings['window_height']))
+        ui_settings: Any = validated["ui"]
+        if "window_width" in ui_settings:
+            ui_settings["window_width"] = max(
+                800, min(3000, ui_settings["window_width"])
+            )
+        if "window_height" in ui_settings:
+            ui_settings["window_height"] = max(
+                600, min(2000, ui_settings["window_height"])
+            )
 
         # Validazione confidenza rilevamento
-        if 'detection_parameters' in validated:
-            params: Any = validated['detection_parameters']
-            if 'hand_confidence' in params:
-                params['hand_confidence'] = max(1, min(100, params['hand_confidence']))
-            if 'face_confidence' in params:
-                params['face_confidence'] = max(1, min(100, params['face_confidence']))
+        if "detection_parameters" in validated:
+            params: Any = validated["detection_parameters"]
+            if "hand_confidence" in params:
+                params["hand_confidence"] = max(1, min(100, params["hand_confidence"]))
+            if "face_confidence" in params:
+                params["face_confidence"] = max(1, min(100, params["face_confidence"]))
 
         return validated
 
@@ -402,7 +454,7 @@ class ConfigManager:
         """Esporta le impostazioni in un file specifico."""
         try:
             settings = self.load_settings()
-            with open(export_path, 'w', encoding='utf-8') as f:
+            with open(export_path, "w", encoding="utf-8") as f:
                 json.dump(settings, f, indent=4, ensure_ascii=False)
             logger.info(f"✓ Impostazioni esportate in: {export_path}")
             return True
@@ -413,7 +465,7 @@ class ConfigManager:
     def import_settings(self, import_path: str) -> bool:
         """Importa le impostazioni da un file specifico."""
         try:
-            with open(import_path, 'r', encoding='utf-8') as f:
+            with open(import_path, "r", encoding="utf-8") as f:
                 settings = json.load(f)
             validated_settings = self.validate_settings(settings)
             return self.save_settings(validated_settings)

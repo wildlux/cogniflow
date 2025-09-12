@@ -10,6 +10,7 @@ from PyQt6.QtCore import QObject, pyqtSignal, QThread
 # Import del TTS manager esistente
 try:
     from Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager import TTSThread
+
     TTS_AVAILABLE = True
 except ImportError:
     TTSThread = None

@@ -16,6 +16,7 @@ def test_ollama_bridge():
     """Test del bridge Ollama"""
     try:
         from Artificial_Intelligence.Ollama import OllamaBridge
+
         print("✅ Bridge Ollama importato con successo")
 
         bridge = OllamaBridge()
@@ -37,6 +38,7 @@ def test_qml_launch():
         from PyQt6.QtCore import QUrl
         from PyQt6.QtQml import QQmlApplicationEngine
         from PyQt6.QtWidgets import QApplication
+
         print("✅ PyQt6 QML importato con successo")
         return True
     except ImportError as e:

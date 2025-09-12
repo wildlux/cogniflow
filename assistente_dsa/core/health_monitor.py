@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 class HealthCheck:
     """Rappresenta un singolo health check."""
 
-    def __init__(self, name: str, check_func: Callable, interval: int = 60, timeout: int = 10):
+    def __init__(
+        self, name: str, check_func: Callable, interval: int = 60, timeout: int = 10
+    ):
         """
         Inizializza un health check.
 
@@ -52,14 +54,18 @@ class HealthCheck:
             self.consecutive_failures = 0
 
             # Check if the result indicates unhealthy status
-            status = result.get("status", "healthy") if isinstance(result, dict) else "healthy"
+            status = (
+                result.get("status", "healthy")
+                if isinstance(result, dict)
+                else "healthy"
+            )
 
             return {
                 "name": self.name,
                 "status": status,
                 "result": result,
                 "response_time": time.time() - start_time,
-                "timestamp": datetime.now()
+                "timestamp": datetime.now(),
             }
 
         except Exception as e:
@@ -72,7 +78,7 @@ class HealthCheck:
                 "error": str(e),
                 "consecutive_failures": self.consecutive_failures,
                 "response_time": time.time() - start_time,
-                "timestamp": datetime.now()
+                "timestamp": datetime.now(),
             }
 
     def _run_with_timeout(self) -> Any:
@@ -110,10 +116,7 @@ class HealthMonitor:
         self.monitor_thread = None
 
         # Soglie di alert
-        self.thresholds = {
-            "max_consecutive_failures": 3,
-            "alert_cooldown_minutes": 5
-        }
+        self.thresholds = {"max_consecutive_failures": 3, "alert_cooldown_minutes": 5}
 
         # Inizializza i check di default
         self._setup_default_checks()
@@ -130,7 +133,9 @@ class HealthMonitor:
         self.add_check("settings_access", self._check_settings_access, interval=120)
         self.add_check("log_writing", self._check_log_writing, interval=60)
 
-    def add_check(self, name: str, check_func: Callable, interval: int = 60, timeout: int = 10):
+    def add_check(
+        self, name: str, check_func: Callable, interval: int = 60, timeout: int = 10
+    ):
         """Aggiunge un nuovo health check."""
         with self.lock:
             self.checks[name] = HealthCheck(name, check_func, interval, timeout)
@@ -174,16 +179,26 @@ class HealthMonitor:
                     "HEALTH_CHECK_FAILED",
                     "Health check '{check_name}' failed {consecutive_failures} times consecutively",
                     "WARNING",
-                    result
+                    result,
                 )
 
-    def _generate_alert(self, alert_type: str, message: str, severity: str, details: Optional[Dict] = None) -> None:
+    def _generate_alert(
+        self,
+        alert_type: str,
+        message: str,
+        severity: str,
+        details: Optional[Dict] = None,
+    ) -> None:
         """Genera un alert di salute."""
         # Controlla cooldown
         now = datetime.now()
-        recent_alerts = [a for a in self.alerts
-                         if a.get("type") == alert_type
-                         and (now - a["timestamp"]).total_seconds() < self.thresholds["alert_cooldown_minutes"] * 60]
+        recent_alerts = [
+            a
+            for a in self.alerts
+            if a.get("type") == alert_type
+            and (now - a["timestamp"]).total_seconds()
+            < self.thresholds["alert_cooldown_minutes"] * 60
+        ]
 
         if recent_alerts:
             return  # Alert ancora in cooldown
@@ -193,7 +208,7 @@ class HealthMonitor:
             "type": alert_type,
             "message": message,
             "severity": severity,
-            "details": details or {}
+            "details": details or {},
         }
 
         self.alerts.append(alert)
@@ -210,7 +225,9 @@ class HealthMonitor:
             return
 
         self.monitoring_active = True
-        self.monitor_thread = threading.Thread(target=self._monitoring_loop, args=(interval,))
+        self.monitor_thread = threading.Thread(
+            target=self._monitoring_loop, args=(interval,)
+        )
         self.monitor_thread.daemon = True
         self.monitor_thread.start()
         logger.info("Health monitoring started with {interval}s interval")
@@ -236,17 +253,25 @@ class HealthMonitor:
         """Restituisce lo stato generale di salute."""
         with self.lock:
             total_checks = len(self.checks)
-            healthy_checks = sum(1 for r in self.results[-total_checks:]
-                                 if r.get("status") == "healthy")
+            healthy_checks = sum(
+                1 for r in self.results[-total_checks:] if r.get("status") == "healthy"
+            )
 
             return {
-                "overall_status": "healthy" if healthy_checks == total_checks else "degraded",
+                "overall_status": (
+                    "healthy" if healthy_checks == total_checks else "degraded"
+                ),
                 "total_checks": total_checks,
                 "healthy_checks": healthy_checks,
                 "unhealthy_checks": total_checks - healthy_checks,
                 "last_check": self.results[-1] if self.results else None,
-                "active_alerts": len([a for a in self.alerts
-                                      if (datetime.now() - a["timestamp"]).total_seconds() < 3600])  # Ultima ora
+                "active_alerts": len(
+                    [
+                        a
+                        for a in self.alerts
+                        if (datetime.now() - a["timestamp"]).total_seconds() < 3600
+                    ]
+                ),  # Ultima ora
             }
 
     # Metodi di check specifici
@@ -258,7 +283,7 @@ class HealthMonitor:
         return {
             "cpu_percent": cpu_percent,
             "cpu_count": psutil.cpu_count(),
-            "cpu_freq": cpu_freq.current if cpu_freq else None
+            "cpu_freq": cpu_freq.current if cpu_freq else None,
         }
 
     def _check_memory_usage(self) -> Dict[str, float]:
@@ -268,17 +293,17 @@ class HealthMonitor:
             "memory_percent": memory.percent,
             "memory_used_gb": memory.used / (1024**3),
             "memory_total_gb": memory.total / (1024**3),
-            "memory_available_gb": memory.available / (1024**3)
+            "memory_available_gb": memory.available / (1024**3),
         }
 
     def _check_disk_space(self) -> Dict[str, Any]:
         """Controlla lo spazio su disco."""
-        disk = psutil.disk_usage('/')
+        disk = psutil.disk_usage("/")
         return {
             "disk_percent": disk.percent,
             "disk_used_gb": disk.used / (1024**3),
             "disk_total_gb": disk.total / (1024**3),
-            "disk_free_gb": disk.free / (1024**3)
+            "disk_free_gb": disk.free / (1024**3),
         }
 
     def _check_ollama_connection(self) -> Dict[str, Any]:
@@ -286,35 +311,34 @@ class HealthMonitor:
         try:
             # Import qui per evitare dipendenze circolari
             from Artificial_Intelligence.Ollama.ollama_manager import OllamaManager
+
             manager = OllamaManager()
             is_running = manager.check_ollama_running()
 
             return {
                 "ollama_running": is_running,
-                "connection_status": "connected" if is_running else "disconnected"
+                "connection_status": "connected" if is_running else "disconnected",
             }
         except Exception as e:
             return {
                 "ollama_running": False,
                 "connection_status": "error",
-                "error": str(e)
+                "error": str(e),
             }
 
     def _check_settings_access(self) -> Dict[str, Any]:
         """Controlla l'accesso alle impostazioni."""
         try:
             from main_03_configurazione_e_opzioni import load_settings
+
             settings = load_settings()
 
             return {
                 "settings_accessible": True,
-                "settings_keys": len(settings) if isinstance(settings, dict) else 0
+                "settings_keys": len(settings) if isinstance(settings, dict) else 0,
             }
         except Exception as e:
-            return {
-                "settings_accessible": False,
-                "error": str(e)
-            }
+            return {"settings_accessible": False, "error": str(e)}
 
     def _check_log_writing(self) -> Dict[str, Any]:
         """Controlla la scrittura dei log."""
@@ -323,13 +347,15 @@ class HealthMonitor:
             import os
 
             # Prova a scrivere un log temporaneo
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.log', delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".log", delete=False
+            ) as f:
                 test_message = "Health check test at {datetime.now()}"
                 f.write(test_message)
                 temp_file = f.name
 
             # Verifica che il file sia stato scritto
-            with open(temp_file, 'r') as f:
+            with open(temp_file, "r") as f:
                 _ = f.read()
 
             # Pulisci
@@ -338,13 +364,10 @@ class HealthMonitor:
             return {
                 "log_writing": True,
                 "test_message": test_message[:50] + "...",
-                "file_created": True
+                "file_created": True,
             }
         except Exception as e:
-            return {
-                "log_writing": False,
-                "error": str(e)
-            }
+            return {"log_writing": False, "error": str(e)}
 
 
 # Istanza globale del monitor di salute

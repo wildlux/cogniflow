@@ -8,10 +8,24 @@ import sys
 import os
 from datetime import datetime
 from PyQt6.QtWidgets import (
-    QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QLineEdit, QPushButton, QMessageBox, QTabWidget, QWidget,
-    QTableWidget, QTableWidgetItem, QFormLayout, QComboBox,
-    QGroupBox, QTextEdit, QProgressBar, QCheckBox
+    QApplication,
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QMessageBox,
+    QTabWidget,
+    QWidget,
+    QTableWidget,
+    QTableWidgetItem,
+    QFormLayout,
+    QComboBox,
+    QGroupBox,
+    QTextEdit,
+    QProgressBar,
+    QCheckBox,
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QIcon
@@ -19,6 +33,7 @@ from PyQt6.QtGui import QFont, QIcon
 # Import del sistema di autenticazione
 try:
     from core.user_auth_manager import get_auth_manager, User, UserGroup
+
     AUTH_AVAILABLE = True
 except ImportError as e:
     print(f"⚠️ Sistema di autenticazione non disponibile: {e}")
@@ -33,13 +48,16 @@ class LoginDialog(QDialog):
 
     def __init__(self):
         super().__init__()
-        self.auth_manager = get_auth_manager() if AUTH_AVAILABLE and get_auth_manager else None
+        self.auth_manager = (
+            get_auth_manager() if AUTH_AVAILABLE and get_auth_manager else None
+        )
         self.current_user = None
 
         self.setWindowTitle("DSA Assistant - Autenticazione")
         self.setModal(True)
         self.setFixedSize(400, 300)
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             QDialog {
                 background-color: #f5f5f5;
                 border-radius: 10px;
@@ -69,7 +87,8 @@ class LoginDialog(QDialog):
             QPushButton:pressed {
                 background-color: #3e8e41;
             }
-        """)
+        """
+        )
 
         self.setup_ui()
 
@@ -81,7 +100,9 @@ class LoginDialog(QDialog):
 
         # Titolo
         title_label = QLabel("🔐 DSA Assistant Login")
-        title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;")
+        title_label.setStyleSheet(
+            "font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;"
+        )
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
 
@@ -135,7 +156,9 @@ class LoginDialog(QDialog):
     def attempt_login(self):
         """Tentativo di login"""
         if not AUTH_AVAILABLE or not self.auth_manager:
-            QMessageBox.warning(self, "Errore", "Sistema di autenticazione non disponibile")
+            QMessageBox.warning(
+                self, "Errore", "Sistema di autenticazione non disponibile"
+            )
             return
 
         username = self.username_input.text().strip()
@@ -178,7 +201,9 @@ class LoginDialog(QDialog):
 
         permissions = self.auth_manager.get_user_permissions(self.current_user)
         if not permissions.get("user_management", False):
-            QMessageBox.warning(self, "Accesso Negato", "Non hai i permessi per gestire gli utenti")
+            QMessageBox.warning(
+                self, "Accesso Negato", "Non hai i permessi per gestire gli utenti"
+            )
             return
 
         user_mgmt = UserManagementDialog(self.auth_manager, self.current_user)
@@ -247,9 +272,9 @@ class UserManagementDialog(QDialog):
         # Tabella utenti
         self.users_table = QTableWidget()
         self.users_table.setColumnCount(6)
-        self.users_table.setHorizontalHeaderLabels([
-            "Username", "Nome Completo", "Email", "Gruppo", "Stato", "Ultimo Accesso"
-        ])
+        self.users_table.setHorizontalHeaderLabels(
+            ["Username", "Nome Completo", "Email", "Gruppo", "Stato", "Ultimo Accesso"]
+        )
         layout.addWidget(self.users_table)
 
         # Pulsanti azioni
@@ -276,9 +301,9 @@ class UserManagementDialog(QDialog):
         # Tabella gruppi
         self.groups_table = QTableWidget()
         self.groups_table.setColumnCount(3)
-        self.groups_table.setHorizontalHeaderLabels([
-            "Nome Gruppo", "Descrizione", "Permessi"
-        ])
+        self.groups_table.setHorizontalHeaderLabels(
+            ["Nome Gruppo", "Descrizione", "Permessi"]
+        )
         layout.addWidget(self.groups_table)
 
         # Pulsanti azioni
@@ -301,9 +326,9 @@ class UserManagementDialog(QDialog):
         # Tabella log
         self.logs_table = QTableWidget()
         self.logs_table.setColumnCount(5)
-        self.logs_table.setHorizontalHeaderLabels([
-            "Timestamp", "Utente", "Azione", "Successo", "IP"
-        ])
+        self.logs_table.setHorizontalHeaderLabels(
+            ["Timestamp", "Utente", "Azione", "Successo", "IP"]
+        )
         layout.addWidget(self.logs_table)
 
         # Pulsanti
@@ -329,8 +354,12 @@ class UserManagementDialog(QDialog):
             self.users_table.setItem(row, 0, QTableWidgetItem(user.username))
             self.users_table.setItem(row, 1, QTableWidgetItem(user.full_name))
             self.users_table.setItem(row, 2, QTableWidgetItem(user.email))
-            self.users_table.setItem(row, 3, QTableWidgetItem(groups.get(user.group_id, "Unknown")))
-            self.users_table.setItem(row, 4, QTableWidgetItem("Attivo" if user.is_active else "Disattivo"))
+            self.users_table.setItem(
+                row, 3, QTableWidgetItem(groups.get(user.group_id, "Unknown"))
+            )
+            self.users_table.setItem(
+                row, 4, QTableWidgetItem("Attivo" if user.is_active else "Disattivo")
+            )
             self.users_table.setItem(row, 5, QTableWidgetItem(user.last_login or "Mai"))
 
         self.load_groups()
@@ -364,7 +393,9 @@ class UserManagementDialog(QDialog):
             self.logs_table.setItem(row, 0, QTableWidgetItem(log["timestamp"]))
             self.logs_table.setItem(row, 1, QTableWidgetItem(log["username"]))
             self.logs_table.setItem(row, 2, QTableWidgetItem(log["action"]))
-            self.logs_table.setItem(row, 3, QTableWidgetItem("Sì" if log["success"] else "No"))
+            self.logs_table.setItem(
+                row, 3, QTableWidgetItem("Sì" if log["success"] else "No")
+            )
             self.logs_table.setItem(row, 4, QTableWidgetItem(log["ip_address"] or ""))
 
     def add_user(self):
@@ -395,26 +426,37 @@ class UserManagementDialog(QDialog):
         username = self.users_table.item(current_row, 0).text()
 
         if username == self.current_user.username:
-            QMessageBox.warning(self, "Errore", "Non puoi eliminare il tuo stesso account")
+            QMessageBox.warning(
+                self, "Errore", "Non puoi eliminare il tuo stesso account"
+            )
             return
 
         reply = QMessageBox.question(
-            self, "Conferma Eliminazione",
+            self,
+            "Conferma Eliminazione",
             f"Sei sicuro di voler eliminare l'utente '{username}'?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
 
         if reply == QMessageBox.StandardButton.Yes:
             # Nota: Questa funzionalità richiederebbe l'implementazione di un metodo delete_user
-            QMessageBox.information(self, "Info", "Funzionalità di eliminazione utente non ancora implementata")
+            QMessageBox.information(
+                self,
+                "Info",
+                "Funzionalità di eliminazione utente non ancora implementata",
+            )
 
     def add_group(self):
         """Aggiunge un nuovo gruppo"""
-        QMessageBox.information(self, "Info", "Funzionalità di aggiunta gruppo non ancora implementata")
+        QMessageBox.information(
+            self, "Info", "Funzionalità di aggiunta gruppo non ancora implementata"
+        )
 
     def edit_group(self):
         """Modifica un gruppo esistente"""
-        QMessageBox.information(self, "Info", "Funzionalità di modifica gruppo non ancora implementata")
+        QMessageBox.information(
+            self, "Info", "Funzionalità di modifica gruppo non ancora implementata"
+        )
 
 
 class UserDialog(QDialog):
@@ -426,7 +468,9 @@ class UserDialog(QDialog):
         self.username = username
         self.is_edit = username is not None
 
-        self.setWindowTitle("Aggiungi Utente" if not self.is_edit else f"Modifica Utente: {username}")
+        self.setWindowTitle(
+            "Aggiungi Utente" if not self.is_edit else f"Modifica Utente: {username}"
+        )
         self.setModal(True)
         self.setFixedSize(400, 500)
 
@@ -488,12 +532,16 @@ class UserDialog(QDialog):
 
         if self.is_edit:
             self.password_input.setPlaceholderText("Lascia vuoto per mantenere attuale")
-            self.confirm_password_input.setPlaceholderText("Lascia vuoto per mantenere attuale")
+            self.confirm_password_input.setPlaceholderText(
+                "Lascia vuoto per mantenere attuale"
+            )
 
     def load_user_data(self):
         """Carica i dati dell'utente da modificare"""
         # Questa funzionalità richiederebbe l'implementazione di un metodo get_user_by_username
-        QMessageBox.information(self, "Info", "Caricamento dati utente non ancora implementato")
+        QMessageBox.information(
+            self, "Info", "Caricamento dati utente non ancora implementato"
+        )
 
     def save_user(self):
         """Salva il nuovo utente o le modifiche"""
@@ -505,7 +553,9 @@ class UserDialog(QDialog):
         full_name = self.full_name_input.text().strip()
         email = self.email_input.text().strip()
         password = self.password_input.text() if self.password_input else ""
-        confirm_password = self.confirm_password_input.text() if self.confirm_password_input else ""
+        confirm_password = (
+            self.confirm_password_input.text() if self.confirm_password_input else ""
+        )
         group_id = self.group_combo.currentData() if self.group_combo else None
 
         # Validazioni
@@ -522,13 +572,23 @@ class UserDialog(QDialog):
             return
 
         # Crea utente
-        if self.auth_manager.create_user(username, password, full_name, email,
-                                       self.get_group_name_by_id(group_id)):
-            QMessageBox.information(self, "Successo",
-                                  "Utente creato con successo!" if not self.is_edit else "Utente modificato con successo!")
+        if self.auth_manager.create_user(
+            username, password, full_name, email, self.get_group_name_by_id(group_id)
+        ):
+            QMessageBox.information(
+                self,
+                "Successo",
+                (
+                    "Utente creato con successo!"
+                    if not self.is_edit
+                    else "Utente modificato con successo!"
+                ),
+            )
             self.accept()
         else:
-            QMessageBox.warning(self, "Errore", "Errore nella creazione/modifica dell'utente")
+            QMessageBox.warning(
+                self, "Errore", "Errore nella creazione/modifica dell'utente"
+            )
 
     def get_group_name_by_id(self, group_id):
         """Ottieni il nome del gruppo dall'ID"""

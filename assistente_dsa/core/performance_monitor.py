@@ -26,6 +26,7 @@ class PerformanceMonitor:
 
     def measure_time(self, func_name: str):
         """Decorator per misurare il tempo di esecuzione di una funzione."""
+
         def decorator(func: Callable):
             @wraps(func)
             def wrapper(*args, **kwargs):
@@ -40,10 +41,14 @@ class PerformanceMonitor:
                     self.record_metric(f"{func_name}.execution_time", execution_time)
                     self.record_metric(f"{func_name}.error_count", 1)
                     raise e
+
             return wrapper
+
         return decorator
 
-    def record_metric(self, name: str, value: float, tags: Optional[Dict[str, Any]] = None):
+    def record_metric(
+        self, name: str, value: float, tags: Optional[Dict[str, Any]] = None
+    ):
         """Registra una metrica."""
         with self.lock:
             if name not in self.metrics:
@@ -52,7 +57,7 @@ class PerformanceMonitor:
             metric_data = {
                 "timestamp": datetime.now(),
                 "value": value,
-                "tags": tags or {}
+                "tags": tags or {},
             }
 
             self.metrics[name].append(metric_data)
@@ -74,7 +79,9 @@ class PerformanceMonitor:
                 "memory_vms": memory_info.vms,
                 "memory_percent": memory_percent,
                 "num_threads": self.process.num_threads(),
-                "num_fds": self.process.num_fds() if hasattr(self.process, 'num_fds') else None,
+                "num_fds": (
+                    self.process.num_fds() if hasattr(self.process, "num_fds") else None
+                ),
             }
         except Exception:
             logger.error("Error getting system metrics: {e}")
@@ -86,7 +93,7 @@ class PerformanceMonitor:
             "timestamp": datetime.now(),
             "label": label,
             "system_metrics": self.get_system_metrics(),
-            "custom_metrics": dict(self.metrics)
+            "custom_metrics": dict(self.metrics),
         }
 
         with self.lock:
@@ -108,7 +115,7 @@ class PerformanceMonitor:
                     "memory_total": psutil.virtual_memory().total,
                 },
                 "current_metrics": self.get_system_metrics(),
-                "custom_metrics_summary": {}
+                "custom_metrics_summary": {},
             }
 
             # Riassunto metriche custom
@@ -120,7 +127,7 @@ class PerformanceMonitor:
                         "avg": sum(metric_values) / len(metric_values),
                         "min": min(metric_values),
                         "max": max(metric_values),
-                        "latest": metric_values[-1]
+                        "latest": metric_values[-1],
                     }
 
             return report
@@ -133,32 +140,38 @@ class PerformanceMonitor:
         # Controlla uso CPU elevato
         cpu_percent = report["current_metrics"].get("cpu_percent", 0)
         if cpu_percent > 80:
-            issues.append({
-                "type": "high_cpu_usage",
-                "severity": "warning",
-                "message": "Uso CPU elevato: {cpu_percent:.1f}%",
-                "suggestion": "Ottimizza operazioni CPU-intensive o considera multiprocessing"
-            })
+            issues.append(
+                {
+                    "type": "high_cpu_usage",
+                    "severity": "warning",
+                    "message": "Uso CPU elevato: {cpu_percent:.1f}%",
+                    "suggestion": "Ottimizza operazioni CPU-intensive o considera multiprocessing",
+                }
+            )
 
         # Controlla uso memoria elevato
         memory_percent = report["current_metrics"].get("memory_percent", 0)
         if memory_percent > 80:
-            issues.append({
-                "type": "high_memory_usage",
-                "severity": "warning",
-                "message": "Uso memoria elevato: {memory_percent:.1f}%",
-                "suggestion": "Verifica memory leaks o ottimizza strutture dati"
-            })
+            issues.append(
+                {
+                    "type": "high_memory_usage",
+                    "severity": "warning",
+                    "message": "Uso memoria elevato: {memory_percent:.1f}%",
+                    "suggestion": "Verifica memory leaks o ottimizza strutture dati",
+                }
+            )
 
         # Controlla funzioni lente
         for name, summary in report["custom_metrics_summary"].items():
             if name.endswith(".execution_time") and summary["avg"] > 1.0:
-                issues.append({
-                    "type": "slow_function",
-                    "severity": "info",
-                    "message": "Funzione {name} lenta: {summary['avg']:.2f}s media",
-                    "suggestion": "Ottimizza algoritmo o considera caching"
-                })
+                issues.append(
+                    {
+                        "type": "slow_function",
+                        "severity": "info",
+                        "message": "Funzione {name} lenta: {summary['avg']:.2f}s media",
+                        "suggestion": "Ottimizza algoritmo o considera caching",
+                    }
+                )
 
         return issues
 
@@ -174,12 +187,13 @@ class PerformanceMonitor:
                     {
                         "timestamp": s["timestamp"].isoformat(),
                         "label": s["label"],
-                        "system_metrics": s["system_metrics"]
-                    } for s in self.snapshots
-                ]
+                        "system_metrics": s["system_metrics"],
+                    }
+                    for s in self.snapshots
+                ],
             }
 
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(data, f, indent=2, default=str)
 
         logger.info(f"Performance metrics exported to {filepath}")

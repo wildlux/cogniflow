@@ -29,14 +29,17 @@ class ProjectService(QObject):
             # Usa la directory di default
             self.projects_dir = os.path.join(
                 os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-                "Save", "mia_dispenda_progetti"
+                "Save",
+                "mia_dispenda_progetti",
             )
         else:
             self.projects_dir = projects_dir
 
         # Assicura che la directory esista
         os.makedirs(self.projects_dir, exist_ok=True)
-        self.logger.info(f"Project Service inizializzato - Directory: {self.projects_dir}")
+        self.logger.info(
+            f"Project Service inizializzato - Directory: {self.projects_dir}"
+        )
 
     def save_project(self, project: ProjectModel) -> bool:
         """Salva un progetto su file"""
@@ -53,7 +56,7 @@ class ProjectService(QObject):
             project_data = project.to_dict()
 
             # Salva su file
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(project_data, f, indent=2, ensure_ascii=False)
 
             self.logger.info(f"Progetto salvato: {file_path}")
@@ -75,7 +78,7 @@ class ProjectService(QObject):
                 return None
 
             # Carica il progetto
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 project_data = json.load(f)
 
             # Crea l'oggetto progetto
@@ -112,7 +115,7 @@ class ProjectService(QObject):
             projects = []
             if os.path.exists(self.projects_dir):
                 for file_name in os.listdir(self.projects_dir):
-                    if file_name.endswith('.json'):
+                    if file_name.endswith(".json"):
                         # Rimuovi l'estensione .json per ottenere il nome del progetto
                         project_name = file_name[:-5]  # Rimuove '.json'
                         projects.append(project_name)
@@ -133,12 +136,13 @@ class ProjectService(QObject):
     def _sanitize_filename(self, filename: str) -> str:
         """Sanitizza il nome del file rimuovendo caratteri non validi"""
         import re
+
         # Sostituisce caratteri non alfanumerici con underscore
-        sanitized = re.sub(r'[^\w\-_\.]', '_', filename)
+        sanitized = re.sub(r"[^\w\-_\.]", "_", filename)
         # Rimuove spazi multipli e underscore multipli
-        sanitized = re.sub(r'[_\s]+', '_', sanitized)
+        sanitized = re.sub(r"[_\s]+", "_", sanitized)
         # Rimuove underscore agli estremi
-        sanitized = sanitized.strip('_')
+        sanitized = sanitized.strip("_")
         return sanitized
 
     def get_project_info(self, project_name: str) -> Optional[Dict[str, Any]]:
@@ -151,7 +155,7 @@ class ProjectService(QObject):
                     "created_at": project.created_at,
                     "last_modified": project.last_modified,
                     "version": project.version,
-                    "data_size": len(json.dumps(project.data)) if project.data else 0
+                    "data_size": len(json.dumps(project.data)) if project.data else 0,
                 }
             return None
         except Exception as e:

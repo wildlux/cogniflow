@@ -13,6 +13,7 @@ import math
 # Add the project root to the path
 sys.path.insert(0, os.path.dirname(__file__))
 
+
 def test_human_detection():
     """Test the human detection algorithm with sample image processing."""
     print("🧪 Testing Human Detection (LIDAR-like) System")
@@ -67,17 +68,23 @@ def test_human_detection():
     print("Testing with synthetic contours:")
 
     # Test 1: Valid human-like contour
-    test_contour_1 = np.array([[[100, 100]], [[100, 200]], [[150, 200]], [[150, 100]]], dtype=np.int32)
+    test_contour_1 = np.array(
+        [[[100, 100]], [[100, 200]], [[150, 200]], [[150, 100]]], dtype=np.int32
+    )
     is_human, message = analyze_contour_for_human(test_contour_1)
     print(f"  Test 1 (rectangle): {message}")
 
     # Test 2: Too small
-    test_contour_2 = np.array([[[0, 0]], [[0, 10]], [[10, 10]], [[10, 0]]], dtype=np.int32)
+    test_contour_2 = np.array(
+        [[[0, 0]], [[0, 10]], [[10, 10]], [[10, 0]]], dtype=np.int32
+    )
     is_human, message = analyze_contour_for_human(test_contour_2)
     print(f"  Test 2 (small): {message}")
 
     # Test 3: Wrong aspect ratio (too wide)
-    test_contour_3 = np.array([[[0, 0]], [[0, 50]], [[200, 50]], [[200, 0]]], dtype=np.int32)
+    test_contour_3 = np.array(
+        [[[0, 0]], [[0, 50]], [[200, 50]], [[200, 0]]], dtype=np.int32
+    )
     is_human, message = analyze_contour_for_human(test_contour_3)
     print(f"  Test 3 (wide): {message}")
 
@@ -85,6 +92,7 @@ def test_human_detection():
     print("✅ Human detection algorithm test completed!")
     print("The system uses contour analysis to detect human-like shapes.")
     print("This provides a LIDAR-like approach for human figure detection.")
+
 
 if __name__ == "__main__":
     test_human_detection()

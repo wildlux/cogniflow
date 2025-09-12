@@ -11,15 +11,25 @@ import os
 from datetime import datetime
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QTextEdit, QScrollArea, QFrame, QMessageBox,
-    QInputDialog
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QTextEdit,
+    QScrollArea,
+    QFrame,
+    QMessageBox,
+    QInputDialog,
 )
 
 # Import delle componenti necessarie
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from UI.draggable_text_widget import DraggableTextWidget
 from main_03_configurazione_e_opzioni import get_config, load_settings
+
 
 class TestWindow(QMainWindow):
     """Finestra di test per le nuove funzionalità."""
@@ -41,7 +51,8 @@ class TestWindow(QMainWindow):
 
         # Titolo
         title_label = QLabel("🧪 Test delle Nuove Funzionalità")
-        title_label.setStyleSheet("""
+        title_label.setStyleSheet(
+            """
             QLabel {
                 font-size: 18px;
                 font-weight: bold;
@@ -49,26 +60,31 @@ class TestWindow(QMainWindow):
                 padding: 10px;
                 text-align: center;
             }
-        """)
+        """
+        )
         main_layout.addWidget(title_label)
 
         # Area per i pensierini di test
         pensierini_group = QFrame()
         pensierini_group.setFrameStyle(QFrame.Shape.Box)
-        pensierini_group.setStyleSheet("""
+        pensierini_group.setStyleSheet(
+            """
             QFrame {
                 background: rgba(248, 249, 250, 0.8);
                 border: 2px solid #dee2e6;
                 border-radius: 10px;
                 margin: 10px;
             }
-        """)
+        """
+        )
 
         pensierini_layout = QVBoxLayout(pensierini_group)
 
         # Titolo sezione pensierini
         pensierini_title = QLabel("📝 Pensierini di Test (con 💬🔊 per lettura)")
-        pensierini_title.setStyleSheet("font-weight: bold; font-size: 14px; color: #495057;")
+        pensierini_title.setStyleSheet(
+            "font-weight: bold; font-size: 14px; color: #495057;"
+        )
         pensierini_layout.addWidget(pensierini_title)
 
         # Scroll area per i pensierini
@@ -90,7 +106,8 @@ class TestWindow(QMainWindow):
 
         # Orario a sinistra
         self.left_time_label = QLabel("⌚️")
-        self.left_time_label.setStyleSheet("""
+        self.left_time_label.setStyleSheet(
+            """
             QLabel {
                 color: #495057;
                 font-size: 12px;
@@ -101,12 +118,14 @@ class TestWindow(QMainWindow):
                 font-weight: bold;
                 min-width: 140px;
             }
-        """)
+        """
+        )
         footer_layout.addWidget(self.left_time_label)
 
         # Pulsante creazione pensierino
         create_button = QPushButton("💭 Nuovo Pensierino")
-        create_button.setStyleSheet("""
+        create_button.setStyleSheet(
+            """
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                     stop:0 rgba(40, 167, 69, 0.8), stop:1 rgba(34, 197, 94, 0.8));
@@ -121,7 +140,8 @@ class TestWindow(QMainWindow):
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                     stop:0 rgba(34, 197, 94, 0.8), stop:1 rgba(40, 167, 69, 0.8));
             }
-        """)
+        """
+        )
         create_button.clicked.connect(self.create_new_pensierino)
         footer_layout.addWidget(create_button)
 
@@ -129,7 +149,8 @@ class TestWindow(QMainWindow):
 
         # Status label
         status_label = QLabel("🧪 Finestra di test attiva")
-        status_label.setStyleSheet("""
+        status_label.setStyleSheet(
+            """
             QLabel {
                 color: #6c757d;
                 font-size: 11px;
@@ -138,12 +159,14 @@ class TestWindow(QMainWindow):
                 border-radius: 5px;
                 border: 1px solid #ddd;
             }
-        """)
+        """
+        )
         footer_layout.addWidget(status_label)
 
         # Orario a destra
         self.right_time_label = QLabel("⌚️")
-        self.right_time_label.setStyleSheet("""
+        self.right_time_label.setStyleSheet(
+            """
             QLabel {
                 color: #495057;
                 font-size: 12px;
@@ -154,7 +177,8 @@ class TestWindow(QMainWindow):
                 font-weight: bold;
                 min-width: 140px;
             }
-        """)
+        """
+        )
         footer_layout.addWidget(self.right_time_label)
 
         main_layout.addLayout(footer_layout)
@@ -179,7 +203,7 @@ class TestWindow(QMainWindow):
             "Questo è un pensierino di test. Clicca sull'icona 💬🔊 per ascoltarlo!",
             "La sintesi vocale dovrebbe funzionare correttamente con questo testo.",
             "Prova a creare un nuovo pensierino usando il pulsante 💭 nel footer.",
-            "Gli orari in basso dovrebbero aggiornarsi automaticamente ogni minuto."
+            "Gli orari in basso dovrebbero aggiornarsi automaticamente ogni minuto.",
         ]
 
         for text in test_texts:
@@ -194,7 +218,7 @@ class TestWindow(QMainWindow):
                 self,
                 "💭 Crea Nuovo Pensierino",
                 "Inserisci il testo del pensierino:",
-                ""
+                "",
             )
 
             if ok and text and text.strip():
@@ -205,13 +229,15 @@ class TestWindow(QMainWindow):
                 QMessageBox.information(
                     self,
                     "✅ Pensierino Creato",
-                    f"Nuovo pensierino aggiunto:\n\n{text.strip()[:100]}{'...' if len(text.strip()) > 100 else ''}"
+                    f"Nuovo pensierino aggiunto:\n\n{text.strip()[:100]}{'...' if len(text.strip()) > 100 else ''}",
                 )
 
                 print(f"💭 Nuovo pensierino creato: {text.strip()[:50]}...")
 
         except Exception as e:
-            QMessageBox.critical(self, "❌ Errore", f"Errore nella creazione del pensierino:\n{str(e)}")
+            QMessageBox.critical(
+                self, "❌ Errore", f"Errore nella creazione del pensierino:\n{str(e)}"
+            )
 
     def _update_time_labels(self):
         """Aggiorna le etichette degli orari."""
@@ -225,23 +251,27 @@ class TestWindow(QMainWindow):
         except Exception as e:
             print(f"Errore nell'aggiornamento degli orari: {e}")
 
+
 def main():
     """Funzione principale per avviare la finestra di test."""
     app = QApplication(sys.argv)
 
     # Stile globale
-    app.setStyleSheet("""
+    app.setStyleSheet(
+        """
         QWidget {
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #f8f9fa, stop:1 #e9ecef);
             color: #212529;
         }
-    """)
+    """
+    )
 
     window = TestWindow()
     window.show()
 
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()

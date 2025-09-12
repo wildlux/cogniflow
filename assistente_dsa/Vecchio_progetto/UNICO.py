@@ -14,33 +14,81 @@ import wave
 from io import BytesIO
 
 from PyQt6.QtCore import (
-    QThread, pyqtSignal, QTimer, Qt, QMimeData, QPoint, QObject, QSize,
-    QPropertyAnimation, QRect, QEvent, QBuffer, QIODevice
+    QThread,
+    pyqtSignal,
+    QTimer,
+    Qt,
+    QMimeData,
+    QPoint,
+    QObject,
+    QSize,
+    QPropertyAnimation,
+    QRect,
+    QEvent,
+    QBuffer,
+    QIODevice,
 )
-from PyQt6.QtGui import QImage, QPixmap, QDrag, QCursor, QIcon, QPainter, QPen, QColor, QMouseEvent
+from PyQt6.QtGui import (
+    QImage,
+    QPixmap,
+    QDrag,
+    QCursor,
+    QIcon,
+    QPainter,
+    QPen,
+    QColor,
+    QMouseEvent,
+)
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QSizePolicy,
-    QLabel, QPushButton, QHBoxLayout, QComboBox, QLineEdit, QFrame, QGridLayout,
-    QDialog, QTextEdit, QTabWidget, QCheckBox, QSlider, QRadioButton,
-    QTableWidget, QTableWidgetItem, QMessageBox, QHeaderView, QStackedWidget,
-    QScrollArea, QSpacerItem, QGroupBox, QMenu
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QSizePolicy,
+    QLabel,
+    QPushButton,
+    QHBoxLayout,
+    QComboBox,
+    QLineEdit,
+    QFrame,
+    QGridLayout,
+    QDialog,
+    QTextEdit,
+    QTabWidget,
+    QCheckBox,
+    QSlider,
+    QRadioButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QMessageBox,
+    QHeaderView,
+    QStackedWidget,
+    QScrollArea,
+    QSpacerItem,
+    QGroupBox,
+    QMenu,
 )
 
 # Importa la libreria pyttsx3 per una sintesi vocale più robusta
 try:
     import pyttsx3
 except ImportError:
-    logging.error("La libreria 'pyttsx3' non è installata. "
-                  "Installala con 'pip install pyttsx3'")
+    logging.error(
+        "La libreria 'pyttsx3' non è installata. "
+        "Installala con 'pip install pyttsx3'"
+    )
     pyttsx3 = None
 
 # Importa la libreria per il riconoscimento vocale
 try:
     import speech_recognition as sr
 except ImportError:
-    logging.error("La libreria 'speech_recognition' non è installata. "
-                  "Per abilitare il riconoscimento vocale, installala con 'pip install SpeechRecognition PyAudio'")
+    logging.error(
+        "La libreria 'speech_recognition' non è installata. "
+        "Per abilitare il riconoscimento vocale, installala con 'pip install SpeechRecognition PyAudio'"
+    )
     sr = None
+
 
 # --- CLASSE THREAD PER LA SINTESI VOCALE (AGGIORNATA) ---
 class TTSThread(QThread):
@@ -50,6 +98,7 @@ class TTSThread(QThread):
 
     Emette segnali per comunicare lo stato al widget DraggableTextWidget.
     """
+
     finished_reading = pyqtSignal()
     started_reading = pyqtSignal()
     error_occurred = pyqtSignal(str)
@@ -96,19 +145,27 @@ class TTSThread(QThread):
         if self.engine:
             self.engine.stop()
         self.wait()
+
+
 # ---------------------------------------------------------------------------------
+
 
 class LogEmitter(QObject):
     """Oggetto QObject per emettere segnali di log."""
+
     new_record = pyqtSignal(str)
     error_occurred = pyqtSignal()
 
+
 class TextEditLogger(logging.Handler):
     """Handler di logging personalizzato che emette segnali a un QTextEdit."""
+
     def __init__(self, log_emitter, parent=None):
         super().__init__()
         self.log_emitter = log_emitter
-        self.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        self.setFormatter(
+            logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        )
 
     def emit(self, record):
         msg = self.format(record)
@@ -116,27 +173,31 @@ class TextEditLogger(logging.Handler):
         if record.levelno >= logging.ERROR:
             self.log_emitter.error_occurred.emit()
 
+
 face_cascade = None
 try:
     # Try the modern cv2.data approach first
-    cv2_data = getattr(cv2, 'data', None)
+    cv2_data = getattr(cv2, "data", None)
     if cv2_data is not None:
-        haarcascades = getattr(cv2_data, 'haarcascades', None)
+        haarcascades = getattr(cv2_data, "haarcascades", None)
         if haarcascades is not None:
-            cascade_path = haarcascades + 'haarcascade_frontalface_default.xml'
+            cascade_path = haarcascades + "haarcascade_frontalface_default.xml"
             face_cascade = cv2.CascadeClassifier(cascade_path)
     else:
         # Fallback to the old path approach
         import os
-        cascade_path = os.path.join(os.path.dirname(cv2.__file__), 'data', 'haarcascade_frontalface_default.xml')
+
+        cascade_path = os.path.join(
+            os.path.dirname(cv2.__file__), "data", "haarcascade_frontalface_default.xml"
+        )
         if os.path.exists(cascade_path):
             face_cascade = cv2.CascadeClassifier(cascade_path)
         else:
             # Try common system paths
             common_paths = [
-                '/usr/share/opencv4/haarcascades/haarcascade_frontalface_default.xml',
-                '/usr/local/share/opencv4/haarcascades/haarcascade_frontalface_default.xml',
-                '/opt/homebrew/share/opencv4/haarcascades/haarcascade_frontalface_default.xml'
+                "/usr/share/opencv4/haarcascades/haarcascade_frontalface_default.xml",
+                "/usr/local/share/opencv4/haarcascades/haarcascade_frontalface_default.xml",
+                "/opt/homebrew/share/opencv4/haarcascades/haarcascade_frontalface_default.xml",
             ]
             for path in common_paths:
                 if os.path.exists(path):
@@ -150,8 +211,10 @@ try:
 except Exception as e:
     logging.error(f"Errore nel caricare il classificatore di cascata: {e}")
 
+
 class VideoThread(QThread):
     """Thread dedicato per la cattura video e rilevamento."""
+
     change_pixmap_signal = pyqtSignal(QImage)
     status_signal = pyqtSignal(str)
 
@@ -177,28 +240,41 @@ class VideoThread(QThread):
                 if self.face_detection_enabled and face_cascade is not None:
                     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-                    for (x, y, w, h) in faces:
+                    for x, y, w, h in faces:
                         cv2.rectangle(frame, (x, y), (x + w, y + h), (46, 140, 219), 2)
 
                 if self.hand_detection_enabled:
                     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-                    mask = cv2.inRange(hsv, self.hand_color_range[0], self.hand_color_range[1])
-                    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    mask = cv2.inRange(
+                        hsv, self.hand_color_range[0], self.hand_color_range[1]
+                    )
+                    contours, _ = cv2.findContours(
+                        mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+                    )
 
                     if contours:
                         max_contour = max(contours, key=cv2.contourArea)
                         if cv2.contourArea(max_contour) > 5000:
                             (x, y, w, h) = cv2.boundingRect(max_contour)
                             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                            cv2.putText(frame, "Mano rilevata", (x, y - 10),
-                                      cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                            cv2.putText(
+                                frame,
+                                "Mano rilevata",
+                                (x, y - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.9,
+                                (0, 255, 0),
+                                2,
+                            )
 
                 rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 h, w, ch = rgb_image.shape
                 bytes_per_line = ch * w
                 # Convert memoryview to bytes for QImage
                 image_bytes = bytes(rgb_image.data)
-                q_image = QImage(image_bytes, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+                q_image = QImage(
+                    image_bytes, w, h, bytes_per_line, QImage.Format.Format_RGB888
+                )
                 self.change_pixmap_signal.emit(q_image)
 
         self.cap.release()
@@ -207,14 +283,17 @@ class VideoThread(QThread):
         self._run_flag = False
         self.wait()
 
+
 class DraggableTextWidget(QFrame):
     """Widget di testo trascinabile con pulsanti di azione."""
+
     def __init__(self, text, parent=None):
         super().__init__(parent)
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setFrameShadow(QFrame.Shadow.Raised)
         self.setMinimumHeight(60)
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             QFrame {
                 background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1,
                                           stop: 0 #667eea, stop: 1 #764ba2);
@@ -233,7 +312,8 @@ class DraggableTextWidget(QFrame):
             QPushButton:hover {
                 background-color: rgba(255, 255, 255, 0.3);
             }
-        """)
+        """
+        )
 
         # --- MODIFICA: Aggiornamento della gestione del thread TTS ---
         self.tts_thread = None
@@ -241,7 +321,9 @@ class DraggableTextWidget(QFrame):
 
         layout = QHBoxLayout(self)
         self.text_label = QLabel(text)
-        self.text_label.setStyleSheet("color: white; font-weight: bold; font-size: 12px;")
+        self.text_label.setStyleSheet(
+            "color: white; font-weight: bold; font-size: 12px;"
+        )
         self.text_label.setWordWrap(True)
         layout.addWidget(self.text_label, 1)
 
@@ -332,8 +414,10 @@ class DraggableTextWidget(QFrame):
         self.setParent(None)
         self.deleteLater()
 
+
 class ConfigurationDialog(QDialog):
     """Dialog per la configurazione dell'applicazione."""
+
     def __init__(self, parent=None, settings=None):
         super().__init__(parent)
         self.setWindowTitle("⚙️ Menu di Configurazione")
@@ -400,7 +484,9 @@ class ConfigurationDialog(QDialog):
 
         trigger_group = QGroupBox("Trigger per AI")
         trigger_layout = QVBoxLayout(trigger_group)
-        trigger_layout.addWidget(QLabel("Imposta una parola d'ordine per inviare il testo all'AI:"))
+        trigger_layout.addWidget(
+            QLabel("Imposta una parola d'ordine per inviare il testo all'AI:")
+        )
         self.ai_trigger_input = QLineEdit("++++")
         trigger_layout.addWidget(self.ai_trigger_input)
         layout.addWidget(trigger_group)
@@ -448,14 +534,18 @@ class ConfigurationDialog(QDialog):
         layout.addWidget(QLabel("Scegli come visualizzare testo e icone:"))
 
         self.visualization_combo = QComboBox()
-        self.visualization_combo.addItems(["Testo con Icona", "Solo Testo", "Solo Icona"])
+        self.visualization_combo.addItems(
+            ["Testo con Icona", "Solo Testo", "Solo Icona"]
+        )
         layout.addWidget(self.visualization_combo)
 
         layout.addWidget(QLabel("Posizione Icone"))
         layout.addWidget(QLabel("Scegli la posizione delle icone negli elementi:"))
 
         self.icon_position_combo = QComboBox()
-        self.icon_position_combo.addItems(["In alto", "In basso", "A sinistra", "A destra"])
+        self.icon_position_combo.addItems(
+            ["In alto", "In basso", "A sinistra", "A destra"]
+        )
         layout.addWidget(self.icon_position_combo)
 
         layout.addStretch()
@@ -474,7 +564,9 @@ class ConfigurationDialog(QDialog):
 
         layout.addWidget(QLabel("Riconoscimento Facciale"))
         face_layout = QVBoxLayout()
-        face_layout.addWidget(QLabel("Attiva la funzione d'emergenza \"genitore empatico\":"))
+        face_layout.addWidget(
+            QLabel('Attiva la funzione d\'emergenza "genitore empatico":')
+        )
 
         self.face_recognition_cb = QCheckBox("Abilita")
         face_layout.addWidget(self.face_recognition_cb)
@@ -519,11 +611,16 @@ class ConfigurationDialog(QDialog):
                 self.ollama_model_combo.addItems(models)
                 self.ollama_model_combo.setCurrentIndex(0)
             else:
-                self.ollama_status_label.setText("Stato: ⚠️ Connesso, ma nessun modello trovato")
+                self.ollama_status_label.setText(
+                    "Stato: ⚠️ Connesso, ma nessun modello trovato"
+                )
         except requests.exceptions.ConnectionError:
             self.ollama_status_label.setText("Stato: ❌ Errore di connessione")
-            QMessageBox.critical(self, "Errore di Connessione",
-                                 "Impossibile connettersi al server Ollama. Assicurati che sia in esecuzione.")
+            QMessageBox.critical(
+                self,
+                "Errore di Connessione",
+                "Impossibile connettersi al server Ollama. Assicurati che sia in esecuzione.",
+            )
         except Exception as e:
             self.ollama_status_label.setText(f"Stato: ❌ Errore - {e}")
             logging.error(f"Errore Ollama: {e}")
@@ -532,10 +629,10 @@ class ConfigurationDialog(QDialog):
     def get_ollama_models(self):
         """Recupera la lista dei modelli da Ollama."""
         try:
-            response = requests.get('http://localhost:11434/api/tags')
+            response = requests.get("http://localhost:11434/api/tags")
             response.raise_for_status()
             data = response.json()
-            models = [model['name'] for model in data.get('models', [])]
+            models = [model["name"] for model in data.get("models", [])]
             return models
         except Exception as e:
             logging.error(f"Impossibile recuperare i modelli da Ollama: {e}")
@@ -544,7 +641,9 @@ class ConfigurationDialog(QDialog):
     def download_log(self):
         """Scarica il log delle emozioni"""
         logging.info("Download log emozioni richiesto")
-        QMessageBox.information(self, "Download Log", "Funzionalità non ancora implementata.")
+        QMessageBox.information(
+            self, "Download Log", "Funzionalità non ancora implementata."
+        )
 
     def load_settings(self):
         """Carica le impostazioni salvate"""
@@ -553,21 +652,23 @@ class ConfigurationDialog(QDialog):
     def get_settings(self):
         """Restituisce le impostazioni correnti."""
         return {
-            'ai_trigger': self.ai_trigger_input.text(),
-            'ollama_model': self.ollama_model_combo.currentText(),
-            'language': self.language_combo.currentText(),
-            'face_recognition': self.face_recognition_cb.isChecked(),
-            'sound_enabled': self.sound_cb.isChecked(),
-            'volume': self.volume_slider.value(),
-            'timeout': self.timeout_input.text(),
-            'theme': 'current' if self.current_theme_btn.isChecked() else 'school',
-            'element_size': self.size_combo.currentText(),
-            'visualization': self.visualization_combo.currentText(),
-            'icon_position': self.icon_position_combo.currentText()
+            "ai_trigger": self.ai_trigger_input.text(),
+            "ollama_model": self.ollama_model_combo.currentText(),
+            "language": self.language_combo.currentText(),
+            "face_recognition": self.face_recognition_cb.isChecked(),
+            "sound_enabled": self.sound_cb.isChecked(),
+            "volume": self.volume_slider.value(),
+            "timeout": self.timeout_input.text(),
+            "theme": "current" if self.current_theme_btn.isChecked() else "school",
+            "element_size": self.size_combo.currentText(),
+            "visualization": self.visualization_combo.currentText(),
+            "icon_position": self.icon_position_combo.currentText(),
         }
+
 
 class ScrollablePanel(QScrollArea):
     """Pannello scrollabile che accetta drop."""
+
     def __init__(self, title, color_class):
         super().__init__()
         self.setWidgetResizable(True)
@@ -578,11 +679,14 @@ class ScrollablePanel(QScrollArea):
         self.container_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #4a90e2;")
+        title_label.setStyleSheet(
+            "font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #4a90e2;"
+        )
         self.container_layout.addWidget(title_label)
 
         self.setWidget(self.container)
-        self.setStyleSheet(f"""
+        self.setStyleSheet(
+            f"""
             QScrollArea {{
                 background-color: #f5f7fa;
                 border: 3px solid {self.get_border_color(color_class)};
@@ -598,15 +702,12 @@ class ScrollablePanel(QScrollArea):
                 background: #4a90e2;
                 border-radius: 6px;
             }}
-        """)
+        """
+        )
 
     def get_border_color(self, color_class):
-        colors = {
-            'blue': '#3498db',
-            'red': '#e74c3c',
-            'green': '#2ecc71'
-        }
-        return colors.get(color_class, '#bdc3c7')
+        colors = {"blue": "#3498db", "red": "#e74c3c", "green": "#2ecc71"}
+        return colors.get(color_class, "#bdc3c7")
 
     def add_widget(self, widget):
         self.container_layout.addWidget(widget)
@@ -622,8 +723,10 @@ class ScrollablePanel(QScrollArea):
             self.add_widget(new_widget)
             event.acceptProposedAction()
 
+
 class MainWindow(QMainWindow):
     """Finestra principale dell'applicazione."""
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Assistente per Dislessia")
@@ -673,7 +776,8 @@ class MainWindow(QMainWindow):
         self.log_widget = QTextEdit()
         self.log_widget.setReadOnly(True)
         self.log_widget.hide()
-        self.log_widget.setStyleSheet("""
+        self.log_widget.setStyleSheet(
+            """
             QTextEdit {
                 background-color: #333;
                 color: #fff;
@@ -682,7 +786,8 @@ class MainWindow(QMainWindow):
                 padding: 10px;
                 font-family: monospace;
             }
-        """)
+        """
+        )
         overlay_layout.addWidget(self.log_widget)
 
         self.setup_bottom_bar(overlay_layout)
@@ -728,21 +833,28 @@ class MainWindow(QMainWindow):
         panels_layout = QHBoxLayout()
         panels_layout.setSpacing(10)
 
-        self.contents_panel = ScrollablePanel("📝 Contenuti pensieri creativi (A)", "blue")
+        self.contents_panel = ScrollablePanel(
+            "📝 Contenuti pensieri creativi (A)", "blue"
+        )
         panels_layout.addWidget(self.contents_panel, 1)
 
         self.work_area_panel = ScrollablePanel("🎯 Area di Lavoro (B)", "red")
         placeholder_label = QLabel("Trascina gli elementi qui per lavorarci")
-        placeholder_label.setStyleSheet("color: #888; font-style: italic; margin: 20px;")
+        placeholder_label.setStyleSheet(
+            "color: #888; font-style: italic; margin: 20px;"
+        )
         placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.work_area_panel.add_widget(placeholder_label)
         panels_layout.addWidget(self.work_area_panel, 1)
 
-        self.ai_panel = ScrollablePanel("📋 Dettagli & Risultati Artificial Intelligence (C)", "green")
+        self.ai_panel = ScrollablePanel(
+            "📋 Dettagli & Risultati Artificial Intelligence (C)", "green"
+        )
         self.ai_results_text = QTextEdit()
         self.ai_results_text.setReadOnly(True)
         self.ai_results_text.setPlainText("Le risposte dell'AI appariranno qui.")
-        self.ai_results_text.setStyleSheet("""
+        self.ai_results_text.setStyleSheet(
+            """
             QTextEdit {
                 background-color: #f5f7fa;
                 border: none;
@@ -750,7 +862,8 @@ class MainWindow(QMainWindow):
                 padding: 10px;
                 font-size: 12px;
             }
-        """)
+        """
+        )
         self.ai_panel.add_widget(self.ai_results_text)
         panels_layout.addWidget(self.ai_panel, 1)
 
@@ -763,7 +876,8 @@ class MainWindow(QMainWindow):
         self.text_input = QLineEdit()
         self.text_input.setPlaceholderText("Inserisci il tuo testo qui...")
         self.text_input.returnPressed.connect(self.add_text)
-        self.text_input.setStyleSheet("""
+        self.text_input.setStyleSheet(
+            """
             QLineEdit {
                 background-color: #fff;
                 border: 2px solid #ddd;
@@ -776,7 +890,8 @@ class MainWindow(QMainWindow):
                 border: 2px solid #4a90e2;
                 background-color: white;
             }
-        """)
+        """
+        )
         bottom_layout.addWidget(self.text_input, 1)
 
         self.add_btn = QPushButton("➕ Aggiungi")
@@ -785,8 +900,16 @@ class MainWindow(QMainWindow):
         self.ai_btn = QPushButton("🧠 AI")
         self.ai_btn.clicked.connect(self.send_to_ai)
 
-        voice_icon = QIcon(self.get_svg_icon("M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3.99-3.98 5.75-5.3 5.75S6.7 14.99 6.7 11H5c0 4.14 3.36 7.48 7.48 7.48V21h-3v2h6v-2h-3v-2.52c4.14 0 7.48-3.34 7.48-7.48h-2.18z"))
-        recording_icon = QIcon(self.get_svg_icon("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"))
+        voice_icon = QIcon(
+            self.get_svg_icon(
+                "M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3.99-3.98 5.75-5.3 5.75S6.7 14.99 6.7 11H5c0 4.14 3.36 7.48 7.48 7.48V21h-3v2h6v-2h-3v-2.52c4.14 0 7.48-3.34 7.48-7.48h-2.18z"
+            )
+        )
+        recording_icon = QIcon(
+            self.get_svg_icon(
+                "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"
+            )
+        )
         self.voice_btn = QPushButton("Registra Voce")
         self.voice_btn.setObjectName("voiceButton")
         self.voice_btn.setIcon(voice_icon)
@@ -800,8 +923,15 @@ class MainWindow(QMainWindow):
         self.log_btn = QPushButton("📊 Mostra Log")
         self.log_btn.clicked.connect(self.toggle_log_visibility)
 
-        for btn in [self.add_btn, self.ai_btn, self.voice_btn,
-                    self.hands_btn, self.face_btn, self.clean_btn, self.log_btn]:
+        for btn in [
+            self.add_btn,
+            self.ai_btn,
+            self.voice_btn,
+            self.hands_btn,
+            self.face_btn,
+            self.clean_btn,
+            self.log_btn,
+        ]:
             bottom_layout.addWidget(btn)
 
         parent_layout.addLayout(bottom_layout)
@@ -815,7 +945,7 @@ class MainWindow(QMainWindow):
         """
         buffer = QBuffer()
         buffer.open(QIODevice.OpenModeFlag.WriteOnly)
-        buffer.write(svg_content.encode('utf-8'))
+        buffer.write(svg_content.encode("utf-8"))
         buffer.close()
         svg_bytes = buffer.data()
         pixmap = QPixmap()
@@ -833,7 +963,7 @@ class MainWindow(QMainWindow):
         """Gestisce il ridimensionamento dell'overlay."""
         if obj is self.centralWidget() and event.type() == QEvent.Type.Resize:
             for child in obj.findChildren(QWidget):
-                if child.parent() == obj and hasattr(child, 'setGeometry'):
+                if child.parent() == obj and hasattr(child, "setGeometry"):
                     child.setGeometry(obj.rect())
         return super().eventFilter(obj, event)
 
@@ -870,13 +1000,19 @@ class MainWindow(QMainWindow):
         input_text = self.text_input.text().strip()
         if not input_text:
             logging.warning("Inserisci del testo per inviarlo all'AI.")
-            QMessageBox.warning(self, "Attenzione", "Inserisci del testo per inviarlo all'AI.")
+            QMessageBox.warning(
+                self, "Attenzione", "Inserisci del testo per inviarlo all'AI."
+            )
             return
 
-        ollama_model = self.settings.get('ollama_model')
+        ollama_model = self.settings.get("ollama_model")
         if not ollama_model or ollama_model == "Seleziona un modello":
             logging.error("Nessuno modello Ollama selezionato.")
-            QMessageBox.critical(self, "Errore", "Nessuno modello Ollama selezionato. Controlla le opzioni.")
+            QMessageBox.critical(
+                self,
+                "Errore",
+                "Nessuno modello Ollama selezionato. Controlla le opzioni.",
+            )
             return
 
         self.update_status(f"🧠 AI in elaborazione con {ollama_model}...")
@@ -910,25 +1046,35 @@ class MainWindow(QMainWindow):
         """Inizia o ferma la registrazione vocale."""
         if not sr:
             logging.error("Libreria 'speech_recognition' non disponibile.")
-            QMessageBox.critical(self, "Errore", "La libreria 'speech_recognition' non è disponibile.")
+            QMessageBox.critical(
+                self, "Errore", "La libreria 'speech_recognition' non è disponibile."
+            )
             return
 
         if not self.is_listening:
             self.is_listening = True
             self.voice_btn.setText("Registrazione in corso...")
-            voice_icon = QIcon(self.get_svg_icon("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"))
+            voice_icon = QIcon(
+                self.get_svg_icon(
+                    "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"
+                )
+            )
             self.voice_btn.setIcon(voice_icon)
-            self.voice_btn.setStyleSheet("""
+            self.voice_btn.setStyleSheet(
+                """
                 #voiceButton {
                     background-color: #e74c3c;
                     color: white;
                     border-radius: 12px;
                     padding: 8px 16px;
                 }
-            """)
+            """
+            )
             self.update_status("🎤 Registrazione in corso...")
 
-            self.voice_thread = VoiceRecognitionThread(self.settings.get('language', 'Italiano'))
+            self.voice_thread = VoiceRecognitionThread(
+                self.settings.get("language", "Italiano")
+            )
             self.voice_thread.recognized_text.connect(self.handle_recognized_text)
             self.voice_thread.recognition_error.connect(self.handle_recognition_error)
             self.voice_thread.finished.connect(self.stop_voice_input)
@@ -958,7 +1104,11 @@ class MainWindow(QMainWindow):
         """Ferma la registrazione vocale e ripristina il pulsante."""
         self.is_listening = False
         self.voice_btn.setText("Registra Voce")
-        voice_icon = QIcon(self.get_svg_icon("M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3.99-3.98 5.75-5.3 5.75S6.7 14.99 6.7 11H5c0 4.14 3.36 7.48 7.48 7.48V21h-3v2h6v-2h-3v-2.52c4.14 0 7.48-3.34 7.48-7.48h-2.18z"))
+        voice_icon = QIcon(
+            self.get_svg_icon(
+                "M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3.99-3.98 5.75-5.3 5.75S6.7 14.99 6.7 11H5c0 4.14 3.36 7.48 7.48 7.48V21h-3v2h6v-2h-3v-2.52c4.14 0 7.48-3.34 7.48-7.48h-2.18z"
+            )
+        )
         self.voice_btn.setIcon(voice_icon)
         self.voice_btn.setStyleSheet("")
         self.update_status("✅ Sistema attivo - Mostra le mani o il viso")
@@ -1161,8 +1311,10 @@ class MainWindow(QMainWindow):
             self.voice_thread.stop()
         event.accept()
 
+
 class OllamaThread(QThread):
     """Thread per la gestione delle chiamate API a Ollama."""
+
     ollama_response = pyqtSignal(str)
     ollama_error = pyqtSignal(str)
 
@@ -1173,13 +1325,11 @@ class OllamaThread(QThread):
 
     def run(self):
         try:
-            logging.info(f"Invio prompt a Ollama. Modello: {self.model}, Prompt: {self.prompt}")
+            logging.info(
+                f"Invio prompt a Ollama. Modello: {self.model}, Prompt: {self.prompt}"
+            )
             url = "http://localhost:11434/api/generate"
-            payload = {
-                "model": self.model,
-                "prompt": self.prompt,
-                "stream": False
-            }
+            payload = {"model": self.model, "prompt": self.prompt, "stream": False}
 
             response = requests.post(url, json=payload, timeout=60)
             response.raise_for_status()
@@ -1191,8 +1341,12 @@ class OllamaThread(QThread):
             logging.info("Risposta Ollama ricevuta.")
 
         except requests.exceptions.ConnectionError:
-            logging.error("Errore di connessione: Il server Ollama non è raggiungibile.")
-            self.ollama_error.emit("Errore di connessione: Il server Ollama non è raggiungibile. Assicurati che sia in esecuzione.")
+            logging.error(
+                "Errore di connessione: Il server Ollama non è raggiungibile."
+            )
+            self.ollama_error.emit(
+                "Errore di connessione: Il server Ollama non è raggiungibile. Assicurati che sia in esecuzione."
+            )
         except requests.exceptions.RequestException as e:
             logging.error(f"Errore nella richiesta Ollama: {e}")
             self.ollama_error.emit(f"Errore nella richiesta Ollama: {e}")
@@ -1200,8 +1354,10 @@ class OllamaThread(QThread):
             logging.error(f"Si è verificato un errore inaspettato: {e}")
             self.ollama_error.emit(f"Si è verificato un errore inaspettato: {e}")
 
+
 class VoiceRecognitionThread(QThread):
     """Thread per il riconoscimento vocale asincrono."""
+
     recognized_text = pyqtSignal(str)
     recognition_error = pyqtSignal(str)
 
@@ -1214,16 +1370,18 @@ class VoiceRecognitionThread(QThread):
             self.recognizer = sr.Recognizer()
 
         lang_map = {
-            'Italiano': 'it-IT',
-            'English': 'en-US',
-            'Français': 'fr-FR',
-            'Deutsch': 'de-DE'
+            "Italiano": "it-IT",
+            "English": "en-US",
+            "Français": "fr-FR",
+            "Deutsch": "de-DE",
         }
-        self.lang_code = lang_map.get(lang_setting, 'it-IT')
+        self.lang_code = lang_map.get(lang_setting, "it-IT")
 
     def run(self):
         if sr is None or self.recognizer is None:
-            self.recognition_error.emit("Libreria di riconoscimento vocale non disponibile.")
+            self.recognition_error.emit(
+                "Libreria di riconoscimento vocale non disponibile."
+            )
             return
 
         try:
@@ -1231,33 +1389,54 @@ class VoiceRecognitionThread(QThread):
                 self.recognizer.adjust_for_ambient_noise(source)
                 logging.info("In ascolto per il riconoscimento vocale...")
                 try:
-                    audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=10)
+                    audio = self.recognizer.listen(
+                        source, timeout=5, phrase_time_limit=10
+                    )
                     if not self._running:
                         return
 
                     logging.info("Riconoscimento in corso...")
-                    text = self.recognizer.recognize_google(audio, language=self.lang_code)
+                    text = self.recognizer.recognize_google(
+                        audio, language=self.lang_code
+                    )
                     self.recognized_text.emit(text)
 
                 except sr.WaitTimeoutError:
-                    logging.warning("Tempo di attesa scaduto per il riconoscimento vocale.")
-                    self.recognition_error.emit("Tempo di attesa scaduto. Nessun input vocale ricevuto.")
+                    logging.warning(
+                        "Tempo di attesa scaduto per il riconoscimento vocale."
+                    )
+                    self.recognition_error.emit(
+                        "Tempo di attesa scaduto. Nessun input vocale ricevuto."
+                    )
                 except sr.UnknownValueError:
-                    logging.warning("Impossibile riconoscere il testo dal segnale audio.")
-                    self.recognition_error.emit("Impossibile riconoscere il testo. Riprova.")
+                    logging.warning(
+                        "Impossibile riconoscere il testo dal segnale audio."
+                    )
+                    self.recognition_error.emit(
+                        "Impossibile riconoscere il testo. Riprova."
+                    )
                 except sr.RequestError as e:
                     logging.error(f"Errore dal servizio di riconoscimento vocale: {e}")
-                    self.recognition_error.emit(f"Errore dal servizio di riconoscimento vocale; {e}")
+                    self.recognition_error.emit(
+                        f"Errore dal servizio di riconoscimento vocale; {e}"
+                    )
                 except Exception as e:
-                    logging.error(f"Si è verificato un errore inaspettato nel riconoscimento vocale: {e}")
-                    self.recognition_error.emit(f"Si è verificato un errore inaspettato: {e}")
+                    logging.error(
+                        f"Si è verificato un errore inaspettato nel riconoscimento vocale: {e}"
+                    )
+                    self.recognition_error.emit(
+                        f"Si è verificato un errore inaspettato: {e}"
+                    )
         except Exception as e:
             logging.error(f"Errore nell'inizializzazione del microfono: {e}")
-            self.recognition_error.emit(f"Errore nell'inizializzazione del microfono: {e}")
+            self.recognition_error.emit(
+                f"Errore nell'inizializzazione del microfono: {e}"
+            )
 
     def stop(self):
         self._running = False
         self.wait()
+
 
 def main():
     """Funzione principale."""
@@ -1274,6 +1453,7 @@ def main():
     window.show()
 
     return app.exec()
+
 
 if __name__ == "__main__":
     sys.exit(main())

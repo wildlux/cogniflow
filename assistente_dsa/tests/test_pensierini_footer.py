@@ -5,14 +5,26 @@ Test script to verify pensierini creation from footer functionality
 
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QLineEdit, QPushButton, QLabel
+from PyQt6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+    QLineEdit,
+    QPushButton,
+    QLabel,
+)
 from PyQt6.QtCore import Qt
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 class TestPensieriniFooter(QMainWindow):
     """Test window to verify pensierini footer functionality"""
@@ -31,7 +43,9 @@ class TestPensieriniFooter(QMainWindow):
 
         # Footer pensierini input (simulating the real one)
         self.footer_pensierini_input = QLineEdit()
-        self.footer_pensierini_input.setPlaceholderText("💭 Scrivi pensierino rapido...")
+        self.footer_pensierini_input.setPlaceholderText(
+            "💭 Scrivi pensierino rapido..."
+        )
         layout.addWidget(QLabel("Footer Pensierini Input:"))
         layout.addWidget(self.footer_pensierini_input)
 
@@ -59,7 +73,9 @@ class TestPensieriniFooter(QMainWindow):
             text = self.footer_pensierini_input.text().strip()
 
             if not text:
-                self.results_label.setText("❌ Campo vuoto! Scrivi qualcosa prima di inviare.")
+                self.results_label.setText(
+                    "❌ Campo vuoto! Scrivi qualcosa prima di inviare."
+                )
                 return
 
             # Simulate creating a pensierino widget
@@ -75,7 +91,9 @@ class TestPensieriniFooter(QMainWindow):
             results_text = f"✅ Pensierino creato con successo!\n\n"
             results_text += f"📝 Testo: {pensierino_text}\n\n"
             results_text += f"📊 Totale pensierini: {len(self.pensierini_list)}\n\n"
-            results_text += "Lista pensierini:\n" + "\n".join(f"• {p}" for p in self.pensierini_list[-5:])  # Show last 5
+            results_text += "Lista pensierini:\n" + "\n".join(
+                f"• {p}" for p in self.pensierini_list[-5:]
+            )  # Show last 5
 
             self.results_label.setText(results_text)
 
@@ -87,6 +105,7 @@ class TestPensieriniFooter(QMainWindow):
             self.results_label.setText(error_msg)
             logging.error(f"Error in send_footer_pensierino: {e}")
 
+
 def main():
     """Main test function"""
     app = QApplication(sys.argv)
@@ -97,6 +116,7 @@ def main():
 
     # Run the application
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()

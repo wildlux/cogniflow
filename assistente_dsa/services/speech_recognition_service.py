@@ -10,8 +10,9 @@ from PyQt6.QtCore import QObject, pyqtSignal
 # Import del speech recognition manager esistente
 try:
     from Artificial_Intelligence.Riconoscimento_Vocale.managers.speech_recognition_manager import (
-        SpeechRecognitionThread
+        SpeechRecognitionThread,
     )
+
     SPEECH_AVAILABLE = True
 except ImportError:
     SpeechRecognitionThread = None
@@ -39,7 +40,9 @@ class SpeechRecognitionService(QObject):
         if SPEECH_AVAILABLE:
             self.logger.info("Speech Recognition Service inizializzato")
         else:
-            self.logger.warning("Speech Recognition non disponibile - servizio limitato")
+            self.logger.warning(
+                "Speech Recognition non disponibile - servizio limitato"
+            )
 
     def start_recognition(self) -> bool:
         """Avvia il riconoscimento vocale"""
@@ -77,7 +80,11 @@ class SpeechRecognitionService(QObject):
     def stop_recognition(self) -> bool:
         """Ferma il riconoscimento vocale"""
         try:
-            if self.recognition_thread and hasattr(self.recognition_thread, 'isRunning') and self.recognition_thread.isRunning():
+            if (
+                self.recognition_thread
+                and hasattr(self.recognition_thread, "isRunning")
+                and self.recognition_thread.isRunning()
+            ):
                 self.recognition_thread.stop()
                 self.recognition_thread.wait()
                 self.logger.info("Riconoscimento vocale fermato")

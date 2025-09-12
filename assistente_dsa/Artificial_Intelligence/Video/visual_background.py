@@ -12,6 +12,7 @@ from PyQt6.QtGui import QImage, QPixmap
 # Import MediaPipe client
 try:
     from services.mediapipe_client import MediaPipeClient
+
     MEDIAPIPE_CLIENT_AVAILABLE = True
 except ImportError:
     MEDIAPIPE_CLIENT_AVAILABLE = False
@@ -21,6 +22,7 @@ except ImportError:
 # MediaPipe imports
 try:
     import mediapipe as mp  # type: ignore
+
     MEDIAPIPE_AVAILABLE = True
     mp_pose = mp.solutions.pose
     mp_drawing = mp.solutions.drawing_utils
@@ -37,12 +39,17 @@ class VideoThread(QThread):
     """
     Thread per la cattura e l'elaborazione del flusso video dalla webcam.
     """
-    change_pixmap_signal = pyqtSignal(QPixmap)  # Invia QPixmap invece di dati raw per efficienza
+
+    change_pixmap_signal = pyqtSignal(
+        QPixmap
+    )  # Invia QPixmap invece di dati raw per efficienza
     status_signal = pyqtSignal(str)
     hand_position_signal = pyqtSignal(int, int)  # x, y coordinates
-    gesture_detected_signal = pyqtSignal(str)    # gesture type
-    human_detected_signal = pyqtSignal(list)     # list of human bounding boxes [(x,y,w,h), ...]
-    human_position_signal = pyqtSignal(int, int) # center position of primary human
+    gesture_detected_signal = pyqtSignal(str)  # gesture type
+    human_detected_signal = pyqtSignal(
+        list
+    )  # list of human bounding boxes [(x,y,w,h), ...]
+    human_position_signal = pyqtSignal(int, int)  # center position of primary human
 
     def __init__(self, main_window=None):
         super().__init__()
@@ -53,7 +60,9 @@ class VideoThread(QThread):
         self.facial_expression_enabled = False
         self.left_hand_tracking_enabled = False
         self.right_hand_tracking_enabled = True  # Abilitato di default
-        self.human_detection_enabled = True  # LIDAR-like human detection enabled by default
+        self.human_detection_enabled = (
+            True  # LIDAR-like human detection enabled by default
+        )
         self.main_window = main_window
 
         # Initialize MediaPipe client
@@ -62,7 +71,9 @@ class VideoThread(QThread):
 
         if MEDIAPIPE_CLIENT_AVAILABLE and MediaPipeClient:
             try:
-                mediapipe_url = os.getenv("MEDIAPIPE_SERVICE_URL", "http://localhost:8001")
+                mediapipe_url = os.getenv(
+                    "MEDIAPIPE_SERVICE_URL", "http://localhost:8001"
+                )
                 self.mediapipe_client = MediaPipeClient(mediapipe_url)
                 logging.info(f"MediaPipe client initialized with URL: {mediapipe_url}")
             except Exception as e:
@@ -74,15 +85,20 @@ class VideoThread(QThread):
         # Carica i classificatori Haar per il rilevamento
         try:
             import cv2.data
-            cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+
+            cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
             logging.info(f"Caricamento cascade da: {cascade_path}")
 
             self.face_cascade = cv2.CascadeClassifier(cascade_path)
             if self.face_cascade is None or self.face_cascade.empty():
-                logging.warning("File Haar cascade per il rilevamento facciale non trovato o vuoto. Rilevamento facciale disabilitato.")
+                logging.warning(
+                    "File Haar cascade per il rilevamento facciale non trovato o vuoto. Rilevamento facciale disabilitato."
+                )
                 self.face_cascade = None
             else:
-                logging.info("Cascade Haar per rilevamento facciale caricato correttamente")
+                logging.info(
+                    "Cascade Haar per rilevamento facciale caricato correttamente"
+                )
         except Exception as e:
             logging.error(f"Errore nel caricamento del cascade Haar: {e}")
             self.face_cascade = None
@@ -90,8 +106,8 @@ class VideoThread(QThread):
         # Parametri per il rilevamento umano basato su contorni (LIDAR-like)
         self.human_min_area = 10000  # Area minima per considerare un umano
         self.human_max_area = 300000  # Area massima
-        self.human_min_aspect = 0.3   # Rapporto aspetto minimo (larghezza/altezza)
-        self.human_max_aspect = 1.2   # Rapporto aspetto massimo
+        self.human_min_aspect = 0.3  # Rapporto aspetto minimo (larghezza/altezza)
+        self.human_max_aspect = 1.2  # Rapporto aspetto massimo
 
         # Per le mani, usiamo un approccio alternativo basato sulla pelle
         # TODO: Calibration - Adjust skin color thresholds based on lighting conditions
@@ -114,8 +130,18 @@ class VideoThread(QThread):
 
         # Parametri per il riconoscimento avanzato delle mani
         self.hand_tracking = {
-            'left': {'position': None, 'fingers': 0, 'gesture': 'unknown', 'confidence': 0},
-            'right': {'position': None, 'fingers': 0, 'gesture': 'unknown', 'confidence': 0}
+            "left": {
+                "position": None,
+                "fingers": 0,
+                "gesture": "unknown",
+                "confidence": 0,
+            },
+            "right": {
+                "position": None,
+                "fingers": 0,
+                "gesture": "unknown",
+                "confidence": 0,
+            },
         }
         self.active_inputs = set()  # Traccia dispositivi attivi (mani + mouse)
 
@@ -139,14 +165,13 @@ class VideoThread(QThread):
             try:
                 if self.mediapipe_pose is None:
                     self.mediapipe_pose = mp_pose.Pose(
-                        min_detection_confidence=0.5,
-                        min_tracking_confidence=0.5
+                        min_detection_confidence=0.5, min_tracking_confidence=0.5
                     )
                 if self.mediapipe_hands is None:
                     self.mediapipe_hands = mp.solutions.hands.Hands(
                         max_num_hands=2,
                         min_detection_confidence=0.5,
-                        min_tracking_confidence=0.5
+                        min_tracking_confidence=0.5,
                     )
                 logging.info("MediaPipe inizializzato correttamente")
             except Exception as e:
@@ -164,8 +189,11 @@ class VideoThread(QThread):
         if enabled and self.current_backend == "mediapipe":
             # Inizializza il client per la comunicazione con la VM
             try:
-    from ..mediapipe.client.mediapipe_client import MediaPipeClient
-                mediapipe_url = os.getenv("MEDIAPIPE_SERVICE_URL", "http://localhost:8001")
+                from ..mediapipe.client.mediapipe_client import MediaPipeClient
+
+                mediapipe_url = os.getenv(
+                    "MEDIAPIPE_SERVICE_URL", "http://localhost:8001"
+                )
                 self.mediapipe_client = MediaPipeClient(mediapipe_url)
                 logging.info(f"Client MediaPipe VM inizializzato: {mediapipe_url}")
             except Exception as e:
@@ -173,7 +201,7 @@ class VideoThread(QThread):
                 self.mediapipe_client = None
         elif not enabled:
             # Ritorna alla modalità locale
-            if hasattr(self, 'mediapipe_client'):
+            if hasattr(self, "mediapipe_client"):
                 self.mediapipe_client = None
 
     def run(self):
@@ -207,7 +235,10 @@ class VideoThread(QThread):
                     status_text += "Faccia: OFF  "
 
                 if self.hand_detection_enabled:
-                    if self.left_hand_tracking_enabled and self.right_hand_tracking_enabled:
+                    if (
+                        self.left_hand_tracking_enabled
+                        and self.right_hand_tracking_enabled
+                    ):
                         status_text += "Mani: SX+DX  "
                     elif self.left_hand_tracking_enabled:
                         status_text += "Mani: SX  "
@@ -233,8 +264,15 @@ class VideoThread(QThread):
                 else:
                     status_text += "Umani: OFF"
 
-                cv2.putText(frame, status_text, (10, frame.shape[0] - 20),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                cv2.putText(
+                    frame,
+                    status_text,
+                    (10, frame.shape[0] - 20),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (255, 255, 255),
+                    2,
+                )
 
                 # Applica i rilevamenti nell'ordine corretto
                 if self.face_detection_enabled:
@@ -259,7 +297,9 @@ class VideoThread(QThread):
                 bytes_per_line = 3 * w
                 # Converti esplicitamente in bytes
                 image_bytes = bytes(rgb_image.tobytes())
-                q_image = QImage(image_bytes, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+                q_image = QImage(
+                    image_bytes, w, h, bytes_per_line, QImage.Format.Format_RGB888
+                )
                 pixmap = QPixmap.fromImage(q_image)
                 # Invia QPixmap invece di dati raw per ridurre uso memoria
                 self.change_pixmap_signal.emit(pixmap)
@@ -279,13 +319,22 @@ class VideoThread(QThread):
             frame = self.detect_faces_mediapipe(frame)
             return frame
         except Exception as e:
-            logging.warning(f"MediaPipe-style face detection failed: {e}, falling back to OpenCV")
+            logging.warning(
+                f"MediaPipe-style face detection failed: {e}, falling back to OpenCV"
+            )
 
         # Fallback a OpenCV
         if self.face_cascade is None:
             # Se il cascade non è disponibile, mostra un messaggio
-            cv2.putText(frame, 'Rilevamento faccia non disponibile', (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            cv2.putText(
+                frame,
+                "Rilevamento faccia non disponibile",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 0, 255),
+                2,
+            )
             return frame
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -296,22 +345,22 @@ class VideoThread(QThread):
         # Parametri ottimizzati per il rilevamento facciale
         faces = self.face_cascade.detectMultiScale(
             gray,
-            scaleFactor=1.1,   # Leggermente più permissivo
-            minNeighbors=2,    # Ridotto per più rilevamenti
+            scaleFactor=1.1,  # Leggermente più permissivo
+            minNeighbors=2,  # Ridotto per più rilevamenti
             minSize=(20, 20),  # Dimensione minima ancora più piccola
-            maxSize=(400, 400), # Dimensione massima più grande
-            flags=cv2.CASCADE_SCALE_IMAGE
+            maxSize=(400, 400),  # Dimensione massima più grande
+            flags=cv2.CASCADE_SCALE_IMAGE,
         )
 
         # Se non trova facce con parametri normali, prova con parametri più permissivi
         if len(faces) == 0:
             faces = self.face_cascade.detectMultiScale(
                 gray,
-                scaleFactor=1.2,   # Più permissivo
-                minNeighbors=1,    # Molto permissivo
+                scaleFactor=1.2,  # Più permissivo
+                minNeighbors=1,  # Molto permissivo
                 minSize=(15, 15),  # Molto piccolo
-                maxSize=(500, 500), # Molto grande
-                flags=cv2.CASCADE_SCALE_IMAGE
+                maxSize=(500, 500),  # Molto grande
+                flags=cv2.CASCADE_SCALE_IMAGE,
             )
 
         # Logging dettagliato per debug
@@ -319,21 +368,54 @@ class VideoThread(QThread):
 
         # Mostra sempre lo stato del rilevamento con più dettagli
         if len(faces) > 0:
-            cv2.putText(frame, f'Faccia rilevata: {len(faces)}', (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(
+                frame,
+                f"Faccia rilevata: {len(faces)}",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                2,
+            )
             logging.info(f"Rilevamento facciale riuscito: {len(faces)} facce")
         else:
-            cv2.putText(frame, 'Nessuna faccia rilevata', (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-            logging.debug("Nessuna faccia rilevata - possibili cause: illuminazione, angolazione, occlusioni")
+            cv2.putText(
+                frame,
+                "Nessuna faccia rilevata",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 255),
+                2,
+            )
+            logging.debug(
+                "Nessuna faccia rilevata - possibili cause: illuminazione, angolazione, occlusioni"
+            )
 
-        for (x, y, w, h) in faces:
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 3)  # Rettangolo più spesso
-            cv2.putText(frame, 'Faccia', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
+        for x, y, w, h in faces:
+            cv2.rectangle(
+                frame, (x, y), (x + w, y + h), (255, 0, 0), 3
+            )  # Rettangolo più spesso
+            cv2.putText(
+                frame,
+                "Faccia",
+                (x, y - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (255, 0, 0),
+                1,
+            )
 
             # Aggiungi informazioni di debug sul rettangolo
-            cv2.putText(frame, f'({x},{y}) {w}x{h}', (x, y + h + 20),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
+            cv2.putText(
+                frame,
+                f"({x},{y}) {w}x{h}",
+                (x, y + h + 20),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.4,
+                (255, 0, 0),
+                1,
+            )
 
         return frame
 
@@ -347,7 +429,9 @@ class VideoThread(QThread):
             try:
                 return self.detect_hands_mediapipe(frame)
             except Exception as e:
-                logging.warning(f"MediaPipe hand detection failed: {e}, falling back to OpenCV")
+                logging.warning(
+                    f"MediaPipe hand detection failed: {e}, falling back to OpenCV"
+                )
 
         # Fallback a OpenCV tradizionale
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -359,7 +443,9 @@ class VideoThread(QThread):
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
 
         # Trova i contorni con approssimazione migliore
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)
+        contours, _ = cv2.findContours(
+            mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1
+        )
 
         detected_hands = []
         for contour in contours:
@@ -380,22 +466,31 @@ class VideoThread(QThread):
                     # Controllo dimensione per mani realistiche
                     if area < 80000:  # Solo processa oggetti di dimensione ragionevole
                         # Analisi avanzata della mano
-                        hand_info = self.analyze_hand_advanced(contour, x, y, w, h, frame.shape[1])
+                        hand_info = self.analyze_hand_advanced(
+                            contour, x, y, w, h, frame.shape[1]
+                        )
 
                         if hand_info is None:
                             continue
 
-                        if hand_info['confidence'] > 0.3:  # Solo mani con buona confidenza
+                        if (
+                            hand_info["confidence"] > 0.3
+                        ):  # Solo mani con buona confidenza
                             # Controlla se il tracciamento per questa mano è abilitato
-                            hand_type = hand_info['hand_type']
-                            if (hand_type == 'left' and not self.left_hand_tracking_enabled) or \
-                               (hand_type == 'right' and not self.right_hand_tracking_enabled):
+                            hand_type = hand_info["hand_type"]
+                            if (
+                                hand_type == "left"
+                                and not self.left_hand_tracking_enabled
+                            ) or (
+                                hand_type == "right"
+                                and not self.right_hand_tracking_enabled
+                            ):
                                 continue  # Salta questa mano se il tracciamento è disabilitato
 
                         detected_hands.append((x, y, w, h, hand_info))
 
                         # Colore diverso per mano destra e sinistra
-                        if hand_info['hand_type'] == 'right':
+                        if hand_info["hand_type"] == "right":
                             color = (0, 255, 0)  # Verde per destra
                         else:
                             color = (255, 0, 255)  # Magenta per sinistra
@@ -405,25 +500,51 @@ class VideoThread(QThread):
 
                         # Info sulla mano
                         info_text = f"{hand_info['hand_type'].upper()}: {hand_info['fingers']} dita, {hand_info['gesture']}"
-                        cv2.putText(frame, info_text, (x, y - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+                        cv2.putText(
+                            frame,
+                            info_text,
+                            (x, y - 15),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.5,
+                            color,
+                            1,
+                        )
 
                         # Info sulle dita individuali
                         finger_text = "Pollice:{'ON' if hand_info['thumb'] else 'OFF'} Indice:{'ON' if hand_info['index'] else 'OFF'}"
-                        cv2.putText(frame, finger_text, (x, y + h + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
+                        cv2.putText(
+                            frame,
+                            finger_text,
+                            (x, y + h + 15),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.4,
+                            color,
+                            1,
+                        )
 
                         # Emit signals for hand position and gesture
                         hand_center_x = x + w // 2
                         hand_center_y = y + h // 2
                         self.hand_position_signal.emit(hand_center_x, hand_center_y)
-                        self.gesture_detected_signal.emit(hand_info['gesture'])
+                        self.gesture_detected_signal.emit(hand_info["gesture"])
 
                         # Add visual cursor indicator
-                        cursor_color = (0, 255, 0) if hand_info['gesture'] == "Open Hand" else (0, 0, 255)
-                        cv2.circle(frame, (hand_center_x, hand_center_y), 10, cursor_color, 2)
-                        cv2.circle(frame, (hand_center_x, hand_center_y), 2, cursor_color, -1)
+                        cursor_color = (
+                            (0, 255, 0)
+                            if hand_info["gesture"] == "Open Hand"
+                            else (0, 0, 255)
+                        )
+                        cv2.circle(
+                            frame, (hand_center_x, hand_center_y), 10, cursor_color, 2
+                        )
+                        cv2.circle(
+                            frame, (hand_center_x, hand_center_y), 2, cursor_color, -1
+                        )
 
                         # Gestisci l'interazione con l'interfaccia
-                        frame = self.handle_advanced_hand_interaction(frame, x, y, w, h, hand_info)
+                        frame = self.handle_advanced_hand_interaction(
+                            frame, x, y, w, h, hand_info
+                        )
 
         # Aggiorna il tracking delle mani
         self.update_hand_tracking(detected_hands)
@@ -457,17 +578,41 @@ class VideoThread(QThread):
                 # Filtra per proporzioni ragionevoli (mani non troppo strette o larghe)
                 aspect_ratio = w / h if h > 0 else 0
                 if 0.5 < aspect_ratio < 2.0:
-                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)  # Verde per mani base
-                    cv2.putText(frame, 'Mano', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 1)
+                    cv2.rectangle(
+                        frame, (x, y), (x + w, y + h), (0, 255, 0), 2
+                    )  # Verde per mani base
+                    cv2.putText(
+                        frame,
+                        "Mano",
+                        (x, y - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        (0, 255, 0),
+                        1,
+                    )
                     hand_count += 1
 
         # Mostra lo stato del riconoscimento mani
         if hand_count > 0:
-            cv2.putText(frame, f'Mani rilevate: {hand_count}', (10, 60),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(
+                frame,
+                f"Mani rilevate: {hand_count}",
+                (10, 60),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                2,
+            )
         else:
-            cv2.putText(frame, 'Nessuna mano rilevata', (10, 60),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(
+                frame,
+                "Nessuna mano rilevata",
+                (10, 60),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                2,
+            )
 
         return frame
 
@@ -477,9 +622,11 @@ class VideoThread(QThread):
             return frame
 
         # Controlla se MediaPipe è realmente disponibile
-        mediapipe_available = (MEDIAPIPE_AVAILABLE and
-                              self.mediapipe_client is not None and
-                              MEDIAPIPE_CLIENT_AVAILABLE)
+        mediapipe_available = (
+            MEDIAPIPE_AVAILABLE
+            and self.mediapipe_client is not None
+            and MEDIAPIPE_CLIENT_AVAILABLE
+        )
 
         logging.debug(f"MediaPipe disponibile: {mediapipe_available}")
 
@@ -488,18 +635,22 @@ class VideoThread(QThread):
                 logging.info("Tentativo rilevamento pose con MediaPipe service")
 
                 # Verifica che il client sia funzionante
-                if hasattr(self.mediapipe_client, 'detect_pose'):
+                if hasattr(self.mediapipe_client, "detect_pose"):
                     # Run MediaPipe detection asynchronously
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
-                    result = loop.run_until_complete(self.detect_humans_mediapipe(frame))
+                    result = loop.run_until_complete(
+                        self.detect_humans_mediapipe(frame)
+                    )
                     loop.close()
 
                     if result is not None:
                         logging.info("Rilevamento pose MediaPipe riuscito")
                         return result
                     else:
-                        logging.warning("MediaPipe service restituito None, fallback a OpenCV")
+                        logging.warning(
+                            "MediaPipe service restituito None, fallback a OpenCV"
+                        )
                 else:
                     logging.warning("MediaPipe client non ha metodo detect_pose")
             except Exception as e:
@@ -522,7 +673,7 @@ class VideoThread(QThread):
                 return None
 
             # Verifica che il metodo detect_pose esista
-            if not hasattr(self.mediapipe_client, 'detect_pose'):
+            if not hasattr(self.mediapipe_client, "detect_pose"):
                 logging.error("MediaPipe client does not have detect_pose method")
                 return None
 
@@ -537,10 +688,9 @@ class VideoThread(QThread):
                 detected_humans = []
                 if pose_result.get("bbox"):
                     bbox = pose_result["bbox"]
-                    detected_humans.append((
-                        bbox["x"], bbox["y"],
-                        bbox["width"], bbox["height"]
-                    ))
+                    detected_humans.append(
+                        (bbox["x"], bbox["y"], bbox["width"], bbox["height"])
+                    )
 
                 # Emit signals
                 if detected_humans:
@@ -555,15 +705,29 @@ class VideoThread(QThread):
 
                 # Show detection status
                 confidence = pose_result.get("confidence", 0.0)
-                cv2.putText(frame, f'MediaPipe: Pose rilevata ({confidence:.2f})', (10, 150),
-                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv2.putText(
+                    frame,
+                    f"MediaPipe: Pose rilevata ({confidence:.2f})",
+                    (10, 150),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 255, 0),
+                    2,
+                )
 
                 return frame
 
             else:
                 # No pose detected
-                cv2.putText(frame, 'MediaPipe: Nessuna posa rilevata', (10, 150),
-                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                cv2.putText(
+                    frame,
+                    "MediaPipe: Nessuna posa rilevata",
+                    (10, 150),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 255, 255),
+                    2,
+                )
                 return frame
 
         except Exception as e:
@@ -573,7 +737,7 @@ class VideoThread(QThread):
     def detect_humans_opencv(self, frame):
         """Rilevamento umani con OpenCV (metodo originale - fallback)."""
         # Verifica che abbiamo i parametri necessari
-        if not hasattr(self, 'human_min_area'):
+        if not hasattr(self, "human_min_area"):
             return frame
 
         # Usa rilevamento basato su movimento e forma per umani
@@ -591,7 +755,9 @@ class VideoThread(QThread):
         closed = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
 
         # Trova contorni
-        contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(
+            closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
 
         detected_humans = []
         primary_human_center = None
@@ -618,13 +784,17 @@ class VideoThread(QThread):
                         # Umani hanno generalmente bassa circolarità e alta solidità
                         if circularity < 0.8 and solidity > 0.7:
                             # Calcola confidenza basata su area e forma
-                            confidence = min(1.0, (area / self.human_max_area) * 0.8 + solidity * 0.2)
+                            confidence = min(
+                                1.0, (area / self.human_max_area) * 0.8 + solidity * 0.2
+                            )
 
                             if confidence > 0.4:  # Soglia di confidenza
                                 detected_humans.append((x, y, w, h))
 
                                 # Disegna rettangolo per l'umano rilevato
-                                color = (0, 255, 0) if confidence > 0.7 else (0, 165, 255)
+                                color = (
+                                    (0, 255, 0) if confidence > 0.7 else (0, 165, 255)
+                                )
                                 cv2.rectangle(frame, (x, y), (x + w, y + h), color, 3)
 
                                 # Calcola centro dell'umano
@@ -632,9 +802,16 @@ class VideoThread(QThread):
                                 center_y = y + h // 2
 
                                 # Info sull'umano rilevato
-                                info_text = f'Umano: {confidence:.2f}'
-                                cv2.putText(frame, info_text, (x, y - 10),
-                                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+                                info_text = f"Umano: {confidence:.2f}"
+                                cv2.putText(
+                                    frame,
+                                    info_text,
+                                    (x, y - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.6,
+                                    color,
+                                    2,
+                                )
 
                                 # Disegna centro come punto di riferimento (LIDAR-like)
                                 cv2.circle(frame, (center_x, center_y), 8, color, -1)
@@ -646,16 +823,32 @@ class VideoThread(QThread):
 
         # Mostra statistiche rilevamento umani
         if detected_humans:
-            cv2.putText(frame, f'OpenCV: Umani rilevati: {len(detected_humans)}', (10, 150),
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(
+                frame,
+                f"OpenCV: Umani rilevati: {len(detected_humans)}",
+                (10, 150),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                2,
+            )
 
             # Emit signals per umani rilevati
             self.human_detected_signal.emit(detected_humans)
             if primary_human_center:
-                self.human_position_signal.emit(primary_human_center[0], primary_human_center[1])
+                self.human_position_signal.emit(
+                    primary_human_center[0], primary_human_center[1]
+                )
         else:
-            cv2.putText(frame, 'OpenCV: Nessun umano rilevato', (10, 150),
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+            cv2.putText(
+                frame,
+                "OpenCV: Nessun umano rilevato",
+                (10, 150),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 255),
+                2,
+            )
 
         return frame
 
@@ -668,11 +861,28 @@ class VideoThread(QThread):
 
         # Draw pose connections (simplified)
         pose_connections = [
-            (11, 12), (11, 13), (13, 15), (15, 17), (15, 19), (15, 21),  # Left arm
-            (12, 14), (14, 16), (16, 18), (16, 20), (16, 22),  # Right arm
-            (11, 23), (12, 24), (23, 24),  # Shoulders to hips
-            (23, 25), (25, 27), (27, 29), (29, 31),  # Left leg
-            (24, 26), (26, 28), (28, 30), (30, 32),  # Right leg
+            (11, 12),
+            (11, 13),
+            (13, 15),
+            (15, 17),
+            (15, 19),
+            (15, 21),  # Left arm
+            (12, 14),
+            (14, 16),
+            (16, 18),
+            (16, 20),
+            (16, 22),  # Right arm
+            (11, 23),
+            (12, 24),
+            (23, 24),  # Shoulders to hips
+            (23, 25),
+            (25, 27),
+            (27, 29),
+            (29, 31),  # Left leg
+            (24, 26),
+            (26, 28),
+            (28, 30),
+            (30, 32),  # Right leg
         ]
 
         landmarks = pose_data["landmarks"]
@@ -734,7 +944,9 @@ class VideoThread(QThread):
                 else:
                     # Se non sono in ordine, riordina
                     sorted_indices = np.sort(hull_indices.flatten())
-                    defects = cv2.convexityDefects(contour, sorted_indices.reshape(-1, 1))
+                    defects = cv2.convexityDefects(
+                        contour, sorted_indices.reshape(-1, 1)
+                    )
             except cv2.error as e:
                 # Se si verifica un errore, logga e continua senza difetti
                 print(f"Errore in convexityDefects (analyze_hand_shape): {e}")
@@ -749,9 +961,9 @@ class VideoThread(QThread):
                 far = tuple(contour[f][0])
 
                 # Calcola la distanza dal punto lontano al contorno
-                a = math.sqrt((end[0] - start[0])**2 + (end[1] - start[1])**2)
-                b = math.sqrt((far[0] - start[0])**2 + (far[1] - start[1])**2)
-                c = math.sqrt((end[0] - far[0])**2 + (end[1] - far[1])**2)
+                a = math.sqrt((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2)
+                b = math.sqrt((far[0] - start[0]) ** 2 + (far[1] - start[1]) ** 2)
+                c = math.sqrt((end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2)
 
                 # Usa la formula di Erone per calcolare l'area
                 s = (a + b + c) / 2
@@ -788,8 +1000,9 @@ class VideoThread(QThread):
         is_open_by_fingers = finger_count >= 3
 
         # Decisione finale
-        if (is_closed_by_compactness and is_closed_by_solidity and is_closed_by_fingers) or \
-           (is_closed_by_aspect and is_closed_by_fingers):
+        if (
+            is_closed_by_compactness and is_closed_by_solidity and is_closed_by_fingers
+        ) or (is_closed_by_aspect and is_closed_by_fingers):
             return "Closed Hand"
         elif is_open_by_compactness and is_open_by_solidity and is_open_by_fingers:
             return "Open Hand"
@@ -802,7 +1015,7 @@ class VideoThread(QThread):
             return False
 
         # Estrai la regione di interesse
-        roi = frame[y:y+h, x:x+w]
+        roi = frame[y : y + h, x : x + w]
         if roi.size == 0:
             return False
 
@@ -811,16 +1024,15 @@ class VideoThread(QThread):
 
         # Rileva volti nella regione
         faces = self.face_cascade.detectMultiScale(
-            gray_roi,
-            scaleFactor=1.1,
-            minNeighbors=3,
-            minSize=(20, 20)
+            gray_roi, scaleFactor=1.1, minNeighbors=3, minSize=(20, 20)
         )
 
         # Se viene rilevato un volto nella regione, è probabile che sia un volto
         return len(faces) > 0
 
-    def determine_hand_orientation_advanced(self, contour, x, y, w, h, center_x, center_y, frame_width):
+    def determine_hand_orientation_advanced(
+        self, contour, x, y, w, h, center_x, center_y, frame_width
+    ):
         """
         Algoritmo avanzato per determinare se una mano è destra o sinistra.
         Ottimizzato per riconoscere correttamente entrambe le mani.
@@ -828,50 +1040,60 @@ class VideoThread(QThread):
         try:
             # Logging per debug della mano sinistra
             is_left_side = center_x < frame_width // 2
-            logging.debug(f"Analisi mano - Posizione: {center_x}/{frame_width} ({'SINISTRA' if is_left_side else 'DESTRA'})")
+            logging.debug(
+                f"Analisi mano - Posizione: {center_x}/{frame_width} ({'SINISTRA' if is_left_side else 'DESTRA'})"
+            )
 
             # Metodo 1: Analisi migliorata della posizione del pollice
             thumb_based_result = self.analyze_thumb_position(contour, x, y, w, h)
-            if thumb_based_result != 'unknown':
+            if thumb_based_result != "unknown":
                 # Correzione specifica per mano sinistra
-                if is_left_side and thumb_based_result == 'right':
+                if is_left_side and thumb_based_result == "right":
                     # Se siamo a sinistra ma il pollice indica destra, potrebbe essere un falso positivo
-                    logging.debug("Correzione: pollice destra rilevata a sinistra, potrebbe essere mano sinistra")
-                    return 'left'
-                elif not is_left_side and thumb_based_result == 'left':
+                    logging.debug(
+                        "Correzione: pollice destra rilevata a sinistra, potrebbe essere mano sinistra"
+                    )
+                    return "left"
+                elif not is_left_side and thumb_based_result == "left":
                     # Se siamo a destra ma il pollice indica sinistra, potrebbe essere un falso positivo
-                    logging.debug("Correzione: pollice sinistra rilevata a destra, potrebbe essere mano destra")
-                    return 'right'
+                    logging.debug(
+                        "Correzione: pollice sinistra rilevata a destra, potrebbe essere mano destra"
+                    )
+                    return "right"
                 else:
-                    logging.debug(f"Mano classificata tramite pollice: {thumb_based_result}")
+                    logging.debug(
+                        f"Mano classificata tramite pollice: {thumb_based_result}"
+                    )
                     return thumb_based_result
 
             # Metodo 2: Analisi dell'orientamento con correzioni per mano sinistra
             orientation_result = self.analyze_hand_orientation(contour, x, y, w, h)
-            if orientation_result != 'unknown':
-                logging.debug(f"Mano classificata tramite orientamento: {orientation_result}")
+            if orientation_result != "unknown":
+                logging.debug(
+                    f"Mano classificata tramite orientamento: {orientation_result}"
+                )
                 return orientation_result
 
             # Metodo 3: Analisi basata sulla posizione con correzioni
             position_result = self.analyze_position_based(center_x, frame_width)
-            if position_result != 'unknown':
+            if position_result != "unknown":
                 logging.debug(f"Mano classificata tramite posizione: {position_result}")
                 return position_result
 
             # Metodo 4: Analisi dell'angolo con considerazioni per mano sinistra
             angle_result = self.analyze_contour_angle(contour)
-            if angle_result != 'unknown':
+            if angle_result != "unknown":
                 logging.debug(f"Mano classificata tramite angolo: {angle_result}")
                 return angle_result
 
             # Fallback finale con logging
-            fallback_result = 'left' if center_x < frame_width // 2 else 'right'
+            fallback_result = "left" if center_x < frame_width // 2 else "right"
             logging.debug(f"Fallback finale: {fallback_result}")
             return fallback_result
 
         except Exception as e:
             logging.warning(f"Errore analisi orientamento mano: {e}")
-            return 'left' if center_x < frame_width // 2 else 'right'
+            return "left" if center_x < frame_width // 2 else "right"
 
     def analyze_thumb_position_improved(self, contour, x, y, w, h, is_left_side):
         """
@@ -882,11 +1104,11 @@ class VideoThread(QThread):
             hull_indices = cv2.convexHull(contour, returnPoints=False)
 
             if hull_indices is None or len(hull_indices) < 3:
-                return 'unknown'
+                return "unknown"
 
             defects = cv2.convexityDefects(contour, hull_indices)
             if defects is None:
-                return 'unknown'
+                return "unknown"
 
             # Trova punti estremi
             leftmost = tuple(contour[contour[:, :, 0].argmin()][0])
@@ -906,21 +1128,21 @@ class VideoThread(QThread):
                 if is_left_side:
                     # Per mano sinistra, il pollice tende ad essere più prominente a sinistra
                     if left_protrusion > right_protrusion * 1.2:
-                        return 'left'
+                        return "left"
                     elif right_protrusion > left_protrusion * 1.8:
-                        return 'right'
+                        return "right"
                 else:
                     # Per mano destra, il pollice tende ad essere più prominente a destra
                     if right_protrusion > left_protrusion * 1.2:
-                        return 'right'
+                        return "right"
                     elif left_protrusion > right_protrusion * 1.8:
-                        return 'left'
+                        return "left"
 
-            return 'unknown'
+            return "unknown"
 
         except Exception as e:
             logging.debug(f"Errore analisi pollice migliorata: {e}")
-            return 'unknown'
+            return "unknown"
 
     def analyze_hand_orientation(self, contour, x, y, w, h):
         """
@@ -929,12 +1151,12 @@ class VideoThread(QThread):
         try:
             # Calcola il momento del contorno per determinare l'orientamento
             moments = cv2.moments(contour)
-            if moments['m00'] == 0:
-                return 'unknown'
+            if moments["m00"] == 0:
+                return "unknown"
 
             # Centroide
-            cx = int(moments['m10'] / moments['m00'])
-            cy = int(moments['m01'] / moments['m00'])
+            cx = int(moments["m10"] / moments["m00"])
+            cy = int(moments["m01"] / moments["m00"])
 
             # Calcola l'orientamento basato sulla distribuzione dei punti rispetto al centroide
             left_points = 0
@@ -956,15 +1178,15 @@ class VideoThread(QThread):
             asymmetry_threshold = 0.6
 
             if left_ratio > asymmetry_threshold:
-                return 'left'  # Più punti a sinistra = probabilmente mano sinistra
+                return "left"  # Più punti a sinistra = probabilmente mano sinistra
             elif right_ratio > asymmetry_threshold:
-                return 'right'  # Più punti a destra = probabilmente mano destra
+                return "right"  # Più punti a destra = probabilmente mano destra
 
-            return 'unknown'
+            return "unknown"
 
         except Exception as e:
             logging.debug(f"Errore nell'analisi dell'orientamento: {e}")
-            return 'unknown'
+            return "unknown"
 
     def analyze_position_based(self, center_x, frame_width):
         """
@@ -974,11 +1196,11 @@ class VideoThread(QThread):
         margin = frame_width * 0.15  # 15% del frame è zona neutra
 
         if center_x < frame_width // 2 - margin:
-            return 'left'
+            return "left"
         elif center_x > frame_width // 2 + margin:
-            return 'right'
+            return "right"
         else:
-            return 'unknown'  # Zona centrale ambigua
+            return "unknown"  # Zona centrale ambigua
 
     def analyze_contour_angle(self, contour):
         """
@@ -999,17 +1221,17 @@ class VideoThread(QThread):
             # Mani tipicamente hanno angoli tra -45 e 45 gradi quando sono orientate naturalmente
             if -30 < angle < 30:
                 # Angolo neutro, usa altre euristiche
-                return 'unknown'
+                return "unknown"
             elif angle < -30:
                 # Rotazione antioraria, potrebbe indicare mano destra
-                return 'right'
+                return "right"
             else:
                 # Rotazione oraria, potrebbe indicare mano sinistra
-                return 'left'
+                return "left"
 
         except Exception as e:
             logging.debug(f"Errore nell'analisi dell'angolo del contorno: {e}")
-            return 'unknown'
+            return "unknown"
 
     def extract_hand_landmarks(self, contour, x, y, w, h):
         """
@@ -1042,19 +1264,27 @@ class VideoThread(QThread):
             landmarks.extend(thumb_points)
 
             # Landmark 5-8: Indice (4 punti)
-            index_points = self.extract_finger_landmarks(contour, defects, x, y, w, h, finger_idx=0)
+            index_points = self.extract_finger_landmarks(
+                contour, defects, x, y, w, h, finger_idx=0
+            )
             landmarks.extend(index_points)
 
             # Landmark 9-12: Medio (4 punti)
-            middle_points = self.extract_finger_landmarks(contour, defects, x, y, w, h, finger_idx=1)
+            middle_points = self.extract_finger_landmarks(
+                contour, defects, x, y, w, h, finger_idx=1
+            )
             landmarks.extend(middle_points)
 
             # Landmark 13-16: Anulare (4 punti)
-            ring_points = self.extract_finger_landmarks(contour, defects, x, y, w, h, finger_idx=2)
+            ring_points = self.extract_finger_landmarks(
+                contour, defects, x, y, w, h, finger_idx=2
+            )
             landmarks.extend(ring_points)
 
             # Landmark 17-20: Mignolo (4 punti)
-            pinky_points = self.extract_finger_landmarks(contour, defects, x, y, w, h, finger_idx=3)
+            pinky_points = self.extract_finger_landmarks(
+                contour, defects, x, y, w, h, finger_idx=3
+            )
             landmarks.extend(pinky_points)
 
             return landmarks
@@ -1098,15 +1328,15 @@ class VideoThread(QThread):
             mid2_y = int(thumb_tip[1] * 0.5 + base_y * 0.5)
 
             return [
-                (base_x, base_y),      # MCP (base)
-                (mid1_x, mid1_y),      # PIP
-                (mid2_x, mid2_y),      # DIP
-                thumb_tip              # TIP
+                (base_x, base_y),  # MCP (base)
+                (mid1_x, mid1_y),  # PIP
+                (mid2_x, mid2_y),  # DIP
+                thumb_tip,  # TIP
             ]
 
         except Exception as e:
             logging.debug(f"Errore estrazione landmark pollice: {e}")
-            return [(x + w//2, y + h//2)] * 4  # Fallback
+            return [(x + w // 2, y + h // 2)] * 4  # Fallback
 
     def extract_finger_landmarks(self, contour, defects, x, y, w, h, finger_idx):
         """Estrae i landmark per un dito specifico (indice, medio, anulare, mignolo)."""
@@ -1146,10 +1376,10 @@ class VideoThread(QThread):
             mcp_point = (finger_start_x + finger_width // 2, base_y)
 
             return [
-                mcp_point,   # MCP (base)
-                pip_point,   # PIP
-                dip_point,   # DIP
-                tip_point    # TIP
+                mcp_point,  # MCP (base)
+                pip_point,  # PIP
+                dip_point,  # DIP
+                tip_point,  # TIP
             ]
 
         except Exception as e:
@@ -1157,10 +1387,10 @@ class VideoThread(QThread):
             # Fallback
             mid_x = x + w // 2
             return [
-                (mid_x, y + h - h//3),  # MCP
-                (mid_x, y + h//2),      # PIP
-                (mid_x, y + h//3),      # DIP
-                (mid_x, y + h//6)       # TIP
+                (mid_x, y + h - h // 3),  # MCP
+                (mid_x, y + h // 2),  # PIP
+                (mid_x, y + h // 3),  # DIP
+                (mid_x, y + h // 6),  # TIP
             ]
 
     def classify_hand_with_landmarks(self, landmarks, center_x, frame_width):
@@ -1169,19 +1399,19 @@ class VideoThread(QThread):
         """
         try:
             if len(landmarks) < 21:
-                return 'unknown'
+                return "unknown"
 
             # Metodo 1: Analizza la posizione relativa del pollice
-            wrist = landmarks[0]      # Polso
-            thumb_base = landmarks[1] # Base pollice
+            wrist = landmarks[0]  # Polso
+            thumb_base = landmarks[1]  # Base pollice
             thumb_tip = landmarks[4]  # Punta pollice
 
             # Se il pollice è a sinistra del polso = mano sinistra
             # Se il pollice è a destra del polso = mano destra
             if thumb_base[0] < wrist[0] - 10:  # Pollice significativamente a sinistra
-                return 'left'
+                return "left"
             elif thumb_base[0] > wrist[0] + 10:  # Pollice significativamente a destra
-                return 'right'
+                return "right"
 
             # Metodo 2: Analizza l'orientamento generale dei landmark
             # Conta quanti landmark sono a sinistra/destra del centro
@@ -1189,22 +1419,22 @@ class VideoThread(QThread):
             right_count = sum(1 for lm in landmarks if lm[0] > wrist[0])
 
             if left_count > right_count + 2:
-                return 'left'
+                return "left"
             elif right_count > left_count + 2:
-                return 'right'
+                return "right"
 
             # Metodo 3: Fallback alla posizione del frame
             margin = frame_width * 0.15
             if center_x < frame_width // 2 - margin:
-                return 'left'
+                return "left"
             elif center_x > frame_width // 2 + margin:
-                return 'right'
+                return "right"
             else:
-                return 'unknown'
+                return "unknown"
 
         except Exception as e:
             logging.debug(f"Errore classificazione mano con landmark: {e}")
-            return 'unknown'
+            return "unknown"
 
     def count_fingers_with_landmarks(self, landmarks):
         """
@@ -1218,11 +1448,11 @@ class VideoThread(QThread):
 
             # Definisci le coppie MCP-TIP per ogni dito
             finger_pairs = [
-                (1, 4),   # Pollice: MCP(1) - TIP(4)
-                (5, 8),   # Indice: MCP(5) - TIP(8)
+                (1, 4),  # Pollice: MCP(1) - TIP(4)
+                (5, 8),  # Indice: MCP(5) - TIP(8)
                 (9, 12),  # Medio: MCP(9) - TIP(12)
-                (13, 16), # Anulare: MCP(13) - TIP(16)
-                (17, 20)  # Mignolo: MCP(17) - TIP(20)
+                (13, 16),  # Anulare: MCP(13) - TIP(16)
+                (17, 20),  # Mignolo: MCP(17) - TIP(20)
             ]
 
             for mcp_idx, tip_idx in finger_pairs:
@@ -1249,7 +1479,13 @@ class VideoThread(QThread):
                 return "Unknown"
 
             # Analizza la posizione delle punte delle dita
-            finger_tips = [landmarks[4], landmarks[8], landmarks[12], landmarks[16], landmarks[20]]
+            finger_tips = [
+                landmarks[4],
+                landmarks[8],
+                landmarks[12],
+                landmarks[16],
+                landmarks[20],
+            ]
 
             # Calcola la posizione media delle punte
             avg_tip_y = sum(tip[1] for tip in finger_tips) / len(finger_tips)
@@ -1301,9 +1537,9 @@ class VideoThread(QThread):
                 far = tuple(contour[f][0])
 
                 # Calcola la profondità
-                a = math.sqrt((end[0] - start[0])**2 + (end[1] - start[1])**2)
-                b = math.sqrt((far[0] - start[0])**2 + (far[1] - start[1])**2)
-                c = math.sqrt((end[0] - far[0])**2 + (end[1] - far[1])**2)
+                a = math.sqrt((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2)
+                b = math.sqrt((far[0] - start[0]) ** 2 + (far[1] - start[1]) ** 2)
+                c = math.sqrt((end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2)
 
                 if a > 0:
                     area = math.sqrt(max(0, (s * (s - a) * (s - b) * (s - c))))
@@ -1336,7 +1572,9 @@ class VideoThread(QThread):
             mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
 
             # Trova contorni con parametri ottimizzati
-            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)
+            contours, _ = cv2.findContours(
+                mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1
+            )
 
             detected_hands = []
             for contour in contours:
@@ -1347,30 +1585,55 @@ class VideoThread(QThread):
 
                     if 0.3 < aspect_ratio < 3.0:  # Range più ampio
                         # Usa la logica avanzata per determinare destra/sinistra
-                        hand_info = self.analyze_hand_advanced(contour, x, y, w, h, frame.shape[1])
+                        hand_info = self.analyze_hand_advanced(
+                            contour, x, y, w, h, frame.shape[1]
+                        )
 
-                        if hand_info and hand_info['confidence'] > 0.4:  # Confidenza più alta
+                        if (
+                            hand_info and hand_info["confidence"] > 0.4
+                        ):  # Confidenza più alta
                             detected_hands.append((x, y, w, h, hand_info))
 
             # Visualizza risultati
             for x, y, w, h, hand_info in detected_hands:
-                hand_type = hand_info['hand_type']
-                fingers = hand_info.get('fingers', 0)
+                hand_type = hand_info["hand_type"]
+                fingers = hand_info.get("fingers", 0)
 
                 # Colori diversi per destra/sinistra
-                color = (0, 255, 0) if hand_type == 'right' else (255, 0, 0)
+                color = (0, 255, 0) if hand_type == "right" else (255, 0, 0)
 
                 cv2.rectangle(frame, (x, y), (x + w, y + h), color, 3)
-                cv2.putText(frame, f'{hand_type.upper()} Hand ({fingers} dita)', (x, y - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+                cv2.putText(
+                    frame,
+                    f"{hand_type.upper()} Hand ({fingers} dita)",
+                    (x, y - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    color,
+                    2,
+                )
 
             # Mostra statistiche
             if detected_hands:
-                cv2.putText(frame, f'Mani rilevate (MP-style): {len(detected_hands)}', (10, 60),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv2.putText(
+                    frame,
+                    f"Mani rilevate (MP-style): {len(detected_hands)}",
+                    (10, 60),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 255, 0),
+                    2,
+                )
             else:
-                cv2.putText(frame, 'Nessuna mano rilevata (MP-style)', (10, 60),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                cv2.putText(
+                    frame,
+                    "Nessuna mano rilevata (MP-style)",
+                    (10, 60),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 255, 255),
+                    2,
+                )
 
             return frame
 
@@ -1384,11 +1647,11 @@ class VideoThread(QThread):
         """
         try:
             moments = cv2.moments(contour)
-            if moments['m00'] == 0:
-                return 'unknown'
+            if moments["m00"] == 0:
+                return "unknown"
 
-            cx = int(moments['m10'] / moments['m00'])
-            cy = int(moments['m01'] / moments['m00'])
+            cx = int(moments["m10"] / moments["m00"])
+            cy = int(moments["m01"] / moments["m00"])
 
             left_points = sum(1 for point in contour if point[0][0] < cx)
             right_points = sum(1 for point in contour if point[0][0] > cx)
@@ -1401,21 +1664,21 @@ class VideoThread(QThread):
             if is_left_side:
                 # Per mano sinistra, soglia più permissiva per destra
                 if left_ratio > 0.55:
-                    return 'left'
+                    return "left"
                 elif right_ratio > 0.65:
-                    return 'right'
+                    return "right"
             else:
                 # Per mano destra, soglia più permissiva per sinistra
                 if right_ratio > 0.55:
-                    return 'right'
+                    return "right"
                 elif left_ratio > 0.65:
-                    return 'left'
+                    return "left"
 
-            return 'unknown'
+            return "unknown"
 
         except Exception as e:
             logging.debug(f"Errore analisi orientamento migliorata: {e}")
-            return 'unknown'
+            return "unknown"
 
     def analyze_position_based_improved(self, center_x, frame_width, is_left_side):
         """
@@ -1425,17 +1688,17 @@ class VideoThread(QThread):
         margin = frame_width * 0.2  # 20% invece di 15%
 
         if center_x < frame_width // 2 - margin:
-            return 'left'
+            return "left"
         elif center_x > frame_width // 2 + margin:
-            return 'right'
+            return "right"
         else:
             # Zona ambigua - usa euristica basata su posizione relativa
             if is_left_side:
                 # Se siamo nel lato sinistro ma vicini al centro, probabilmente è sinistra
-                return 'left' if center_x < frame_width // 2 else 'unknown'
+                return "left" if center_x < frame_width // 2 else "unknown"
             else:
                 # Se siamo nel lato destro ma vicini al centro, probabilmente è destra
-                return 'right' if center_x > frame_width // 2 else 'unknown'
+                return "right" if center_x > frame_width // 2 else "unknown"
 
     def analyze_contour_angle_improved(self, contour, is_left_side):
         """
@@ -1454,21 +1717,21 @@ class VideoThread(QThread):
             if is_left_side:
                 # Per mano sinistra, angoli diversi possono indicare orientamenti diversi
                 if -45 < angle < 15:
-                    return 'left'
+                    return "left"
                 elif angle < -45 or angle > 15:
-                    return 'right'
+                    return "right"
             else:
                 # Per mano destra
                 if -15 < angle < 45:
-                    return 'right'
+                    return "right"
                 elif angle < -15 or angle > 45:
-                    return 'left'
+                    return "left"
 
-            return 'unknown'
+            return "unknown"
 
         except Exception as e:
             logging.debug(f"Errore analisi angolo migliorata: {e}")
-            return 'unknown'
+            return "unknown"
 
     def detect_hands_mediapipe(self, frame):
         """Rilevamento mani usando approccio MediaPipe-style."""
@@ -1485,7 +1748,9 @@ class VideoThread(QThread):
             mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
 
             # Trova contorni con parametri ottimizzati
-            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)
+            contours, _ = cv2.findContours(
+                mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1
+            )
 
             detected_hands = []
             for contour in contours:
@@ -1496,30 +1761,55 @@ class VideoThread(QThread):
 
                     if 0.3 < aspect_ratio < 3.0:  # Range più ampio
                         # Usa la logica avanzata per determinare destra/sinistra
-                        hand_info = self.analyze_hand_advanced(contour, x, y, w, h, frame.shape[1])
+                        hand_info = self.analyze_hand_advanced(
+                            contour, x, y, w, h, frame.shape[1]
+                        )
 
-                        if hand_info and hand_info['confidence'] > 0.4:  # Confidenza più alta
+                        if (
+                            hand_info and hand_info["confidence"] > 0.4
+                        ):  # Confidenza più alta
                             detected_hands.append((x, y, w, h, hand_info))
 
             # Visualizza risultati
             for x, y, w, h, hand_info in detected_hands:
-                hand_type = hand_info['hand_type']
-                fingers = hand_info.get('fingers', 0)
+                hand_type = hand_info["hand_type"]
+                fingers = hand_info.get("fingers", 0)
 
                 # Colori diversi per destra/sinistra
-                color = (0, 255, 0) if hand_type == 'right' else (255, 0, 0)
+                color = (0, 255, 0) if hand_type == "right" else (255, 0, 0)
 
                 cv2.rectangle(frame, (x, y), (x + w, y + h), color, 3)
-                cv2.putText(frame, f'{hand_type.upper()} Hand ({fingers} dita)', (x, y - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+                cv2.putText(
+                    frame,
+                    f"{hand_type.upper()} Hand ({fingers} dita)",
+                    (x, y - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    color,
+                    2,
+                )
 
             # Mostra statistiche
             if detected_hands:
-                cv2.putText(frame, f'Mani rilevate (MP-style): {len(detected_hands)}', (10, 60),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv2.putText(
+                    frame,
+                    f"Mani rilevate (MP-style): {len(detected_hands)}",
+                    (10, 60),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 255, 0),
+                    2,
+                )
             else:
-                cv2.putText(frame, 'Nessuna mano rilevata (MP-style)', (10, 60),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                cv2.putText(
+                    frame,
+                    "Nessuna mano rilevata (MP-style)",
+                    (10, 60),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 255, 255),
+                    2,
+                )
 
             return frame
 
@@ -1557,15 +1847,33 @@ class VideoThread(QThread):
 
             # Disegna i risultati
             for i, (x, y, w, h) in enumerate(filtered_poses):
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 255), 3)  # Magenta per pose
-                cv2.putText(frame, f'Pose {i+1}', (x, y - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 255), 2)
+                cv2.rectangle(
+                    frame, (x, y), (x + w, y + h), (255, 0, 255), 3
+                )  # Magenta per pose
+                cv2.putText(
+                    frame,
+                    f"Pose {i+1}",
+                    (x, y - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (255, 0, 255),
+                    2,
+                )
 
             # Mostra statistiche
             if filtered_poses:
-                cv2.putText(frame, f'Pose rilevate (OpenCV): {len(filtered_poses)}', (10, 90),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
-                logging.info(f"Rilevamento pose OpenCV riuscito: {len(filtered_poses)} pose")
+                cv2.putText(
+                    frame,
+                    f"Pose rilevate (OpenCV): {len(filtered_poses)}",
+                    (10, 90),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (255, 0, 255),
+                    2,
+                )
+                logging.info(
+                    f"Rilevamento pose OpenCV riuscito: {len(filtered_poses)} pose"
+                )
 
                 # Emit signals
                 self.human_detected_signal.emit(filtered_poses)
@@ -1577,8 +1885,15 @@ class VideoThread(QThread):
                     center_y = primary_pose[1] + primary_pose[3] // 2
                     self.human_position_signal.emit(center_x, center_y)
             else:
-                cv2.putText(frame, 'Nessuna posa rilevata (OpenCV)', (10, 90),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 165, 0), 2)
+                cv2.putText(
+                    frame,
+                    "Nessuna posa rilevata (OpenCV)",
+                    (10, 90),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (255, 165, 0),
+                    2,
+                )
                 logging.debug("Nessuna posa rilevata con OpenCV avanzato")
 
             return frame
@@ -1591,8 +1906,9 @@ class VideoThread(QThread):
         """Rileva pose basandosi sui contorni del corpo."""
         try:
             # Soglia adattiva per segmentare il corpo
-            thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                         cv2.THRESH_BINARY_INV, 11, 2)
+            thresh = cv2.adaptiveThreshold(
+                gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2
+            )
 
             # Operazioni morfologiche per pulire l'immagine
             kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
@@ -1600,7 +1916,9 @@ class VideoThread(QThread):
             thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
 
             # Trova contorni
-            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            contours, _ = cv2.findContours(
+                thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
 
             poses = []
             for contour in contours:
@@ -1644,7 +1962,9 @@ class VideoThread(QThread):
             _, thresh = cv2.threshold(magnitude, 50, 255, cv2.THRESH_BINARY)
 
             # Trova contorni nelle aree di alto gradiente
-            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            contours, _ = cv2.findContours(
+                thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
 
             for contour in contours:
                 area = cv2.contourArea(contour)
@@ -1707,33 +2027,53 @@ class VideoThread(QThread):
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = self.face_cascade.detectMultiScale(
-            gray,
-            scaleFactor=1.05,
-            minNeighbors=3,
-            minSize=(30, 30),
-            maxSize=(300, 300)
+            gray, scaleFactor=1.05, minNeighbors=3, minSize=(30, 30), maxSize=(300, 300)
         )
 
         expression_count = 0
-        for (x, y, w, h) in faces:
+        for x, y, w, h in faces:
             # Estrai la regione del volto
-            face_roi = gray[y:y + h, x:x + w]
+            face_roi = gray[y : y + h, x : x + w]
 
             # Analizza l'espressione usando caratteristiche geometriche
             expression = self.analyze_facial_expression(face_roi, x, y, w, h)
 
             # Disegna il rettangolo e l'espressione rilevata
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 255), 3)  # Magenta per espressioni
-            cv2.putText(frame, f'Espressione: {expression}', (x, y + h + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
+            cv2.rectangle(
+                frame, (x, y), (x + w, y + h), (255, 0, 255), 3
+            )  # Magenta per espressioni
+            cv2.putText(
+                frame,
+                f"Espressione: {expression}",
+                (x, y + h + 20),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 0, 255),
+                1,
+            )
             expression_count += 1
 
         # Mostra lo stato del riconoscimento espressioni
         if expression_count > 0:
-            cv2.putText(frame, f'Espressioni rilevate: {expression_count}', (10, 120),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
+            cv2.putText(
+                frame,
+                f"Espressioni rilevate: {expression_count}",
+                (10, 120),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 0, 255),
+                2,
+            )
         else:
-            cv2.putText(frame, 'Nessuna espressione rilevata', (10, 120),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
+            cv2.putText(
+                frame,
+                "Nessuna espressione rilevata",
+                (10, 120),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 0, 255),
+                2,
+            )
 
         return frame
 
@@ -1757,25 +2097,46 @@ class VideoThread(QThread):
                 minNeighbors=3,
                 minSize=(30, 30),
                 maxSize=(300, 300),
-                flags=cv2.CASCADE_SCALE_IMAGE
+                flags=cv2.CASCADE_SCALE_IMAGE,
             )
 
             logging.info(f"MediaPipe-style detection found {len(faces)} faces")
 
             # Mostra stato del rilevamento
             if len(faces) > 0:
-                cv2.putText(frame, f'Faccia rilevata (MP-style): {len(faces)}', (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv2.putText(
+                    frame,
+                    f"Faccia rilevata (MP-style): {len(faces)}",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 255, 0),
+                    2,
+                )
             else:
-                cv2.putText(frame, 'Nessuna faccia rilevata (MP-style)', (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                cv2.putText(
+                    frame,
+                    "Nessuna faccia rilevata (MP-style)",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 255, 255),
+                    2,
+                )
 
             # Disegna rettangoli con stile MediaPipe
-            for (x, y, w, h) in faces:
+            for x, y, w, h in faces:
                 # Rettangolo più sottile come MediaPipe
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                cv2.putText(frame, 'Face (MP)', (x, y - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 1)
+                cv2.putText(
+                    frame,
+                    "Face (MP)",
+                    (x, y - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (0, 255, 0),
+                    1,
+                )
 
             return frame
 
@@ -1787,8 +2148,15 @@ class VideoThread(QThread):
     def detect_faces_opencv(self, frame):
         """Rilevamento facciale tradizionale con OpenCV."""
         if self.face_cascade is None:
-            cv2.putText(frame, 'Cascade non disponibile', (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            cv2.putText(
+                frame,
+                "Cascade non disponibile",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 0, 255),
+                2,
+            )
             return frame
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -1801,22 +2169,43 @@ class VideoThread(QThread):
             minNeighbors=2,
             minSize=(20, 20),
             maxSize=(400, 400),
-            flags=cv2.CASCADE_SCALE_IMAGE
+            flags=cv2.CASCADE_SCALE_IMAGE,
         )
 
         logging.debug(f"OpenCV detection found {len(faces)} faces")
 
         if len(faces) > 0:
-            cv2.putText(frame, f'Faccia rilevata (OpenCV): {len(faces)}', (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+            cv2.putText(
+                frame,
+                f"Faccia rilevata (OpenCV): {len(faces)}",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 0, 0),
+                2,
+            )
         else:
-            cv2.putText(frame, 'Nessuna faccia rilevata (OpenCV)', (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 165, 0), 2)
+            cv2.putText(
+                frame,
+                "Nessuna faccia rilevata (OpenCV)",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 165, 0),
+                2,
+            )
 
-        for (x, y, w, h) in faces:
+        for x, y, w, h in faces:
             cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
-            cv2.putText(frame, 'Face (CV)', (x, y - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
+            cv2.putText(
+                frame,
+                "Face (CV)",
+                (x, y - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (255, 0, 0),
+                1,
+            )
 
         return frame
 
@@ -1826,7 +2215,7 @@ class VideoThread(QThread):
             return False
 
         # Estrai la regione di interesse
-        roi = frame[y:y+h, x:x+w]
+        roi = frame[y : y + h, x : x + w]
         if roi.size == 0:
             return False
 
@@ -1835,10 +2224,7 @@ class VideoThread(QThread):
 
         # Rileva volti nella regione
         faces = self.face_cascade.detectMultiScale(
-            gray_roi,
-            scaleFactor=1.1,
-            minNeighbors=3,
-            minSize=(20, 20)
+            gray_roi, scaleFactor=1.1, minNeighbors=3, minSize=(20, 20)
         )
 
         # Se viene rilevato un volto nella regione, è probabile che sia un volto
@@ -1859,9 +2245,9 @@ class VideoThread(QThread):
         face_roi = cv2.equalizeHist(face_roi)
 
         # Dividi il volto in regioni più precise
-        eye_region = face_roi[height // 5:2 * height // 5, :]  # Regione occhi
-        nose_region = face_roi[2 * height // 5:3 * height // 5, :]  # Regione naso
-        mouth_region = face_roi[3 * height // 5:4 * height // 5, :]  # Regione bocca
+        eye_region = face_roi[height // 5 : 2 * height // 5, :]  # Regione occhi
+        nose_region = face_roi[2 * height // 5 : 3 * height // 5, :]  # Regione naso
+        mouth_region = face_roi[3 * height // 5 : 4 * height // 5, :]  # Regione bocca
 
         # Calcola statistiche per ogni regione
         eye_mean = np.mean(eye_region)
@@ -1875,7 +2261,9 @@ class VideoThread(QThread):
         gradient_magnitude = np.sqrt(sobelx**2 + sobely**2)
 
         # Analizza la regione della bocca (dove si concentrano le espressioni)
-        mouth_gradient = np.mean(gradient_magnitude[3 * height // 5:4 * height // 5, :])
+        mouth_gradient = np.mean(
+            gradient_magnitude[3 * height // 5 : 4 * height // 5, :]
+        )
 
         # Calcola l'entropia per misurare la complessità della texture
         def calculate_entropy(region):
@@ -1889,21 +2277,35 @@ class VideoThread(QThread):
 
         # Algoritmo di classificazione migliorato
         # Sorriso: alta variazione nella regione bocca, luminosità aumentata
-        is_smile = (mouth_gradient > 30 and mouth_std > 25
-                    and mouth_entropy > 6.5 and mouth_mean > eye_mean)
+        is_smile = (
+            mouth_gradient > 30
+            and mouth_std > 25
+            and mouth_entropy > 6.5
+            and mouth_mean > eye_mean
+        )
 
         # Triste: bassa variazione, luminosità diminuita nella regione inferiore
-        is_sad = (mouth_gradient < 15 and mouth_std < 20
-                  and mouth_mean < eye_mean and mouth_entropy < 6.0)
+        is_sad = (
+            mouth_gradient < 15
+            and mouth_std < 20
+            and mouth_mean < eye_mean
+            and mouth_entropy < 6.0
+        )
 
         # Sorpreso: alta entropia in regione occhi, variazione elevata
-        is_surprised = (eye_entropy > 7.0 and eye_std > 30
-                        and mouth_gradient > 25 and mouth_std > 25)
+        is_surprised = (
+            eye_entropy > 7.0
+            and eye_std > 30
+            and mouth_gradient > 25
+            and mouth_std > 25
+        )
 
         # Neutro: valori intermedi, bassa variazione
-        is_neutral = (15 <= mouth_gradient <= 30
-                      and 20 <= mouth_std <= 30
-                      and 6.0 <= mouth_entropy <= 7.0)
+        is_neutral = (
+            15 <= mouth_gradient <= 30
+            and 20 <= mouth_std <= 30
+            and 6.0 <= mouth_entropy <= 7.0
+        )
 
         # Decisione finale basata sui punteggi
         if is_smile:
@@ -1919,7 +2321,7 @@ class VideoThread(QThread):
 
     def check_hand_interaction(self, frame, hand_x, hand_y, hand_w, hand_h, gesture):
         """Verifica se la mano sta interagendo con elementi dell'interfaccia."""
-        if not hasattr(self, 'main_window') or self.main_window is None:
+        if not hasattr(self, "main_window") or self.main_window is None:
             return frame
 
         # Coordinate approssimative della colonna A (pensierini)
@@ -1933,31 +2335,60 @@ class VideoThread(QThread):
         hand_center_x = hand_x + hand_w // 2
         hand_center_y = hand_y + hand_h // 2
 
-        is_in_column_a = (column_a_left < hand_center_x < column_a_right
-                          and column_a_top < hand_center_y < column_a_bottom)
+        is_in_column_a = (
+            column_a_left < hand_center_x < column_a_right
+            and column_a_top < hand_center_y < column_a_bottom
+        )
 
         if is_in_column_a:
             # Disegna un'indicazione visiva che la mano è nella zona di interazione
-            cv2.rectangle(frame, (column_a_left, column_a_top),
-                          (column_a_right, column_a_bottom), (0, 255, 255), 2)
-            cv2.putText(frame, 'ZONA INTERAZIONE', (column_a_left + 10, column_a_top + 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+            cv2.rectangle(
+                frame,
+                (column_a_left, column_a_top),
+                (column_a_right, column_a_bottom),
+                (0, 255, 255),
+                2,
+            )
+            cv2.putText(
+                frame,
+                "ZONA INTERAZIONE",
+                (column_a_left + 10, column_a_top + 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 255, 255),
+                2,
+            )
 
             # Se la mano è chiusa, inizia il trascinamento
             if gesture == "Closed Hand" and not self.is_dragging:
                 self.start_dragging()
-                cv2.putText(frame, 'TRASCINAMENTO INIZIATO!', (hand_center_x - 100, hand_center_y - 20),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                cv2.putText(
+                    frame,
+                    "TRASCINAMENTO INIZIATO!",
+                    (hand_center_x - 100, hand_center_y - 20),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.8,
+                    (0, 255, 0),
+                    2,
+                )
             elif gesture == "Open Hand" and self.is_dragging:
                 self.stop_dragging()
-                cv2.putText(frame, 'TRASCINAMENTO COMPLETATO!', (hand_center_x - 120, hand_center_y - 20),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                cv2.putText(
+                    frame,
+                    "TRASCINAMENTO COMPLETATO!",
+                    (hand_center_x - 120, hand_center_y - 20),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.8,
+                    (0, 255, 0),
+                    2,
+                )
 
         return frame
 
     def start_dragging(self):
         """Inizia il processo di trascinamento."""
         import time
+
         self.is_dragging = True
         self.drag_start_time = time.time()
         logging.info("Iniziato trascinamento con gesto mano chiusa")
@@ -1965,6 +2396,7 @@ class VideoThread(QThread):
     def stop_dragging(self):
         """Termina il processo di trascinamento e simula il drop nell'area centrale."""
         import time
+
         if self.is_dragging and self.drag_start_time > 0:
             drag_duration = time.time() - self.drag_start_time
             self.is_dragging = False
@@ -1980,7 +2412,7 @@ class VideoThread(QThread):
 
     def simulate_drag_to_center(self):
         """Simula il trascinamento di un elemento nell'area centrale."""
-        if hasattr(self, 'main_window') and self.main_window:
+        if hasattr(self, "main_window") and self.main_window:
             try:
                 # Trova l'ultimo widget nella colonna A
                 widgets = []
@@ -1997,7 +2429,9 @@ class VideoThread(QThread):
                     text = last_widget.text_label.text()
 
                     # Aggiungi il testo all'area centrale
-                    current_text = self.main_window.work_area_main_text_edit.toPlainText()
+                    current_text = (
+                        self.main_window.work_area_main_text_edit.toPlainText()
+                    )
                     new_text = current_text + f"\n\n[TRASCINATO]: {text}"
 
                     # Rimuovi il widget dalla colonna A
@@ -2023,23 +2457,29 @@ class VideoThread(QThread):
 
             if hand_landmarks and len(hand_landmarks) >= 21:
                 # Step 2: Determina destra/sinistra usando landmark avanzati
-                landmark_hand_type = self.classify_hand_with_landmarks(hand_landmarks, center_x, frame_width)
-                if landmark_hand_type != 'unknown':
+                landmark_hand_type = self.classify_hand_with_landmarks(
+                    hand_landmarks, center_x, frame_width
+                )
+                if landmark_hand_type != "unknown":
                     hand_type = landmark_hand_type
                     logging.debug(f"Mano classificata con landmark: {hand_type}")
                 else:
                     # Fallback alla logica tradizionale
-                    hand_type = self.determine_hand_orientation_advanced(contour, x, y, w, h, center_x, center_y, frame_width)
+                    hand_type = self.determine_hand_orientation_advanced(
+                        contour, x, y, w, h, center_x, center_y, frame_width
+                    )
                     logging.debug(f"Fallback landmark - Mano: {hand_type}")
             else:
                 # Fallback completo
-                hand_type = self.determine_hand_orientation_advanced(contour, x, y, w, h, center_x, center_y, frame_width)
+                hand_type = self.determine_hand_orientation_advanced(
+                    contour, x, y, w, h, center_x, center_y, frame_width
+                )
                 logging.debug(f"Fallback completo - Mano: {hand_type}")
 
         except Exception as e:
             logging.warning(f"Errore analisi ibrida, uso fallback semplice: {e}")
             # Fallback alla logica semplice
-            hand_type = 'left' if center_x < frame_width // 2 else 'right'
+            hand_type = "left" if center_x < frame_width // 2 else "right"
 
         # Analisi della forma per contare le dita
         hull = cv2.convexHull(contour)
@@ -2064,7 +2504,9 @@ class VideoThread(QThread):
                 else:
                     # Se non sono in ordine, riordina
                     sorted_indices = np.sort(hull_indices.flatten())
-                    defects = cv2.convexityDefects(contour, sorted_indices.reshape(-1, 1))
+                    defects = cv2.convexityDefects(
+                        contour, sorted_indices.reshape(-1, 1)
+                    )
             except cv2.error as e:
                 # Se si verifica un errore, logga e continua senza difetti
                 print(f"Errore in convexityDefects: {e}")
@@ -2082,9 +2524,9 @@ class VideoThread(QThread):
                 far = tuple(contour[f][0])
 
                 # Calcola la profondità del difetto
-                a = math.sqrt((end[0] - start[0])**2 + (end[1] - start[1])**2)
-                b = math.sqrt((far[0] - start[0])**2 + (far[1] - start[1])**2)
-                c = math.sqrt((end[0] - far[0])**2 + (end[1] - far[1])**2)
+                a = math.sqrt((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2)
+                b = math.sqrt((far[0] - start[0]) ** 2 + (far[1] - start[1]) ** 2)
+                c = math.sqrt((end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2)
 
                 if a > 0:
                     area = math.sqrt(max(0, (s * (s - a) * (s - b) * (s - c))))
@@ -2097,13 +2539,17 @@ class VideoThread(QThread):
                     finger_count += 1
 
                     # Identifica pollice e indice basandosi sulla posizione
-                    if hand_type == 'right':
-                        if far[0] > start[0] and far[0] > end[0]:  # Pollice a destra per mano destra
+                    if hand_type == "right":
+                        if (
+                            far[0] > start[0] and far[0] > end[0]
+                        ):  # Pollice a destra per mano destra
                             thumb_detected = True
                         elif finger_count == 1:  # Primo dito dopo il pollice
                             index_detected = True
                     else:  # Mano sinistra
-                        if far[0] < start[0] and far[0] < end[0]:  # Pollice a sinistra per mano sinistra
+                        if (
+                            far[0] < start[0] and far[0] < end[0]
+                        ):  # Pollice a sinistra per mano sinistra
                             thumb_detected = True
                         elif finger_count == 1:
                             index_detected = True
@@ -2120,46 +2566,66 @@ class VideoThread(QThread):
         confidence = min(1.0, (finger_count * 0.2) + (solidity * 0.3) + 0.3)
 
         return {
-            'hand_type': hand_type,
-            'fingers': finger_count,
-            'thumb': thumb_detected,
-            'index': index_detected,
-            'gesture': gesture,
-            'confidence': confidence,
-            'solidity': solidity
+            "hand_type": hand_type,
+            "fingers": finger_count,
+            "thumb": thumb_detected,
+            "index": index_detected,
+            "gesture": gesture,
+            "confidence": confidence,
+            "solidity": solidity,
         }
 
     def update_hand_tracking(self, detected_hands):
         """Aggiorna il tracking delle mani per il sistema multi-input."""
         # Reset delle posizioni precedenti
-        for hand_type in ['left', 'right']:
-            self.hand_tracking[hand_type]['position'] = None
-            self.hand_tracking[hand_type]['confidence'] = 0
+        for hand_type in ["left", "right"]:
+            self.hand_tracking[hand_type]["position"] = None
+            self.hand_tracking[hand_type]["confidence"] = 0
 
         # Aggiorna con le mani rilevate
         for x, y, w, h, hand_info in detected_hands:
-            hand_type = hand_info['hand_type']
-            self.hand_tracking[hand_type]['position'] = (x + w // 2, y + h // 2)
-            self.hand_tracking[hand_type]['fingers'] = hand_info['fingers']
-            self.hand_tracking[hand_type]['gesture'] = hand_info['gesture']
-            self.hand_tracking[hand_type]['confidence'] = hand_info['confidence']
+            hand_type = hand_info["hand_type"]
+            self.hand_tracking[hand_type]["position"] = (x + w // 2, y + h // 2)
+            self.hand_tracking[hand_type]["fingers"] = hand_info["fingers"]
+            self.hand_tracking[hand_type]["gesture"] = hand_info["gesture"]
+            self.hand_tracking[hand_type]["confidence"] = hand_info["confidence"]
 
     def display_hand_statistics(self, frame, detected_hands):
         """Mostra le statistiche delle mani rilevate."""
         if detected_hands:
-            left_count = sum(1 for _, _, _, _, info in detected_hands if info['hand_type'] == 'left')
-            right_count = sum(1 for _, _, _, _, info in detected_hands if info['hand_type'] == 'right')
+            left_count = sum(
+                1 for _, _, _, _, info in detected_hands if info["hand_type"] == "left"
+            )
+            right_count = sum(
+                1 for _, _, _, _, info in detected_hands if info["hand_type"] == "right"
+            )
 
             stats_text = f"Mani rilevate: SX:{left_count} DX:{right_count}"
-            cv2.putText(frame, stats_text, (10, 90),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 165, 0), 2)
+            cv2.putText(
+                frame,
+                stats_text,
+                (10, 90),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (255, 165, 0),
+                2,
+            )
         else:
-            cv2.putText(frame, 'Nessuna mano rilevata', (10, 90),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 165, 0), 2)
+            cv2.putText(
+                frame,
+                "Nessuna mano rilevata",
+                (10, 90),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (255, 165, 0),
+                2,
+            )
 
-    def handle_advanced_hand_interaction(self, frame, hand_x, hand_y, hand_w, hand_h, hand_info):
+    def handle_advanced_hand_interaction(
+        self, frame, hand_x, hand_y, hand_w, hand_h, hand_info
+    ):
         """Gestisce l'interazione avanzata con l'interfaccia usando le mani."""
-        if not hasattr(self, 'main_window') or self.main_window is None:
+        if not hasattr(self, "main_window") or self.main_window is None:
             return frame
 
         # Coordinate della zona di interazione (colonna A)
@@ -2171,20 +2637,35 @@ class VideoThread(QThread):
         hand_center_x = hand_x + hand_w // 2
         hand_center_y = hand_y + hand_h // 2
 
-        is_in_interaction_zone = (column_a_left < hand_center_x < column_a_right
-                                  and column_a_top < hand_center_y < column_a_bottom)
+        is_in_interaction_zone = (
+            column_a_left < hand_center_x < column_a_right
+            and column_a_top < hand_center_y < column_a_bottom
+        )
 
         if is_in_interaction_zone:
             # Disegna la zona di interazione
-            cv2.rectangle(frame, (column_a_left, column_a_top),
-                          (column_a_right, column_a_bottom), (0, 255, 255), 2)
-            cv2.putText(frame, 'ZONA INTERAZIONE', (column_a_left + 10, column_a_top + 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+            cv2.rectangle(
+                frame,
+                (column_a_left, column_a_top),
+                (column_a_right, column_a_bottom),
+                (0, 255, 255),
+                2,
+            )
+            cv2.putText(
+                frame,
+                "ZONA INTERAZIONE",
+                (column_a_left + 10, column_a_top + 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 255, 255),
+                2,
+            )
 
             # Gestisci il trascinamento con timer
-            if hand_info['gesture'] == "Closed Hand":
+            if hand_info["gesture"] == "Closed Hand":
                 if not self.is_dragging:
                     import time
+
                     current_time = time.time()
 
                     if self.drag_start_time == 0.0:
@@ -2195,24 +2676,47 @@ class VideoThread(QThread):
 
                     if self.drag_timer >= self.DRAG_THRESHOLD:
                         self.start_dragging()
-                        cv2.putText(frame, 'TRASCINAMENTO INIZIATO!', (hand_center_x - 100, hand_center_y - 20),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                        cv2.putText(
+                            frame,
+                            "TRASCINAMENTO INIZIATO!",
+                            (hand_center_x - 100, hand_center_y - 20),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.8,
+                            (0, 255, 0),
+                            2,
+                        )
                     else:
                         remaining = int(self.DRAG_THRESHOLD - self.drag_timer)
-                        cv2.putText(frame, f'Mantieni chiusa per {remaining}s', (hand_center_x - 80, hand_center_y - 20),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
+                        cv2.putText(
+                            frame,
+                            f"Mantieni chiusa per {remaining}s",
+                            (hand_center_x - 80, hand_center_y - 20),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.6,
+                            (0, 165, 255),
+                            2,
+                        )
             else:
                 if self.is_dragging:
                     self.stop_dragging()
-                    cv2.putText(frame, 'TRASCINAMENTO COMPLETATO!', (hand_center_x - 120, hand_center_y - 20),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                    cv2.putText(
+                        frame,
+                        "TRASCINAMENTO COMPLETATO!",
+                        (hand_center_x - 120, hand_center_y - 20),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.8,
+                        (0, 255, 0),
+                        2,
+                    )
                 else:
                     self.drag_start_time = 0.0
                     self.drag_timer = 0
 
         return frame
 
-    def webcam_to_ui_coordinates(self, webcam_x, webcam_y, frame_width, frame_height, ui_width, ui_height):
+    def webcam_to_ui_coordinates(
+        self, webcam_x, webcam_y, frame_width, frame_height, ui_width, ui_height
+    ):
         """Converte le coordinate dalla webcam alle coordinate dell'interfaccia utente."""
         # Calcola il rapporto di scala
         scale_x = ui_width / frame_width
@@ -2226,12 +2730,17 @@ class VideoThread(QThread):
 
     def find_element_at_position(self, ui_x, ui_y):
         """Trova l'elemento dell'interfaccia alla posizione specificata."""
-        if not hasattr(self, 'main_window') or self.main_window is None:
+        if not hasattr(self, "main_window") or self.main_window is None:
             return None
 
         # Cerca nei widget della colonna A (pensierini)
-        if hasattr(self.main_window, 'pensierini_widget') and self.main_window.pensierini_widget:
-            pensierini_layout = getattr(self.main_window.pensierini_widget, 'pensierini_layout', None)
+        if (
+            hasattr(self.main_window, "pensierini_widget")
+            and self.main_window.pensierini_widget
+        ):
+            pensierini_layout = getattr(
+                self.main_window.pensierini_widget, "pensierini_layout", None
+            )
             if pensierini_layout:
                 for i in range(pensierini_layout.count()):
                     item = pensierini_layout.itemAt(i)

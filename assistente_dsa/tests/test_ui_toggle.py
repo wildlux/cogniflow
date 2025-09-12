@@ -15,12 +15,15 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
+
 def analyze_ui_logs():
     """Analizza i log delle metriche UI per identificare il problema."""
     log_file = project_root / "assistente_dsa" / "debug_logs" / "ui_metrics.jsonl"
 
     if not log_file.exists():
-        print("❌ File di log non trovato. Avvia prima l'applicazione per generare i dati.")
+        print(
+            "❌ File di log non trovato. Avvia prima l'applicazione per generare i dati."
+        )
         return
 
     print("📊 Analisi dei log UI...")
@@ -28,7 +31,7 @@ def analyze_ui_logs():
 
     # Leggi tutti i log
     logs = []
-    with open(log_file, 'r', encoding='utf-8') as f:
+    with open(log_file, "r", encoding="utf-8") as f:
         for line in f:
             try:
                 logs.append(json.loads(line.strip()))
@@ -42,7 +45,7 @@ def analyze_ui_logs():
     # Raggruppa per contesto
     contexts = {}
     for log in logs:
-        context = log.get('context', 'UNKNOWN')
+        context = log.get("context", "UNKNOWN")
         if context not in contexts:
             contexts[context] = []
         contexts[context].append(log)
@@ -55,17 +58,19 @@ def analyze_ui_logs():
         if context_logs:
             # Prendi l'ultimo log per questo contesto
             log = context_logs[-1]
-            window = log.get('window', {})
-            buttons = log.get('buttons', {})
+            window = log.get("window", {})
+            buttons = log.get("buttons", {})
 
-            print(f"   📐 Finestra: {window.get('size', 'N/A')} @ {window.get('pos', 'N/A')}")
+            print(
+                f"   📐 Finestra: {window.get('size', 'N/A')} @ {window.get('pos', 'N/A')}"
+            )
 
             for btn_name, btn_data in buttons.items():
-                pos = btn_data.get('pos', 'N/A')
-                size = btn_data.get('size', 'N/A')
+                pos = btn_data.get("pos", "N/A")
+                size = btn_data.get("size", "N/A")
                 print(f"   🔘 {btn_name}: pos={pos}, size={size}")
 
-            splitter_sizes = log.get('splitter_sizes')
+            splitter_sizes = log.get("splitter_sizes")
             if splitter_sizes:
                 print(f"   📊 Splitter: {splitter_sizes}")
 
@@ -73,25 +78,25 @@ def analyze_ui_logs():
     print("\n" + "=" * 50)
     print("🔄 Analisi dei cambiamenti:")
 
-    if 'BEFORE_TOGGLE' in contexts and 'AFTER_TOGGLE_START' in contexts:
-        before = contexts['BEFORE_TOGGLE'][-1]
-        after = contexts['AFTER_TOGGLE_START'][-1]
+    if "BEFORE_TOGGLE" in contexts and "AFTER_TOGGLE_START" in contexts:
+        before = contexts["BEFORE_TOGGLE"][-1]
+        after = contexts["AFTER_TOGGLE_START"][-1]
 
         print("\n📈 Cambiamenti finestra:")
-        before_window = before.get('window', {})
-        after_window = after.get('window', {})
+        before_window = before.get("window", {})
+        after_window = after.get("window", {})
 
-        before_size = before_window.get('size', (0, 0))
-        after_size = after_window.get('size', (0, 0))
+        before_size = before_window.get("size", (0, 0))
+        after_size = after_window.get("size", (0, 0))
         print(f"   Dimensione: {before_size} → {after_size}")
 
-        before_pos = before_window.get('pos', (0, 0))
-        after_pos = after_window.get('pos', (0, 0))
+        before_pos = before_window.get("pos", (0, 0))
+        after_pos = after_window.get("pos", (0, 0))
         print(f"   Posizione: {before_pos} → {after_pos}")
 
         print("\n🔘 Cambiamenti pulsanti:")
-        before_buttons = before.get('buttons', {})
-        after_buttons = after.get('buttons', {})
+        before_buttons = before.get("buttons", {})
+        after_buttons = after.get("buttons", {})
 
         all_buttons = set(before_buttons.keys()) | set(after_buttons.keys())
 
@@ -99,8 +104,8 @@ def analyze_ui_logs():
             before_btn = before_buttons.get(btn_name, {})
             after_btn = after_buttons.get(btn_name, {})
 
-            before_pos = before_btn.get('pos', 'N/A')
-            after_pos = after_btn.get('pos', 'N/A')
+            before_pos = before_btn.get("pos", "N/A")
+            after_pos = after_btn.get("pos", "N/A")
 
             if before_pos != after_pos:
                 print(f"   {btn_name}: {before_pos} → {after_pos} ⚠️ CAMBIATO")
@@ -108,14 +113,17 @@ def analyze_ui_logs():
                 print(f"   {btn_name}: {before_pos} → {after_pos} ✅ STABILE")
 
         print("\n📊 Cambiamenti splitter:")
-        before_splitter = before.get('splitter_sizes')
-        after_splitter = after.get('splitter_sizes')
+        before_splitter = before.get("splitter_sizes")
+        after_splitter = after.get("splitter_sizes")
         print(f"   Splitter: {before_splitter} → {after_splitter}")
+
 
 def main():
     """Funzione principale per testare l'interfaccia."""
     print("🚀 Avvio test interfaccia CogniFlow...")
-    print("Questo script analizzerà i movimenti dell'interfaccia quando premi il pulsante '🔧 Ingranaggi'")
+    print(
+        "Questo script analizzerà i movimenti dell'interfaccia quando premi il pulsante '🔧 Ingranaggi'"
+    )
     print()
 
     # Controlla se ci sono già dei log precedenti
@@ -157,7 +165,9 @@ def main():
     except Exception as e:
         print(f"❌ Errore durante il test: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     main()

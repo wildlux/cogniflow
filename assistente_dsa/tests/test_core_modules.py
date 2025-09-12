@@ -17,7 +17,12 @@ class TestCacheManager:
 
     def setup_method(self):
         """Setup per ogni test."""
-        from assistente_dsa.core.cache_manager import CacheManager, LRUCache, PersistentCache
+        from assistente_dsa.core.cache_manager import (
+            CacheManager,
+            LRUCache,
+            PersistentCache,
+        )
+
         self.cache_manager = CacheManager()
 
     def test_lru_cache_basic_operations(self):
@@ -104,7 +109,9 @@ class TestPerformanceMonitor:
         import importlib.util
         import os
 
-        perf_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "core", "performance_monitor.py")
+        perf_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), "core", "performance_monitor.py"
+        )
         spec = importlib.util.spec_from_file_location("performance_monitor", perf_path)
         if spec and spec.loader:
             perf_module = importlib.util.module_from_spec(spec)
@@ -172,7 +179,11 @@ class TestPerformanceMonitor:
     def test_performance_issue_detection(self):
         """Test rilevamento problemi prestazioni."""
         # Simula alto uso CPU
-        with patch.object(self.monitor, 'get_system_metrics', return_value={"cpu_percent": 85.0, "memory_percent": 50.0}):
+        with patch.object(
+            self.monitor,
+            "get_system_metrics",
+            return_value={"cpu_percent": 85.0, "memory_percent": 50.0},
+        ):
             issues = self.monitor.detect_performance_issues()
 
             assert len(issues) > 0
@@ -184,7 +195,7 @@ class TestPerformanceMonitor:
         """Test esportazione metriche."""
         self.monitor.record_metric("export_test", 123.45)
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             temp_file = f.name
 
         try:
@@ -193,7 +204,7 @@ class TestPerformanceMonitor:
             # Verifica che il file sia stato creato e contenga dati validi
             assert os.path.exists(temp_file)
 
-            with open(temp_file, 'r') as f:
+            with open(temp_file, "r") as f:
                 data = json.load(f)
 
             assert "metrics" in data
@@ -210,8 +221,14 @@ class TestCircuitBreaker:
 
     def setup_method(self):
         """Setup per ogni test."""
-        from assistente_dsa.core.circuit_breaker import CircuitBreaker, CircuitBreakerError
-        self.cb = CircuitBreaker(failure_threshold=2, recovery_timeout=1, success_threshold=1)
+        from assistente_dsa.core.circuit_breaker import (
+            CircuitBreaker,
+            CircuitBreakerError,
+        )
+
+        self.cb = CircuitBreaker(
+            failure_threshold=2, recovery_timeout=1, success_threshold=1
+        )
 
     def test_initial_state(self):
         """Test stato iniziale."""
@@ -230,13 +247,17 @@ class TestCircuitBreaker:
 
         # Simula failure
         with pytest.raises(RuntimeError):
-            self.cb.call(lambda: next((_ for _ in ()).throw(RuntimeError("test error"))))
+            self.cb.call(
+                lambda: next((_ for _ in ()).throw(RuntimeError("test error")))
+            )
 
         assert self.cb.metrics["failed_requests"] == 1
 
         # Dopo threshold, dovrebbe aprire
         with pytest.raises(RuntimeError):
-            self.cb.call(lambda: next((_ for _ in ()).throw(RuntimeError("test error"))))
+            self.cb.call(
+                lambda: next((_ for _ in ()).throw(RuntimeError("test error")))
+            )
 
         # Ora dovrebbe essere aperto
         with pytest.raises(CircuitBreakerError):
@@ -259,6 +280,7 @@ class TestCircuitBreaker:
 
         # Aspetta recovery timeout
         import time
+
         time.sleep(1.1)
 
         # Dovrebbe provare recovery e avere successo
@@ -273,10 +295,12 @@ class TestHealthMonitor:
     def setup_method(self):
         """Setup per ogni test."""
         from assistente_dsa.core.health_monitor import HealthMonitor
+
         self.monitor = HealthMonitor()
 
     def test_add_check(self):
         """Test aggiunta check."""
+
         def test_check():
             return {"status": "healthy", "message": "OK"}
 
@@ -287,6 +311,7 @@ class TestHealthMonitor:
 
     def test_run_single_check(self):
         """Test esecuzione singolo check."""
+
         def healthy_check():
             return {"status": "healthy", "message": "All good"}
 
@@ -300,6 +325,7 @@ class TestHealthMonitor:
 
     def test_unhealthy_check(self):
         """Test check non healthy."""
+
         def unhealthy_check():
             return {"status": "unhealthy", "message": "Something wrong"}
 
@@ -313,6 +339,7 @@ class TestHealthMonitor:
 
     def test_check_with_exception(self):
         """Test check che solleva eccezione."""
+
         def failing_check():
             raise Exception("Check failed")
 
@@ -326,6 +353,7 @@ class TestHealthMonitor:
 
     def test_multiple_checks(self):
         """Test esecuzione multipli check."""
+
         def check1():
             return {"status": "healthy", "message": "Check 1 OK"}
 
@@ -349,11 +377,14 @@ class TestSecurityMonitor:
     def setup_method(self):
         """Setup per ogni test."""
         from core.security_monitor import SecurityMonitor
+
         self.monitor = SecurityMonitor()
 
     def test_log_security_event(self):
         """Test logging eventi sicurezza."""
-        self.monitor.log_security_event("TEST_EVENT", {"message": "Test message", "user": "test"}, "INFO")
+        self.monitor.log_security_event(
+            "TEST_EVENT", {"message": "Test message", "user": "test"}, "INFO"
+        )
 
         # Verifica che l'evento sia stato registrato
         stats = self.monitor.get_security_stats()
@@ -361,9 +392,15 @@ class TestSecurityMonitor:
 
     def test_event_filtering(self):
         """Test filtraggio eventi."""
-        self.monitor.log_security_event("INFO_EVENT", {"message": "Info message"}, "INFO")
-        self.monitor.log_security_event("WARN_EVENT", {"message": "Warn message"}, "WARNING")
-        self.monitor.log_security_event("ERROR_EVENT", {"message": "Error message"}, "ERROR")
+        self.monitor.log_security_event(
+            "INFO_EVENT", {"message": "Info message"}, "INFO"
+        )
+        self.monitor.log_security_event(
+            "WARN_EVENT", {"message": "Warn message"}, "WARNING"
+        )
+        self.monitor.log_security_event(
+            "ERROR_EVENT", {"message": "Error message"}, "ERROR"
+        )
 
         # Verifica che gli eventi siano stati registrati
         stats = self.monitor.get_security_stats()
@@ -381,7 +418,9 @@ class TestSecurityMonitor:
         """Test rilevamento incidenti sicurezza."""
         # Log multipli eventi di sicurezza
         for i in range(5):
-            self.monitor.log_security_event("SUSPICIOUS_{i}", {"message": "Suspicious activity {i}"}, "WARNING")
+            self.monitor.log_security_event(
+                "SUSPICIOUS_{i}", {"message": "Suspicious activity {i}"}, "WARNING"
+            )
 
         # Verifica che gli eventi siano stati registrati
         stats = self.monitor.get_security_stats()

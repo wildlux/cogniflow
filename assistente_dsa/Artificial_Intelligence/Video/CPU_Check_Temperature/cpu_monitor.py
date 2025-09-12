@@ -9,12 +9,14 @@ from PyQt6.QtCore import QThread, pyqtSignal
 # Import per monitoraggio CPU e temperatura
 try:
     import psutil
+
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
 
 try:
     import wmi
+
     HAS_WMI = True
 except ImportError:
     HAS_WMI = False
@@ -43,7 +45,9 @@ class CPUMonitor(QThread):
             else:
                 self.process = None
         except Exception:
-            logging.warning("Impossibile ottenere il processo per monitoraggio CPU: {e}")
+            logging.warning(
+                "Impossibile ottenere il processo per monitoraggio CPU: {e}"
+            )
             self.process = None
 
     def run(self):
@@ -51,13 +55,15 @@ class CPUMonitor(QThread):
         while self.is_running:
             try:
                 current_time = time.time()
-                check_interval = self.settings.get('cpu_check_interval_seconds', 5)
+                check_interval = self.settings.get("cpu_check_interval_seconds", 5)
 
                 # Monitoraggio CPU
-                if self.settings.get('cpu_monitoring_enabled', True):
+                if self.settings.get("cpu_monitoring_enabled", True):
                     cpu_percent = self.get_cpu_usage()
-                    cpu_threshold = self.settings.get('cpu_threshold_percent', 95.0)
-                    cpu_high_duration = self.settings.get('cpu_high_duration_seconds', 30)
+                    cpu_threshold = self.settings.get("cpu_threshold_percent", 95.0)
+                    cpu_high_duration = self.settings.get(
+                        "cpu_high_duration_seconds", 30
+                    )
 
                     if cpu_percent >= cpu_threshold:
                         if self.high_cpu_start_time is None:
@@ -74,12 +80,18 @@ class CPUMonitor(QThread):
                             self.high_cpu_start_time = None
 
                 # Monitoraggio temperatura
-                if self.settings.get('temperature_monitoring_enabled', True):
+                if self.settings.get("temperature_monitoring_enabled", True):
                     temperature = self.get_temperature()
                     if temperature is not None:
-                        temp_threshold = self.settings.get('temperature_threshold_celsius', 80.0)
-                        temp_high_duration = self.settings.get('temperature_high_duration_seconds', 60)
-                        temp_critical = self.settings.get('temperature_critical_threshold', 90.0)
+                        temp_threshold = self.settings.get(
+                            "temperature_threshold_celsius", 80.0
+                        )
+                        temp_high_duration = self.settings.get(
+                            "temperature_high_duration_seconds", 60
+                        )
+                        temp_critical = self.settings.get(
+                            "temperature_critical_threshold", 90.0
+                        )
 
                         if temperature >= temp_critical:
                             self.handle_critical_temperature(temperature)
@@ -90,7 +102,9 @@ class CPUMonitor(QThread):
                             else:
                                 duration = current_time - self.high_temp_start_time
                                 if duration >= temp_high_duration:
-                                    self.handle_high_temperature_duration(temperature, duration)
+                                    self.handle_high_temperature_duration(
+                                        temperature, duration
+                                    )
                         else:
                             if self.high_temp_start_time is not None:
                                 duration = current_time - self.high_temp_start_time
@@ -113,6 +127,7 @@ class CPUMonitor(QThread):
                 # Fallback: utilizzo CPU totale del sistema
                 if HAS_PSUTIL:
                     import psutil
+
                     return psutil.cpu_percent(interval=1)
                 else:
                     return 0.0
@@ -125,24 +140,32 @@ class CPUMonitor(QThread):
         try:
             if HAS_PSUTIL:
                 # Prova a ottenere la temperatura usando psutil
-                if hasattr(psutil, 'sensors_temperatures'):
+                if hasattr(psutil, "sensors_temperatures"):
                     temps = psutil.sensors_temperatures()
                     if temps:
                         # Cerca temperature della CPU
                         for name, entries in temps.items():
-                            if 'cpu' in name.lower() or 'core' in name.lower():
+                            if "cpu" in name.lower() or "core" in name.lower():
                                 if entries:
                                     # Prendi la temperatura più alta
-                                    return max(entry.current for entry in entries if hasattr(entry, 'current'))
+                                    return max(
+                                        entry.current
+                                        for entry in entries
+                                        if hasattr(entry, "current")
+                                    )
 
             # Fallback per Linux: lettura diretta da /sys/class/thermal/
-            if os.name == 'posix' and os.path.exists('/sys/class/thermal/'):
+            if os.name == "posix" and os.path.exists("/sys/class/thermal/"):
                 try:
-                    thermal_zones = [d for d in os.listdir('/sys/class/thermal/') if d.startswith('thermal_zone')]
+                    thermal_zones = [
+                        d
+                        for d in os.listdir("/sys/class/thermal/")
+                        if d.startswith("thermal_zone")
+                    ]
                     for zone in thermal_zones:
-                        temp_file = f'/sys/class/thermal/{zone}/temp'
+                        temp_file = f"/sys/class/thermal/{zone}/temp"
                         if os.path.exists(temp_file):
-                            with open(temp_file, 'r') as f:
+                            with open(temp_file, "r") as f:
                                 temp_millidegree = int(f.read().strip())
                                 temp_celsius = temp_millidegree / 1000.0
                                 if temp_celsius > 0:  # Valore valido
@@ -156,8 +179,10 @@ class CPUMonitor(QThread):
                     w = wmi.WMI(namespace="root\\wmi")
                     temperature_info = w.MSAcpi_ThermalZoneTemperature()
                     for temp in temperature_info:
-                        if hasattr(temp, 'CurrentTemperature'):
-                            temp_celsius = (temp.CurrentTemperature - 2732) / 10.0  # Convert from tenths of Kelvin
+                        if hasattr(temp, "CurrentTemperature"):
+                            temp_celsius = (
+                                temp.CurrentTemperature - 2732
+                            ) / 10.0  # Convert from tenths of Kelvin
                             if temp_celsius > 0:
                                 return temp_celsius
                 except Exception:
@@ -172,7 +197,7 @@ class CPUMonitor(QThread):
     def handle_high_cpu_duration(self, cpu_percent, duration):
         """Gestisce il caso di CPU alta per troppo tempo."""
         try:
-            signal_type = self.settings.get('cpu_signal_type', 'SIGTERM')
+            signal_type = self.settings.get("cpu_signal_type", "SIGTERM")
             message = ".1f"
 
             logging.critical(message)
@@ -187,7 +212,7 @@ class CPUMonitor(QThread):
     def handle_critical_temperature(self, temperature):
         """Gestisce temperature critiche che richiedono azione immediata."""
         try:
-            signal_type = self.settings.get('cpu_signal_type', 'SIGTERM')
+            signal_type = self.settings.get("cpu_signal_type", "SIGTERM")
             message = ".1f"
 
             logging.critical(message)
@@ -215,20 +240,22 @@ class CPUMonitor(QThread):
         try:
             current_pid = os.getpid()
 
-            if signal_type == 'SIGTERM':
+            if signal_type == "SIGTERM":
                 sig = signal.SIGTERM
-                sig_name = 'SIGTERM'
-            elif signal_type == 'SIGKILL':
+                sig_name = "SIGTERM"
+            elif signal_type == "SIGKILL":
                 sig = signal.SIGKILL
-                sig_name = 'SIGKILL'
-            elif signal_type == 'SIGUSR1':
+                sig_name = "SIGKILL"
+            elif signal_type == "SIGUSR1":
                 sig = signal.SIGUSR1
-                sig_name = 'SIGUSR1'
+                sig_name = "SIGUSR1"
             else:
                 logging.error("Tipo di segnale non supportato: {signal_type}")
                 return
 
-            logging.critical(f"Invio segnale {sig_name} (PID: {current_pid}) per alto utilizzo CPU")
+            logging.critical(
+                f"Invio segnale {sig_name} (PID: {current_pid}) per alto utilizzo CPU"
+            )
 
             # Invia il segnale al processo corrente
             os.kill(current_pid, sig)

@@ -14,9 +14,24 @@ from typing import Dict, Any, Optional
 from PyQt6.QtCore import Qt, QTimer, QObject, pyqtSignal
 from PyQt6.QtGui import QFontDatabase, QFont
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel,
-    QPushButton, QHBoxLayout, QLineEdit, QTextEdit, QGroupBox,
-    QScrollArea, QMessageBox, QFileDialog, QSlider, QDialog, QSplitter, QGridLayout, QFrame
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QLabel,
+    QPushButton,
+    QHBoxLayout,
+    QLineEdit,
+    QTextEdit,
+    QGroupBox,
+    QScrollArea,
+    QMessageBox,
+    QFileDialog,
+    QSlider,
+    QDialog,
+    QSplitter,
+    QGridLayout,
+    QFrame,
 )
 
 # Import dei componenti UI esistenti
@@ -26,6 +41,7 @@ from .settings_dialog import SettingsDialog
 # Import del controller (quando sarà disponibile)
 try:
     from ..controllers.cogniflow_controller import CogniFlowController
+
     CONTROLLER_AVAILABLE = True
 except ImportError:
     CogniFlowController = None
@@ -34,11 +50,14 @@ except ImportError:
 # Import TTS per la pronuncia IPA
 try:
     from ..Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager import TTSThread
+
     TTS_AVAILABLE = True
 except ImportError:
     TTSThread = None
     TTS_AVAILABLE = False
-    logging.warning("Sistema TTS non disponibile - funzionalità di pronuncia IPA limitata")
+    logging.warning(
+        "Sistema TTS non disponibile - funzionalità di pronuncia IPA limitata"
+    )
 
 # Import del sistema di configurazione
 from ..main_03_configurazione_e_opzioni import get_config, load_settings
@@ -53,7 +72,7 @@ try:
     from ..Artificial_Intelligence.Riconoscimento_Vocale.managers.speech_recognition_manager import (
         SpeechRecognitionThread,
         AudioFileTranscriptionThread,
-        ensure_vosk_model_available
+        ensure_vosk_model_available,
     )
 except ImportError:
     SpeechRecognitionThread = None
@@ -64,16 +83,21 @@ except ImportError:
 try:
     from .user_friendly_errors import show_user_friendly_error, show_success_message
 except ImportError:
+
     def show_user_friendly_error(parent, error, context=""):
         QMessageBox.critical(parent, "Errore", f"Errore: {str(error)}")
 
     def show_success_message(parent, operation, details=""):
-        QMessageBox.information(parent, "Successo", f"Operazione completata: {operation}")
+        QMessageBox.information(
+            parent, "Successo", f"Operazione completata: {operation}"
+        )
+
 
 # Import per funzionalità multimediali
 try:
     from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
     from PyQt6.QtMultimediaWidgets import QVideoWidget
+
     MULTIMEDIA_AVAILABLE = True
 except ImportError:
     QMediaPlayer = None
@@ -85,6 +109,7 @@ except ImportError:
 try:
     import pytesseract
     from PIL import Image
+
     OCR_AVAILABLE = True
 except ImportError:
     pytesseract = None
@@ -122,8 +147,8 @@ class UIManager(QObject):
         settings = load_settings()
 
         # Dimensioni finestra
-        window_width = settings.get('ui', {}).get('window_width', 1200)
-        window_height = settings.get('ui', {}).get('window_height', 800)
+        window_width = settings.get("ui", {}).get("window_width", 1200)
+        window_height = settings.get("ui", {}).get("window_height", 800)
         self.main_window.setGeometry(100, 100, window_width, window_height)
 
         # Widget centrale
@@ -151,14 +176,14 @@ class UIManager(QObject):
     def _apply_styles(self, settings):
         """Applica gli stili all'interfaccia"""
         # Carica colori dalle impostazioni
-        colors = settings.get('colors', {})
-        button_text_colors = colors.get('button_text_colors', {})
-        button_border_colors = colors.get('button_border_colors', {})
-        button_background_colors = colors.get('button_background_colors', {})
+        colors = settings.get("colors", {})
+        button_text_colors = colors.get("button_text_colors", {})
+        button_border_colors = colors.get("button_border_colors", {})
+        button_background_colors = colors.get("button_background_colors", {})
 
         # Carica preferenze font
-        main_font_size = settings.get('fonts', {}).get('main_font_size', 13)
-        pensierini_font_size = settings.get('fonts', {}).get('pensierini_font_size', 12)
+        main_font_size = settings.get("fonts", {}).get("main_font_size", 13)
+        pensierini_font_size = settings.get("fonts", {}).get("pensierini_font_size", 12)
 
         # CSS dinamico
         style_sheet = f"""
@@ -195,13 +220,17 @@ class UIManager(QObject):
 
         # Pulsante Opzioni
         self.options_button = QPushButton("⚙️ Opzioni")
-        self.options_button.clicked.connect(lambda: self.button_clicked.emit("options", {}))
+        self.options_button.clicked.connect(
+            lambda: self.button_clicked.emit("options", {})
+        )
         top_layout.addWidget(self.options_button)
 
         # Pulsante Toggle Tools
         self.toggle_tools_button = QPushButton("🔧 Ingranaggi")
         self.toggle_tools_button.setCheckable(True)
-        self.toggle_tools_button.clicked.connect(lambda: self.button_clicked.emit("toggle_tools", {}))
+        self.toggle_tools_button.clicked.connect(
+            lambda: self.button_clicked.emit("toggle_tools", {})
+        )
         top_layout.addWidget(self.toggle_tools_button)
 
         top_layout.addStretch()
@@ -283,13 +312,17 @@ class UIManager(QObject):
         input_row_layout.setSpacing(10)
 
         self.input_text_area = QTextEdit()
-        self.input_text_area.setPlaceholderText("Scrivi qui, ( premi INVIO per creare un pensierino - Premi INVIO di destra per tornare a capo )")
+        self.input_text_area.setPlaceholderText(
+            "Scrivi qui, ( premi INVIO per creare un pensierino - Premi INVIO di destra per tornare a capo )"
+        )
         self.input_text_area.setFixedHeight(35)
         self.input_text_area.installEventFilter(self.main_window)
         input_row_layout.addWidget(self.input_text_area, 4)
 
         self.add_pensierino_button = QPushButton("➕ Aggiungi Pensierino")
-        self.add_pensierino_button.clicked.connect(lambda: self.button_clicked.emit("add_pensierino", {}))
+        self.add_pensierino_button.clicked.connect(
+            lambda: self.button_clicked.emit("add_pensierino", {})
+        )
         input_row_layout.addWidget(self.add_pensierino_button, 1)
 
         pensierini_layout.addLayout(input_row_layout)
@@ -312,8 +345,11 @@ class UIManager(QObject):
         self.status_footer_label = QLabel()
         self.status_footer_label.setObjectName("status_footer_label")
 
-        footer_font_size = self.main_window.settings.get('fonts', {}).get('main_font_size', 13) - 2
-        self.status_footer_label.setStyleSheet(f"""
+        footer_font_size = (
+            self.main_window.settings.get("fonts", {}).get("main_font_size", 13) - 2
+        )
+        self.status_footer_label.setStyleSheet(
+            f"""
             QLabel#status_footer_label {{
                 color: #495057;
                 font-size: {footer_font_size}px;
@@ -326,7 +362,8 @@ class UIManager(QObject):
                 text-align: center;
                 min-height: 20px;
             }}
-        """)
+        """
+        )
 
         self.update_footer_status()
         footer_layout.addWidget(self.status_footer_label)
@@ -342,7 +379,9 @@ class UIManager(QObject):
         """Aggiorna le informazioni di stato nel footer"""
         try:
             current_time = datetime.now().strftime("%H:%M:%S")
-            status_text = f"🕐 {current_time} | 👤 Sessione attiva | 📊 Sistema operativo"
+            status_text = (
+                f"🕐 {current_time} | 👤 Sessione attiva | 📊 Sistema operativo"
+            )
             self.status_footer_label.setText(status_text)
         except Exception as e:
             logging.error(f"Errore nell'aggiornamento del footer: {e}")
@@ -355,6 +394,7 @@ class UIManager(QObject):
 
         # Crea widget per mostrare testo
         from PyQt6.QtWidgets import QTextEdit
+
         text_widget = QTextEdit()
         text_widget.setReadOnly(True)
         text_widget.setPlainText(full_text)
@@ -413,7 +453,9 @@ class WorkAreaWidget(QWidget):
 
     def dragEnterEvent(self, event):
         """Accetta il drag se contiene testo o dati del widget."""
-        if event.mimeData().hasText() or event.mimeData().hasFormat("application/x-draggable-widget"):
+        if event.mimeData().hasText() or event.mimeData().hasFormat(
+            "application/x-draggable-widget"
+        ):
             event.acceptProposedAction()
             event.setDropAction(Qt.DropAction.CopyAction)
 
@@ -424,6 +466,7 @@ class WorkAreaWidget(QWidget):
                 text = event.mimeData().text()
                 if text and text.strip():
                     from .draggable_text_widget import DraggableTextWidget
+
                     widget = DraggableTextWidget(text, self.settings)
                     self.widget_layout.addWidget(widget)
                     event.acceptProposedAction()
@@ -444,7 +487,10 @@ class PensieriniWidget(QWidget):
         """Accetta il drag se contiene testo o dati del widget."""
         try:
             mime_data = event.mimeData()
-            if mime_data and (mime_data.hasText() or mime_data.hasFormat("application/x-draggable-widget")):
+            if mime_data and (
+                mime_data.hasText()
+                or mime_data.hasFormat("application/x-draggable-widget")
+            ):
                 event.acceptProposedAction()
                 event.setDropAction(Qt.DropAction.CopyAction)
         except Exception as e:
@@ -458,6 +504,7 @@ class PensieriniWidget(QWidget):
                 if text and text.strip():
                     # Controlla duplicati (implementazione semplificata)
                     from .draggable_text_widget import DraggableTextWidget
+
                     widget = DraggableTextWidget(text, self.settings)
                     if self.pensierini_layout:
                         self.pensierini_layout.addWidget(widget)
@@ -555,15 +602,18 @@ class MainWindowRefactored(QMainWindow):
         """Salva il progetto corrente"""
         project_name = self.ui_manager.get_project_name()
         if not project_name:
-            QMessageBox.warning(self, "Nome progetto mancante",
-                              "Inserisci un nome per il progetto prima di salvarlo.")
+            QMessageBox.warning(
+                self,
+                "Nome progetto mancante",
+                "Inserisci un nome per il progetto prima di salvarlo.",
+            )
             return
 
         # Raccogli i dati del progetto (implementazione semplificata)
         project_data = {
             "pensierini": [],
             "work_area": [],
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
         if self.controller:
@@ -573,11 +623,17 @@ class MainWindowRefactored(QMainWindow):
             success = self._save_project_manual(project_name, project_data)
 
         if success:
-            QMessageBox.information(self, "Salvataggio completato",
-                                  f"Progetto '{project_name}' salvato con successo!")
+            QMessageBox.information(
+                self,
+                "Salvataggio completato",
+                f"Progetto '{project_name}' salvato con successo!",
+            )
         else:
-            QMessageBox.critical(self, "Errore salvataggio",
-                               "Errore durante il salvataggio del progetto.")
+            QMessageBox.critical(
+                self,
+                "Errore salvataggio",
+                "Errore durante il salvataggio del progetto.",
+            )
 
     def _load_project(self):
         """Carica un progetto"""
@@ -587,12 +643,14 @@ class MainWindowRefactored(QMainWindow):
             projects = self._get_available_projects_manual()
 
         if not projects:
-            QMessageBox.information(self, "Nessun progetto",
-                                  "Non ci sono progetti salvati.")
+            QMessageBox.information(
+                self, "Nessun progetto", "Non ci sono progetti salvati."
+            )
             return
 
-        project_name, ok = QInputDialog.getItem(self, "Carica progetto",
-                                               "Seleziona progetto:", projects, 0, False)
+        project_name, ok = QInputDialog.getItem(
+            self, "Carica progetto", "Seleziona progetto:", projects, 0, False
+        )
         if ok and project_name:
             if self.controller:
                 project_data = self.controller.load_project(project_name)
@@ -601,11 +659,17 @@ class MainWindowRefactored(QMainWindow):
 
             if project_data:
                 self.ui_manager.set_project_name(project_name)
-                QMessageBox.information(self, "Caricamento completato",
-                                      f"Progetto '{project_name}' caricato con successo!")
+                QMessageBox.information(
+                    self,
+                    "Caricamento completato",
+                    f"Progetto '{project_name}' caricato con successo!",
+                )
             else:
-                QMessageBox.critical(self, "Errore caricamento",
-                                   "Errore durante il caricamento del progetto.")
+                QMessageBox.critical(
+                    self,
+                    "Errore caricamento",
+                    "Errore durante il caricamento del progetto.",
+                )
 
     def _add_pensierino(self):
         """Aggiunge un pensierino"""
@@ -617,14 +681,19 @@ class MainWindowRefactored(QMainWindow):
     def _save_project_manual(self, project_name: str, data: dict) -> bool:
         """Salvataggio manuale semplificato"""
         try:
-            projects_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                      "Save", "mia_dispenda_progetti")
+            projects_dir = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)),
+                "Save",
+                "mia_dispenda_progetti",
+            )
             os.makedirs(projects_dir, exist_ok=True)
 
-            safe_name = "".join(c for c in project_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            safe_name = "".join(
+                c for c in project_name if c.isalnum() or c in (" ", "-", "_")
+            ).rstrip()
             file_path = os.path.join(projects_dir, f"{safe_name}.json")
 
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
 
             return True
@@ -635,13 +704,18 @@ class MainWindowRefactored(QMainWindow):
     def _load_project_manual(self, project_name: str) -> Optional[dict]:
         """Caricamento manuale semplificato"""
         try:
-            projects_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                      "Save", "mia_dispenda_progetti")
-            safe_name = "".join(c for c in project_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            projects_dir = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)),
+                "Save",
+                "mia_dispenda_progetti",
+            )
+            safe_name = "".join(
+                c for c in project_name if c.isalnum() or c in (" ", "-", "_")
+            ).rstrip()
             file_path = os.path.join(projects_dir, f"{safe_name}.json")
 
             if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, "r", encoding="utf-8") as f:
                     return json.load(f)
             return None
         except Exception as e:
@@ -651,10 +725,13 @@ class MainWindowRefactored(QMainWindow):
     def _get_available_projects_manual(self) -> list:
         """Ottiene la lista dei progetti disponibili (manuale)"""
         try:
-            projects_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                      "Save", "mia_dispenda_progetti")
+            projects_dir = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)),
+                "Save",
+                "mia_dispenda_progetti",
+            )
             if os.path.exists(projects_dir):
-                return [f[:-5] for f in os.listdir(projects_dir) if f.endswith('.json')]
+                return [f[:-5] for f in os.listdir(projects_dir) if f.endswith(".json")]
             return []
         except Exception as e:
             logging.error(f"Errore recupero progetti: {e}")
@@ -664,10 +741,12 @@ class MainWindowRefactored(QMainWindow):
         """Event filter per intercettare eventi della tastiera."""
         from PyQt6.QtCore import QEvent, Qt
 
-        if (obj == self.ui_manager.input_text_area
-                and event.type() == QEvent.Type.KeyPress
-                and event.key() == Qt.Key.Key_Return
-                and not event.modifiers() & Qt.KeyboardModifier.ShiftModifier):
+        if (
+            obj == self.ui_manager.input_text_area
+            and event.type() == QEvent.Type.KeyPress
+            and event.key() == Qt.Key.Key_Return
+            and not event.modifiers() & Qt.KeyboardModifier.ShiftModifier
+        ):
             text = self.ui_manager.get_input_text()
             if text:
                 self._on_text_input_submitted(text)

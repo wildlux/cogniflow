@@ -11,6 +11,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 try:
     import pytesseract
     from PIL import Image
+
     OCR_AVAILABLE = True
 except ImportError:
     pytesseract = None
@@ -59,7 +60,7 @@ class OCRService(QObject):
             image = Image.open(image_path)
 
             # Estrai il testo
-            text = pytesseract.image_to_string(image, lang='ita+eng')
+            text = pytesseract.image_to_string(image, lang="ita+eng")
 
             if text and text.strip():
                 self.logger.info(f"Testo estratto dall'immagine: {text[:50]}...")
@@ -83,8 +84,9 @@ class OCRService(QObject):
         if not image_path:
             return False
 
-        valid_extensions = ['.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif']
+        valid_extensions = [".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif"]
         import os
+
         _, ext = os.path.splitext(image_path.lower())
 
         return ext in valid_extensions and os.path.exists(image_path)

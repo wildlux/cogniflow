@@ -28,14 +28,16 @@ class SecurityMonitor:
             "max_failed_attempts": 5,
             "max_suspicious_activities": 10,
             "alert_cooldown_minutes": 15,
-            "max_file_access_attempts": 20
+            "max_file_access_attempts": 20,
         }
 
         # Tracking delle attività recenti
         self.recent_activities = []
         self.last_alert_time = {}
 
-    def log_security_event(self, event_type: str, details: Dict[str, Any], severity: str = "INFO"):
+    def log_security_event(
+        self, event_type: str, details: Dict[str, Any], severity: str = "INFO"
+    ):
         """Registra un evento di sicurezza."""
         with self.lock:
             event = {
@@ -43,7 +45,7 @@ class SecurityMonitor:
                 "type": event_type,
                 "details": details,
                 "severity": severity,
-                "source_ip": details.get("ip", "localhost")
+                "source_ip": details.get("ip", "localhost"),
             }
 
             self.recent_activities.append(event)
@@ -54,8 +56,7 @@ class SecurityMonitor:
 
             # Log dell'evento
             logger.log(
-                getattr(logging, severity),
-                "Security Event: {event_type} - {details}"
+                getattr(logging, severity), "Security Event: {event_type} - {details}"
             )
 
             # Verifica se generare un alert
@@ -72,19 +73,25 @@ class SecurityMonitor:
             self.failed_attempts[event["source_ip"]] += 1
 
         # Controlla soglie
-        if self.suspicious_activities[event_type] >= self.thresholds["max_suspicious_activities"]:
+        if (
+            self.suspicious_activities[event_type]
+            >= self.thresholds["max_suspicious_activities"]
+        ):
             self._generate_alert(
                 "HIGH_ACTIVITY",
                 "Alta attività sospetta per {event_type}: {self.suspicious_activities[event_type]} eventi",
-                "HIGH"
+                "HIGH",
             )
             self.suspicious_activities[event_type] = 0  # Reset contatore
 
-        if self.failed_attempts[event["source_ip"]] >= self.thresholds["max_failed_attempts"]:
+        if (
+            self.failed_attempts[event["source_ip"]]
+            >= self.thresholds["max_failed_attempts"]
+        ):
             self._generate_alert(
                 "BRUTE_FORCE",
                 "Tentativi falliti eccessivi da {event['source_ip']}: {self.failed_attempts[event['source_ip']]}",
-                "CRITICAL"
+                "CRITICAL",
             )
             self.failed_attempts[event["source_ip"]] = 0  # Reset contatore
 
@@ -101,7 +108,7 @@ class SecurityMonitor:
             "timestamp": now,
             "type": alert_type,
             "message": message,
-            "severity": severity
+            "severity": severity,
         }
 
         self.alerts.append(alert)
@@ -127,7 +134,7 @@ class SecurityMonitor:
                 "suspicious_activities": dict(self.suspicious_activities),
                 "failed_attempts": dict(self.failed_attempts),
                 "recent_activities_count": len(self.recent_activities),
-                "last_alert": self.alerts[-1] if self.alerts else None
+                "last_alert": self.alerts[-1] if self.alerts else None,
             }
 
     def clear_old_alerts(self, days: int = 7):
@@ -135,21 +142,25 @@ class SecurityMonitor:
         with self.lock:
             cutoff_date = datetime.now() - timedelta(days=days)
             self.alerts = [
-                alert for alert in self.alerts
-                if alert["timestamp"] > cutoff_date
+                alert for alert in self.alerts if alert["timestamp"] > cutoff_date
             ]
 
     def is_ip_blocked(self, ip: str) -> bool:
         """Verifica se un IP è bloccato per tentativi eccessivi."""
         with self.lock:
-            return self.failed_attempts.get(ip, 0) >= self.thresholds["max_failed_attempts"] * 2
+            return (
+                self.failed_attempts.get(ip, 0)
+                >= self.thresholds["max_failed_attempts"] * 2
+            )
 
 
 # Istanza globale del monitor di sicurezza
 security_monitor = SecurityMonitor()
 
 
-def log_security_event(event_type: str, details: Dict[str, Any], severity: str = "INFO"):
+def log_security_event(
+    event_type: str, details: Dict[str, Any], severity: str = "INFO"
+):
     """Funzione di comodo per loggare eventi di sicurezza."""
     security_monitor.log_security_event(event_type, details, severity)
 

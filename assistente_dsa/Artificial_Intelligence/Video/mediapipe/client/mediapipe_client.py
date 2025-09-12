@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import time
 
+
 class MediaPipeClient:
     def __init__(self, service_url: str = "http://localhost:8001"):
         self.service_url = service_url
@@ -45,7 +46,7 @@ class MediaPipeClient:
 
         try:
             # Convert frame to JPEG bytes
-            success, buffer = cv2.imencode('.jpg', frame)
+            success, buffer = cv2.imencode(".jpg", frame)
             if not success:
                 self.logger.error("Failed to encode frame to JPEG")
                 return None
@@ -55,15 +56,19 @@ class MediaPipeClient:
             # Send to MediaPipe service
             response = await self.client.post(
                 f"{self.service_url}/detect_pose",
-                files={"file": ("frame.jpg", frame_bytes, "image/jpeg")}
+                files={"file": ("frame.jpg", frame_bytes, "image/jpeg")},
             )
 
             if response.status_code == 200:
                 result = response.json()
-                self.logger.debug(f"Pose detection result: detected={result.get('detected', False)}")
+                self.logger.debug(
+                    f"Pose detection result: detected={result.get('detected', False)}"
+                )
                 return result
             else:
-                self.logger.warning(f"MediaPipe pose detection failed: {response.status_code}")
+                self.logger.warning(
+                    f"MediaPipe pose detection failed: {response.status_code}"
+                )
                 self.available = False
                 return None
 
@@ -79,7 +84,7 @@ class MediaPipeClient:
 
         try:
             # Convert frame to JPEG bytes
-            success, buffer = cv2.imencode('.jpg', frame)
+            success, buffer = cv2.imencode(".jpg", frame)
             if not success:
                 self.logger.error("Failed to encode frame to JPEG")
                 return None
@@ -89,15 +94,19 @@ class MediaPipeClient:
             # Send to MediaPipe service
             response = await self.client.post(
                 f"{self.service_url}/detect_hands",
-                files={"file": ("frame.jpg", frame_bytes, "image/jpeg")}
+                files={"file": ("frame.jpg", frame_bytes, "image/jpeg")},
             )
 
             if response.status_code == 200:
                 result = response.json()
-                self.logger.debug(f"Hand detection result: detected={result.get('detected', False)}")
+                self.logger.debug(
+                    f"Hand detection result: detected={result.get('detected', False)}"
+                )
                 return result
             else:
-                self.logger.warning(f"MediaPipe hand detection failed: {response.status_code}")
+                self.logger.warning(
+                    f"MediaPipe hand detection failed: {response.status_code}"
+                )
                 self.available = False
                 return None
 
@@ -113,7 +122,7 @@ class MediaPipeClient:
 
         try:
             # Convert frame to JPEG bytes
-            success, buffer = cv2.imencode('.jpg', frame)
+            success, buffer = cv2.imencode(".jpg", frame)
             if not success:
                 self.logger.error("Failed to encode frame to JPEG")
                 return None
@@ -123,14 +132,16 @@ class MediaPipeClient:
             # Send to MediaPipe service
             response = await self.client.post(
                 f"{self.service_url}/detect_combined",
-                files={"file": ("frame.jpg", frame_bytes, "image/jpeg")}
+                files={"file": ("frame.jpg", frame_bytes, "image/jpeg")},
             )
 
             if response.status_code == 200:
                 result = response.json()
                 return result
             else:
-                self.logger.warning(f"MediaPipe combined detection failed: {response.status_code}")
+                self.logger.warning(
+                    f"MediaPipe combined detection failed: {response.status_code}"
+                )
                 self.available = False
                 return None
 
@@ -144,7 +155,7 @@ class MediaPipeClient:
         return {
             "available": self.available,
             "service_url": self.service_url,
-            "last_health_check": self.last_health_check
+            "last_health_check": self.last_health_check,
         }
 
     async def close(self):

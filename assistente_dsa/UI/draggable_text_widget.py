@@ -3,7 +3,15 @@ import os
 import pyttsx3
 from PyQt6.QtCore import Qt, QMimeData, QTimer
 from PyQt6.QtGui import QDrag
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QMessageBox, QInputDialog
+from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QMessageBox,
+    QInputDialog,
+)
 
 # Constants
 WIDGET_MIN_HEIGHT = 60
@@ -45,7 +53,6 @@ class DraggableTextWidget(QFrame):
         self.setFrameShadow(QFrame.Shadow.Raised)
         self.setMinimumHeight(WIDGET_MIN_HEIGHT)
 
-
         self.settings = settings
         self.original_text = text
         self.is_selected = False
@@ -58,8 +65,12 @@ class DraggableTextWidget(QFrame):
         layout = QHBoxLayout(self)
         self.text_label = QLabel(text)
         # Usa le preferenze font dalle impostazioni utente
-        pensierini_font_size = self.settings.get('fonts', {}).get('pensierini_font_size', DEFAULT_FONT_SIZE)
-        self.text_label.setStyleSheet(f"font-weight: bold; font-size: {pensierini_font_size}px;")
+        pensierini_font_size = self.settings.get("fonts", {}).get(
+            "pensierini_font_size", DEFAULT_FONT_SIZE
+        )
+        self.text_label.setStyleSheet(
+            f"font-weight: bold; font-size: {pensierini_font_size}px;"
+        )
         self.text_label.setWordWrap(True)
         self.text_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.text_label.customContextMenuRequested.connect(self.show_context_menu)
@@ -76,7 +87,9 @@ class DraggableTextWidget(QFrame):
         self.read_button.setFixedSize(*BUTTON_DEFAULT_SIZE)
         self.read_button.setToolTip("Leggi ad alta voce")
         self.read_button.clicked.connect(self.start_reading)
-        self.read_button.setStyleSheet("background-color: #ff6600; color: white; border: 2px solid #ffaa00;")
+        self.read_button.setStyleSheet(
+            "background-color: #ff6600; color: white; border: 2px solid #ffaa00;"
+        )
         self.read_button.show()
 
         # Pause button (now visible with orange color)
@@ -84,7 +97,9 @@ class DraggableTextWidget(QFrame):
         self.pause_button.setFixedSize(*BUTTON_DEFAULT_SIZE)
         self.pause_button.setToolTip("Pausa")
         self.pause_button.clicked.connect(self.pause_reading)
-        self.pause_button.setStyleSheet("background-color: #ff6600; color: white; border: 2px solid #ffaa00;")
+        self.pause_button.setStyleSheet(
+            "background-color: #ff6600; color: white; border: 2px solid #ffaa00;"
+        )
         self.pause_button.show()
 
         # Stop button (now visible with orange color)
@@ -92,7 +107,9 @@ class DraggableTextWidget(QFrame):
         self.stop_button.setFixedSize(*BUTTON_DEFAULT_SIZE)
         self.stop_button.setToolTip("Ferma")
         self.stop_button.clicked.connect(self.stop_reading)
-        self.stop_button.setStyleSheet("background-color: #ff6600; color: white; border: 2px solid #ffaa00;")
+        self.stop_button.setStyleSheet(
+            "background-color: #ff6600; color: white; border: 2px solid #ffaa00;"
+        )
         self.stop_button.show()
 
         self.edit_button = QPushButton("✏️")
@@ -147,8 +164,10 @@ class DraggableTextWidget(QFrame):
     def edit_text(self):
         """Apre una finestra di dialogo per modificare il testo del widget."""
         new_text, ok = QInputDialog.getMultiLineText(
-            self, "Modifica Testo", "Modifica il contenuto del widget:",
-            self.text_label.text()
+            self,
+            "Modifica Testo",
+            "Modifica il contenuto del widget:",
+            self.text_label.text(),
         )
         if ok and new_text.strip():
             self.text_label.setText(new_text.strip())
@@ -162,14 +181,18 @@ class DraggableTextWidget(QFrame):
 
     def mouseMoveEvent(self, a0):
         """Gestisce il movimento del mouse per il trascinamento."""
-        if (self.start_pos is not None and self.text_label and a0 is not None
-                and a0.buttons() == Qt.MouseButton.LeftButton):
+        if (
+            self.start_pos is not None
+            and self.text_label
+            and a0 is not None
+            and a0.buttons() == Qt.MouseButton.LeftButton
+        ):
             current_pos = a0.pos()
             if current_pos.x() >= 0 and current_pos.y() >= 0:
                 distance = (current_pos - self.start_pos).manhattanLength()
                 if distance > DRAG_DISTANCE_THRESHOLD:
                     # Annulla eventuali timer di click se attivi
-                    if hasattr(self, '_click_timer') and self._click_timer.isActive():
+                    if hasattr(self, "_click_timer") and self._click_timer.isActive():
                         self._click_timer.stop()
 
                     drag = QDrag(self)
@@ -211,8 +234,12 @@ class DraggableTextWidget(QFrame):
             # Abilita i pulsanti di pausa e stop durante la lettura
             self.pause_button.setEnabled(True)
             self.stop_button.setEnabled(True)
-            self.pause_button.setStyleSheet("background-color: #ff6600; color: white; border: 2px solid #ffaa00;")
-            self.stop_button.setStyleSheet("background-color: #ff6600; color: white; border: 2px solid #ffaa00;")
+            self.pause_button.setStyleSheet(
+                "background-color: #ff6600; color: white; border: 2px solid #ffaa00;"
+            )
+            self.stop_button.setStyleSheet(
+                "background-color: #ff6600; color: white; border: 2px solid #ffaa00;"
+            )
 
             # Start reading
             text_to_read = self.text_label.text()
@@ -223,7 +250,9 @@ class DraggableTextWidget(QFrame):
             self.reset_reading_buttons()
 
         except Exception:
-            QMessageBox.warning(self, "Errore Lettura", "Errore durante la lettura: {str(e)}")
+            QMessageBox.warning(
+                self, "Errore Lettura", "Errore durante la lettura: {str(e)}"
+            )
             self.reset_reading_buttons()
 
     def pause_reading(self):
@@ -267,7 +296,9 @@ class DraggableTextWidget(QFrame):
         self.pause_button.setToolTip("Pausa (disabilitato)")
 
         # Aggiorna lo stile per mostrare lo stato disabilitato
-        disabled_style = "background-color: #ffaa00; color: #666; border: 2px solid #ffcc00;"
+        disabled_style = (
+            "background-color: #ffaa00; color: #666; border: 2px solid #ffcc00;"
+        )
         self.pause_button.setStyleSheet(disabled_style)
         self.stop_button.setStyleSheet(disabled_style)
 
@@ -289,7 +320,7 @@ class DraggableTextWidget(QFrame):
                 item = pensierini_layout.itemAt(i)
                 if item:
                     widget = item.widget()
-                    if widget and widget != self and hasattr(widget, 'is_selected'):
+                    if widget and widget != self and hasattr(widget, "is_selected"):
                         widget.is_selected = False
                         widget.update_selection_style()
 
@@ -298,11 +329,11 @@ class DraggableTextWidget(QFrame):
         current = self.parent()
         while current is not None:
             # Controlla se è un layout che contiene pensierini
-            if hasattr(current, 'count') and hasattr(current, 'itemAt'):
+            if hasattr(current, "count") and hasattr(current, "itemAt"):
                 # Verifica se contiene DraggableTextWidget
                 for i in range(current.count()):
                     item = current.itemAt(i)
-                    if item and hasattr(item.widget(), 'text_label'):
+                    if item and hasattr(item.widget(), "text_label"):
                         return current
             current = current.parent()
         return None
@@ -384,7 +415,9 @@ class DraggableTextWidget(QFrame):
         current = self.parent()
         depth = 0
         while current is not None and depth < 10:  # Limite per evitare loop infiniti
-            if hasattr(current, 'show_text_in_details') and callable(getattr(current, 'show_text_in_details', None)):
+            if hasattr(current, "show_text_in_details") and callable(
+                getattr(current, "show_text_in_details", None)
+            ):
                 return current
             current = current.parent()
             depth += 1
@@ -396,7 +429,7 @@ class DraggableTextWidget(QFrame):
             return "📝 Contenuto vuoto"
 
         # Controlla se è un percorso file
-        if os.path.exists(text) or (len(text.split()) == 1 and '.' in text):
+        if os.path.exists(text) or (len(text.split()) == 1 and "." in text):
             return self._analyze_file(text)
 
         # Controlla se è una singola parola
@@ -438,9 +471,9 @@ class DraggableTextWidget(QFrame):
         metadata = "🔤 Analisi Grammaticale: {word}\n\n"
 
         # Analisi grammaticale di base
-        if word.endswith(('are', 'ere', 'ire')):
+        if word.endswith(("are", "ere", "ire")):
             metadata += self._analyze_verb(word)
-        elif word.endswith(('a', 'e', 'i', 'o', 'u')):
+        elif word.endswith(("a", "e", "i", "o", "u")):
             metadata += self._analyze_noun(word)
         else:
             metadata += "❓ Tipo di parola non identificato\n"
@@ -456,13 +489,13 @@ class DraggableTextWidget(QFrame):
         metadata = "🏃 Tipo: Verbo\n"
 
         # Identifica la coniugazione
-        if verb.endswith('are'):
+        if verb.endswith("are"):
             conjugation = "1ª coniugazione (-are)"
             stem = verb[:-3]
-        elif verb.endswith('ere'):
+        elif verb.endswith("ere"):
             conjugation = "2ª coniugazione (-ere)"
             stem = verb[:-3]
-        elif verb.endswith('ire'):
+        elif verb.endswith("ire"):
             conjugation = "3ª coniugazione (-ire)"
             stem = verb[:-3]
         else:
@@ -486,9 +519,9 @@ class DraggableTextWidget(QFrame):
         metadata = "🏷️ Tipo: Nome\n"
 
         # Identifica genere (molto semplificato)
-        if noun.endswith(('a', 'e')):
+        if noun.endswith(("a", "e")):
             gender = "Femminile"
-        elif noun.endswith(('o', 'e')):
+        elif noun.endswith(("o", "e")):
             gender = "Maschile"
         else:
             gender = "Genere non identificato"
@@ -496,7 +529,7 @@ class DraggableTextWidget(QFrame):
         metadata += "⚧ Genere: {gender}\n"
 
         # Numero
-        if noun.endswith('i') or noun.endswith('e'):
+        if noun.endswith("i") or noun.endswith("e"):
             number = "Plurale"
         else:
             number = "Singolare"
@@ -565,9 +598,13 @@ class DraggableTextWidget(QFrame):
 
         for i, word in enumerate(words):
             clean_word = word.strip('.,!?;:"').lower()
-            if clean_word.endswith(('are', 'ere', 'ire', 'are', 'ere', 'ire')):
+            if clean_word.endswith(("are", "ere", "ire", "are", "ere", "ire")):
                 verbs.append((clean_word, i))
-            elif i == 0 or (i > 0 and words[i - 1].lower() in ['il', 'lo', 'la', 'i', 'gli', 'le', 'un', 'una', 'uno']):
+            elif i == 0 or (
+                i > 0
+                and words[i - 1].lower()
+                in ["il", "lo", "la", "i", "gli", "le", "un", "una", "uno"]
+            ):
                 subjects.append((clean_word, i))
 
         # Struttura base
@@ -577,9 +614,9 @@ class DraggableTextWidget(QFrame):
             analysis += "👤 Soggetto: {subjects[0][0]}\n"
 
         # Tipo di frase
-        if text.endswith('?'):
+        if text.endswith("?"):
             analysis += "❓ Tipo: Frase interrogativa\n"
-        elif text.endswith('!'):
+        elif text.endswith("!"):
             analysis += "⚡ Tipo: Frase esclamativa\n"
         else:
             analysis += "📝 Tipo: Frase dichiarativa\n"
@@ -599,35 +636,49 @@ class DraggableTextWidget(QFrame):
         # Determina la funzione grammaticale
         if position == 0:
             analysis += "Funzione: Soggetto"
-        elif word in ['il', 'lo', 'la', 'i', 'gli', 'le', 'un', 'una', 'uno', 'del', 'della', 'dei', 'delle']:
+        elif word in [
+            "il",
+            "lo",
+            "la",
+            "i",
+            "gli",
+            "le",
+            "un",
+            "una",
+            "uno",
+            "del",
+            "della",
+            "dei",
+            "delle",
+        ]:
             analysis += "Funzione: Articolo determinativo"
-        elif word in ['di', 'a', 'da', 'in', 'con', 'su', 'per', 'tra', 'fra']:
+        elif word in ["di", "a", "da", "in", "con", "su", "per", "tra", "fra"]:
             analysis += "Funzione: Preposizione"
-        elif word in ['e', 'o', 'ma', 'però', 'quindi', 'allora']:
+        elif word in ["e", "o", "ma", "però", "quindi", "allora"]:
             analysis += "Funzione: Congiunzione"
-        elif word.endswith(('are', 'ere', 'ire')):
+        elif word.endswith(("are", "ere", "ire")):
             analysis += "Funzione: Verbo"
-        elif word.endswith(('a', 'e', 'i', 'o', 'u')) and len(word) > 2:
+        elif word.endswith(("a", "e", "i", "o", "u")) and len(word) > 2:
             analysis += "Funzione: Nome/Sostantivo"
         else:
             analysis += "Funzione: Aggettivo/Avverbio/Altro"
 
         # Analisi morfologica di base
-        if word.endswith(('are', 'ere', 'ire')):
+        if word.endswith(("are", "ere", "ire")):
             analysis += " | Tipo: Verbo"
-            if word.endswith('are'):
+            if word.endswith("are"):
                 analysis += " | Coniugazione: 1ª (-are)"
-            elif word.endswith('ere'):
+            elif word.endswith("ere"):
                 analysis += " | Coniugazione: 2ª (-ere)"
-            elif word.endswith('ire'):
+            elif word.endswith("ire"):
                 analysis += " | Coniugazione: 3ª (-ire)"
-        elif word.endswith(('a', 'e', 'i', 'o')):
-            if word.endswith('a') or word.endswith('e'):
+        elif word.endswith(("a", "e", "i", "o")):
+            if word.endswith("a") or word.endswith("e"):
                 analysis += " | Genere: Femminile"
             else:
                 analysis += " | Genere: Maschile"
 
-            if word.endswith(('i', 'e')):
+            if word.endswith(("i", "e")):
                 analysis += " | Numero: Plurale"
             else:
                 analysis += " | Numero: Singolare"
@@ -647,17 +698,26 @@ class DraggableTextWidget(QFrame):
             "fuoco": "Dal latino 'focus' = focolare",
         }
 
-        return etymologies.get(word.lower(), "📖 Etimologia non disponibile per '{word}'\nOrigine: Probabilmente dal latino o da altre lingue indoeuropee")
+        return etymologies.get(
+            word.lower(),
+            "📖 Etimologia non disponibile per '{word}'\nOrigine: Probabilmente dal latino o da altre lingue indoeuropee",
+        )
 
     def eventFilter(self, obj, event):
         """Intercetta gli eventi del QLabel per gestire i click."""
         if obj == self.text_label:
-            if event.type() == event.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
+            if (
+                event.type() == event.Type.MouseButtonPress
+                and event.button() == Qt.MouseButton.LeftButton
+            ):
                 self._label_click_start = event.pos()
                 return False  # Non consumare l'evento
 
-            elif event.type() == event.Type.MouseButtonRelease and event.button() == Qt.MouseButton.LeftButton:
-                if hasattr(self, '_label_click_start'):
+            elif (
+                event.type() == event.Type.MouseButtonRelease
+                and event.button() == Qt.MouseButton.LeftButton
+            ):
+                if hasattr(self, "_label_click_start"):
                     # Verifica se è stato un click breve (non un drag)
                     start_pos = self._label_click_start
                     end_pos = event.pos()
@@ -667,7 +727,7 @@ class DraggableTextWidget(QFrame):
                         self.toggle_selection()
                         self.show_metadata_in_details()
 
-                    delattr(self, '_label_click_start')
+                    delattr(self, "_label_click_start")
                 return False  # Non consumare l'evento
 
         return super().eventFilter(obj, event)

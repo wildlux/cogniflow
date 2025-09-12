@@ -10,22 +10,50 @@ import os
 import sys
 import importlib.util
 from datetime import datetime
-from PyQt6.QtCore import Qt, QTimer, QEvent, QPropertyAnimation, QEasingCurve, QDateTime, pyqtSignal
+from PyQt6.QtCore import (
+    Qt,
+    QTimer,
+    QEvent,
+    QPropertyAnimation,
+    QEasingCurve,
+    QDateTime,
+    pyqtSignal,
+)
 from PyQt6.QtGui import QFontDatabase, QFont, QColor, QShortcut, QKeySequence
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel,
-    QPushButton, QHBoxLayout, QLineEdit, QTextEdit, QGroupBox,
-    QScrollArea, QMessageBox, QFileDialog, QSlider, QDialog, QSplitter, QGridLayout, QFrame, QToolBox, QInputDialog
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QLabel,
+    QPushButton,
+    QHBoxLayout,
+    QLineEdit,
+    QTextEdit,
+    QGroupBox,
+    QScrollArea,
+    QMessageBox,
+    QFileDialog,
+    QSlider,
+    QDialog,
+    QSplitter,
+    QGridLayout,
+    QFrame,
+    QToolBox,
+    QInputDialog,
 )
 
 # Import TTS per la pronuncia IPA
 try:
     from Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager import TTSThread
+
     TTS_AVAILABLE = True
 except ImportError:
     TTSThread = None
     TTS_AVAILABLE = False
-    logging.warning("Sistema TTS non disponibile - funzionalità di pronuncia IPA limitata")
+    logging.warning(
+        "Sistema TTS non disponibile - funzionalità di pronuncia IPA limitata"
+    )
 
 # Import del sistema di configurazione
 from .main_03_configurazione_e_opzioni import get_config, load_settings
@@ -51,7 +79,7 @@ try:
     from Artificial_Intelligence.Riconoscimento_Vocale.managers.speech_recognition_manager import (
         SpeechRecognitionThread,
         AudioFileTranscriptionThread,
-        ensure_vosk_model_available
+        ensure_vosk_model_available,
     )
 except ImportError:
     SpeechRecognitionThread = None
@@ -65,16 +93,22 @@ except ImportError:
     # Fallback se il modulo non è disponibile
     def show_user_friendly_error(parent, error, context=""):
         from PyQt6.QtWidgets import QMessageBox
+
         QMessageBox.critical(parent, "Errore", "Errore: {str(error)}")
 
     def show_success_message(parent, operation, details=""):
         from PyQt6.QtWidgets import QMessageBox
-        QMessageBox.information(parent, "Successo", "Operazione completata: {operation}")
+
+        QMessageBox.information(
+            parent, "Successo", "Operazione completata: {operation}"
+        )
+
 
 # Import per funzionalità multimediali
 try:
     from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
     from PyQt6.QtMultimediaWidgets import QVideoWidget
+
     MULTIMEDIA_AVAILABLE = True
 except ImportError:
     QMediaPlayer = None
@@ -85,6 +119,7 @@ except ImportError:
 # Import VideoThread per gesture recognition
 try:
     from Artificial_Intelligence.Video.visual_background import VideoThread
+
     VIDEO_THREAD_AVAILABLE = True
 except ImportError:
     VideoThread = None
@@ -97,11 +132,11 @@ class WebcamTestWindow(QMainWindow):
 
     # Signals for hand gesture integration
     hand_position_signal = pyqtSignal(int, int)  # x, y coordinates
-    gesture_detected_signal = pyqtSignal(str)    # gesture type
+    gesture_detected_signal = pyqtSignal(str)  # gesture type
 
     # Signals for human detection (LIDAR-like)
-    human_detected_signal = pyqtSignal(list)     # list of human bounding boxes
-    human_position_signal = pyqtSignal(int, int) # center position of primary human
+    human_detected_signal = pyqtSignal(list)  # list of human bounding boxes
+    human_position_signal = pyqtSignal(int, int)  # center position of primary human
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -148,6 +183,7 @@ class WebcamTestWindow(QMainWindow):
 
         # RITARDA L'AVVIO AUTOMATICO PER ASSICURARE CHE TUTTO SIA PRONTO
         from PyQt6.QtCore import QTimer
+
         QTimer.singleShot(100, self.start_webcam_automatically)  # Avvia dopo 100ms
 
         # ASSICURA CHE TUTTI I PULSANTI DI TRACCIAMENTO SIANO VISUALMENTE DISABILITATI
@@ -182,21 +218,24 @@ class WebcamTestWindow(QMainWindow):
 
         # Titolo
         title_label = QLabel("🧪 Webcam Test Window - Gesture Control")
-        title_label.setStyleSheet("""
+        title_label.setStyleSheet(
+            """
             QLabel {
                 font-size: 18px;
                 font-weight: bold;
                 color: #2c3e50;
                 margin-bottom: 10px;
             }
-        """)
+        """
+        )
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
 
         # Splitter orizzontale per webcam e area di trascinamento
         self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
         self.main_splitter.setHandleWidth(4)
-        self.main_splitter.setStyleSheet("""
+        self.main_splitter.setStyleSheet(
+            """
             QSplitter::handle {
                 background: rgba(108, 117, 125, 0.4);
                 border: 1px solid rgba(108, 117, 125, 0.6);
@@ -206,7 +245,8 @@ class WebcamTestWindow(QMainWindow):
                 background: rgba(74, 144, 226, 0.6);
                 border-color: rgba(74, 144, 226, 0.8);
             }
-        """)
+        """
+        )
 
         # === Colonna SINISTRA: Webcam ===
         self.setup_webcam_column()
@@ -221,7 +261,8 @@ class WebcamTestWindow(QMainWindow):
 
         # Pulsante semi-trasparente sovrapposto all'immagine webcam
         self.test_button = QPushButton("Pulsante di Prova")
-        self.test_button.setStyleSheet("""
+        self.test_button.setStyleSheet(
+            """
             QPushButton {
                 background: rgba(255, 255, 255, 0.8);
                 color: #333;
@@ -239,7 +280,8 @@ class WebcamTestWindow(QMainWindow):
             QPushButton:pressed {
                 background: rgba(0, 123, 255, 0.2);
             }
-        """)
+        """
+        )
         self.test_button.setFixedSize(160, 45)
         self.test_button.clicked.connect(self.on_test_button_clicked)
 
@@ -248,7 +290,9 @@ class WebcamTestWindow(QMainWindow):
 
         # Carica la posizione salvata o usa quella di default
         button_x, button_y = self.load_button_position()
-        self.test_button.move(button_x, button_y)  # Posizione assoluta sopra l'immagine webcam
+        self.test_button.move(
+            button_x, button_y
+        )  # Posizione assoluta sopra l'immagine webcam
         self.test_button.raise_()  # Porta il pulsante in primo piano
         self.test_button.show()
 
@@ -259,7 +303,8 @@ class WebcamTestWindow(QMainWindow):
         # Pulsante avvia test
         self.start_test_btn = QPushButton("▶️ Avvia Test")
         self.start_test_btn.setMinimumHeight(35)
-        self.start_test_btn.setStyleSheet("""
+        self.start_test_btn.setStyleSheet(
+            """
             QPushButton {
                 background: #28a745;
                 color: white;
@@ -275,14 +320,16 @@ class WebcamTestWindow(QMainWindow):
             QPushButton:pressed {
                 background: #1e7e34;
             }
-        """)
+        """
+        )
         controls_layout.addWidget(self.start_test_btn)
 
         # Pulsante ferma test
         self.stop_test_btn = QPushButton("⏹️ Ferma Test")
         self.stop_test_btn.setMinimumHeight(35)
         self.stop_test_btn.setEnabled(False)
-        self.stop_test_btn.setStyleSheet("""
+        self.stop_test_btn.setStyleSheet(
+            """
             QPushButton {
                 background: #dc3545;
                 color: white;
@@ -301,14 +348,16 @@ class WebcamTestWindow(QMainWindow):
             QPushButton:disabled {
                 background: #6c757d;
             }
-        """)
+        """
+        )
         controls_layout.addWidget(self.stop_test_btn)
 
         # Pulsante cattura
         self.capture_btn = QPushButton("📸 Cattura")
         self.capture_btn.setMinimumHeight(35)
         self.capture_btn.setEnabled(False)
-        self.capture_btn.setStyleSheet("""
+        self.capture_btn.setStyleSheet(
+            """
             QPushButton {
                 background: #007bff;
                 color: white;
@@ -327,14 +376,16 @@ class WebcamTestWindow(QMainWindow):
             QPushButton:disabled {
                 background: #6c757d;
             }
-        """)
+        """
+        )
         controls_layout.addWidget(self.capture_btn)
 
         # Pulsanti controllo rilevamento
         self.hands_btn = QPushButton("🤚 Mani OFF")
         self.hands_btn.setMinimumHeight(35)
         self.hands_btn.setEnabled(False)
-        self.hands_btn.setStyleSheet("""
+        self.hands_btn.setStyleSheet(
+            """
             QPushButton {
                 background: #17a2b8;
                 color: white;
@@ -353,13 +404,15 @@ class WebcamTestWindow(QMainWindow):
             QPushButton:disabled {
                 background: #6c757d;
             }
-        """)
+        """
+        )
         controls_layout.addWidget(self.hands_btn)
 
         self.gestures_btn = QPushButton("👋 Gesti OFF")
         self.gestures_btn.setMinimumHeight(35)
         self.gestures_btn.setEnabled(False)
-        self.gestures_btn.setStyleSheet("""
+        self.gestures_btn.setStyleSheet(
+            """
             QPushButton {
                 background: #ffc107;
                 color: black;
@@ -378,13 +431,15 @@ class WebcamTestWindow(QMainWindow):
             QPushButton:disabled {
                 background: #6c757d;
             }
-        """)
+        """
+        )
         controls_layout.addWidget(self.gestures_btn)
 
         self.expressions_btn = QPushButton("😊 Espressioni OFF")
         self.expressions_btn.setMinimumHeight(35)
         self.expressions_btn.setEnabled(False)
-        self.expressions_btn.setStyleSheet("""
+        self.expressions_btn.setStyleSheet(
+            """
             QPushButton {
                 background: #fd7e14;
                 color: white;
@@ -403,14 +458,16 @@ class WebcamTestWindow(QMainWindow):
             QPushButton:disabled {
                 background: #6c757d;
             }
-        """)
+        """
+        )
         controls_layout.addWidget(self.expressions_btn)
 
         # Pulsante selezione backend
         self.backend_btn = QPushButton("🔄 OpenCV")
         self.backend_btn.setMinimumHeight(35)
         self.backend_btn.setEnabled(False)
-        self.backend_btn.setStyleSheet("""
+        self.backend_btn.setStyleSheet(
+            """
             QPushButton {
                 background: #6f42c1;
                 color: white;
@@ -429,14 +486,16 @@ class WebcamTestWindow(QMainWindow):
             QPushButton:disabled {
                 background: #6c757d;
             }
-        """)
+        """
+        )
         controls_layout.addWidget(self.backend_btn)
 
         # Pulsante modalità VM
         self.vm_btn = QPushButton("🖥️ VM OFF")
         self.vm_btn.setMinimumHeight(35)
         self.vm_btn.setEnabled(False)
-        self.vm_btn.setStyleSheet("""
+        self.vm_btn.setStyleSheet(
+            """
             QPushButton {
                 background: #20c997;
                 color: white;
@@ -455,7 +514,8 @@ class WebcamTestWindow(QMainWindow):
             QPushButton:disabled {
                 background: #6c757d;
             }
-        """)
+        """
+        )
         controls_layout.addWidget(self.vm_btn)
 
         controls_layout.addStretch()
@@ -467,14 +527,16 @@ class WebcamTestWindow(QMainWindow):
 
         # Etichetta sezione
         tracking_label = QLabel("🎯 Tracciamento:")
-        tracking_label.setStyleSheet("""
+        tracking_label.setStyleSheet(
+            """
             QLabel {
                 font-size: 12px;
                 font-weight: bold;
                 color: #495057;
                 padding: 5px;
             }
-        """)
+        """
+        )
         tracking_layout.addWidget(tracking_label)
 
         # Pulsante traccia viso
@@ -482,7 +544,8 @@ class WebcamTestWindow(QMainWindow):
         self.face_tracking_btn.setCheckable(True)
         self.face_tracking_btn.setChecked(False)
         self.face_tracking_btn.setMinimumHeight(30)
-        self.face_tracking_btn.setStyleSheet("""
+        self.face_tracking_btn.setStyleSheet(
+            """
             QPushButton {
                 background: #6c757d;
                 color: white;
@@ -501,7 +564,8 @@ class WebcamTestWindow(QMainWindow):
             QPushButton:checked:hover {
                 background: #218838;
             }
-        """)
+        """
+        )
         tracking_layout.addWidget(self.face_tracking_btn)
 
         # Pulsante traccia mano sinistra
@@ -509,7 +573,8 @@ class WebcamTestWindow(QMainWindow):
         self.left_hand_tracking_btn.setCheckable(True)
         self.left_hand_tracking_btn.setChecked(False)
         self.left_hand_tracking_btn.setMinimumHeight(30)
-        self.left_hand_tracking_btn.setStyleSheet("""
+        self.left_hand_tracking_btn.setStyleSheet(
+            """
             QPushButton {
                 background: #6c757d;
                 color: white;
@@ -528,7 +593,8 @@ class WebcamTestWindow(QMainWindow):
             QPushButton:checked:hover {
                 background: #0056b3;
             }
-        """)
+        """
+        )
         tracking_layout.addWidget(self.left_hand_tracking_btn)
 
         # Pulsante traccia mano destra
@@ -536,7 +602,8 @@ class WebcamTestWindow(QMainWindow):
         self.right_hand_tracking_btn.setCheckable(True)
         self.right_hand_tracking_btn.setChecked(False)  # Disabilitato di default
         self.right_hand_tracking_btn.setMinimumHeight(30)
-        self.right_hand_tracking_btn.setStyleSheet("""
+        self.right_hand_tracking_btn.setStyleSheet(
+            """
             QPushButton {
                 background: #6c757d;
                 color: white;
@@ -555,7 +622,8 @@ class WebcamTestWindow(QMainWindow):
             QPushButton:checked:hover {
                 background: #0056b3;
             }
-        """)
+        """
+        )
         tracking_layout.addWidget(self.right_hand_tracking_btn)
 
         # Pulsante rilevamento umano (LIDAR-like)
@@ -563,7 +631,8 @@ class WebcamTestWindow(QMainWindow):
         self.human_detection_btn.setCheckable(True)
         self.human_detection_btn.setChecked(False)  # Disabilitato di default
         self.human_detection_btn.setMinimumHeight(30)
-        self.human_detection_btn.setStyleSheet("""
+        self.human_detection_btn.setStyleSheet(
+            """
             QPushButton {
                 background: #6c757d;
                 color: white;
@@ -582,7 +651,8 @@ class WebcamTestWindow(QMainWindow):
             QPushButton:checked:hover {
                 background: #138496;
             }
-        """)
+        """
+        )
         tracking_layout.addWidget(self.human_detection_btn)
 
         tracking_layout.addStretch()
@@ -590,7 +660,8 @@ class WebcamTestWindow(QMainWindow):
 
         # Status e informazioni
         self.status_label = QLabel("Status: Pronto per il test")
-        self.status_label.setStyleSheet("""
+        self.status_label.setStyleSheet(
+            """
             QLabel {
                 font-size: 12px;
                 color: #6c757d;
@@ -598,13 +669,15 @@ class WebcamTestWindow(QMainWindow):
                 background: #f8f9fa;
                 border-radius: 4px;
             }
-        """)
+        """
+        )
         layout.addWidget(self.status_label)
 
         # Pulsante chiudi
         close_btn = QPushButton("❌ Chiudi Finestra")
         close_btn.setMinimumHeight(35)
-        close_btn.setStyleSheet("""
+        close_btn.setStyleSheet(
+            """
             QPushButton {
                 background: #6c757d;
                 color: white;
@@ -620,7 +693,8 @@ class WebcamTestWindow(QMainWindow):
             QPushButton:pressed {
                 background: #545b62;
             }
-        """)
+        """
+        )
         layout.addWidget(close_btn)
         close_btn.clicked.connect(self.close)
 
@@ -660,15 +734,25 @@ class WebcamTestWindow(QMainWindow):
         drag_x, drag_y = self.map_webcam_to_drag_coordinates(webcam_x, webcam_y)
 
         # Update circle position in drag area
-        if hasattr(self, 'drag_circle'):
+        if hasattr(self, "drag_circle"):
             # Keep circle within drag area bounds
             circle_size = self.drag_circle.size()
             drag_area_size = self.drag_area.size()
 
-            bounded_x = max(0, min(drag_x - circle_size.width() // 2,
-                                   drag_area_size.width() - circle_size.width()))
-            bounded_y = max(0, min(drag_y - circle_size.height() // 2,
-                                   drag_area_size.height() - circle_size.height()))
+            bounded_x = max(
+                0,
+                min(
+                    drag_x - circle_size.width() // 2,
+                    drag_area_size.width() - circle_size.width(),
+                ),
+            )
+            bounded_y = max(
+                0,
+                min(
+                    drag_y - circle_size.height() // 2,
+                    drag_area_size.height() - circle_size.height(),
+                ),
+            )
 
             self.drag_circle.move(bounded_x, bounded_y)
 
@@ -684,7 +768,11 @@ class WebcamTestWindow(QMainWindow):
                 self.update_button_style()
 
         # Handle dragging if active
-        if self.is_dragging and self.drag_start_pos and self.button_original_pos is not None:
+        if (
+            self.is_dragging
+            and self.drag_start_pos
+            and self.button_original_pos is not None
+        ):
             # Calculate movement delta
             delta_x = ui_x - self.drag_start_pos[0]
             delta_y = ui_y - self.drag_start_pos[1]
@@ -694,8 +782,12 @@ class WebcamTestWindow(QMainWindow):
             new_y = self.button_original_pos.y() + delta_y
 
             # Keep button within bounds
-            new_x = max(0, min(new_x, self.video_container.width() - self.test_button.width()))
-            new_y = max(0, min(new_y, self.video_container.height() - self.test_button.height()))
+            new_x = max(
+                0, min(new_x, self.video_container.width() - self.test_button.width())
+            )
+            new_y = max(
+                0, min(new_y, self.video_container.height() - self.test_button.height())
+            )
 
             self.test_button.move(new_x, new_y)
 
@@ -753,7 +845,9 @@ class WebcamTestWindow(QMainWindow):
         else:
             # Se video_thread non è disponibile, disabilita il pulsante e mostra messaggio
             self.face_tracking_btn.setChecked(False)
-            self.status_label.setText("Status: Avvia prima la webcam per abilitare i tracciamenti")
+            self.status_label.setText(
+                "Status: Avvia prima la webcam per abilitare i tracciamenti"
+            )
             print("⚠️ Webcam non attiva - impossibile abilitare tracciamento viso")
 
     def toggle_left_hand_tracking(self):
@@ -767,8 +861,12 @@ class WebcamTestWindow(QMainWindow):
         else:
             # Se video_thread non è disponibile, disabilita il pulsante e mostra messaggio
             self.left_hand_tracking_btn.setChecked(False)
-            self.status_label.setText("Status: Avvia prima la webcam per abilitare i tracciamenti")
-            print("⚠️ Webcam non attiva - impossibile abilitare tracciamento mano sinistra")
+            self.status_label.setText(
+                "Status: Avvia prima la webcam per abilitare i tracciamenti"
+            )
+            print(
+                "⚠️ Webcam non attiva - impossibile abilitare tracciamento mano sinistra"
+            )
 
     def toggle_right_hand_tracking(self):
         """Attiva/disattiva il tracciamento della mano destra."""
@@ -781,8 +879,12 @@ class WebcamTestWindow(QMainWindow):
         else:
             # Se video_thread non è disponibile, disabilita il pulsante e mostra messaggio
             self.right_hand_tracking_btn.setChecked(False)
-            self.status_label.setText("Status: Avvia prima la webcam per abilitare i tracciamenti")
-            print("⚠️ Webcam non attiva - impossibile abilitare tracciamento mano destra")
+            self.status_label.setText(
+                "Status: Avvia prima la webcam per abilitare i tracciamenti"
+            )
+            print(
+                "⚠️ Webcam non attiva - impossibile abilitare tracciamento mano destra"
+            )
 
     def toggle_human_detection(self):
         """Attiva/disattiva il rilevamento umano (LIDAR-like)."""
@@ -795,7 +897,9 @@ class WebcamTestWindow(QMainWindow):
         else:
             # Se video_thread non è disponibile, disabilita il pulsante e mostra messaggio
             self.human_detection_btn.setChecked(False)
-            self.status_label.setText("Status: Avvia prima la webcam per abilitare i tracciamenti")
+            self.status_label.setText(
+                "Status: Avvia prima la webcam per abilitare i tracciamenti"
+            )
             print("⚠️ Webcam non attiva - impossibile abilitare rilevamento umano")
 
     def on_gesture_detected(self, gesture):
@@ -807,7 +911,9 @@ class WebcamTestWindow(QMainWindow):
             if self.is_dragging:
                 self.status_label.setText("Status: Trascinamento attivo - Closed Hand")
             else:
-                self.status_label.setText("Status: Closed Hand rilevata - Pronto per trascinare")
+                self.status_label.setText(
+                    "Status: Closed Hand rilevata - Pronto per trascinare"
+                )
         elif gesture == "Open Hand":
             if self.is_dragging:
                 self.status_label.setText("Status: Open Hand - Rilascia trascinamento")
@@ -881,7 +987,9 @@ class WebcamTestWindow(QMainWindow):
         """Aggiorna il feed della webcam con il pixmap dal VideoThread."""
         if self.webcam_active and pixmap:
             # Scale pixmap to fit video area
-            scaled_pixmap = pixmap.scaled(self.video_area.size(), Qt.AspectRatioMode.KeepAspectRatio)
+            scaled_pixmap = pixmap.scaled(
+                self.video_area.size(), Qt.AspectRatioMode.KeepAspectRatio
+            )
             self.video_area.setPixmap(scaled_pixmap)
 
     def update_button_style(self):
@@ -900,23 +1008,31 @@ class WebcamTestWindow(QMainWindow):
         """
 
         if self.hover_highlight:
-            style = base_style + """
+            style = (
+                base_style
+                + """
                 QPushButton {
                     background: rgba(255, 255, 255, 0.95);
                     border-color: #28a745;
                     color: #155724;
                 }
             """
+            )
         elif self.is_dragging:
-            style = base_style + """
+            style = (
+                base_style
+                + """
                 QPushButton {
                     background: rgba(255, 193, 7, 0.9);
                     border-color: #856404;
                     color: #533f00;
                 }
             """
+            )
         else:
-            style = base_style + """
+            style = (
+                base_style
+                + """
                 QPushButton:hover {
                     background: rgba(255, 255, 255, 0.95);
                     border-color: #007bff;
@@ -925,6 +1041,7 @@ class WebcamTestWindow(QMainWindow):
                     background: rgba(0, 123, 255, 0.2);
                 }
             """
+            )
 
         self.test_button.setStyleSheet(style)
 
@@ -936,7 +1053,7 @@ class WebcamTestWindow(QMainWindow):
 
     def keyPressEvent(self, a0):
         """Gestisce gli eventi della tastiera per spostare il pulsante."""
-        if hasattr(self, 'test_button') and a0 is not None:
+        if hasattr(self, "test_button") and a0 is not None:
             current_pos = self.test_button.pos()
             step = 5  # Pixel per spostamento
 
@@ -966,27 +1083,31 @@ class WebcamTestWindow(QMainWindow):
     def load_button_position(self):
         """Carica la posizione del pulsante dal file JSON."""
         try:
-            settings_file = os.path.join(os.path.dirname(__file__), 'button_position.json')
+            settings_file = os.path.join(
+                os.path.dirname(__file__), "button_position.json"
+            )
             if os.path.exists(settings_file):
-                with open(settings_file, 'r', encoding='utf-8') as f:
+                with open(settings_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    return data.get('x', 10), data.get('y', 10)
+                    return data.get("x", 10), data.get("y", 10)
         except Exception as e:
             print(f"Errore caricamento posizione pulsante: {e}")
         return 10, 10  # Posizione di default
 
     def save_button_position(self):
         """Salva la posizione del pulsante nel file JSON."""
-        if hasattr(self, 'test_button'):
+        if hasattr(self, "test_button"):
             try:
                 pos = self.test_button.pos()
-                settings_file = os.path.join(os.path.dirname(__file__), 'button_position.json')
+                settings_file = os.path.join(
+                    os.path.dirname(__file__), "button_position.json"
+                )
                 data = {
-                    'x': pos.x(),
-                    'y': pos.y(),
-                    'timestamp': datetime.now().isoformat()
+                    "x": pos.x(),
+                    "y": pos.y(),
+                    "timestamp": datetime.now().isoformat(),
                 }
-                with open(settings_file, 'w', encoding='utf-8') as f:
+                with open(settings_file, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2, ensure_ascii=False)
                 print(f"✓ Posizione pulsante salvata: ({pos.x()}, {pos.y()})")
             except Exception as e:
@@ -994,7 +1115,7 @@ class WebcamTestWindow(QMainWindow):
 
     def resizeEvent(self, a0):
         """Gestisce il ridimensionamento della finestra per riposizionare il pulsante."""
-        if hasattr(self, 'test_button'):
+        if hasattr(self, "test_button"):
             # Il pulsante è ora figlio del container video, quindi rimane sempre alla stessa posizione relativa
             # Non è necessario riposizionarlo manualmente dato che si muove con il container
             pass
@@ -1006,7 +1127,9 @@ class WebcamTestWindow(QMainWindow):
             # Check if VideoThread is available
             if not VIDEO_THREAD_AVAILABLE or VideoThread is None:
                 self.status_label.setText("Status: VideoThread non disponibile")
-                self.video_area.setText("❌ VideoThread non disponibile\n\nFunzionalità avanzate webcam limitate")
+                self.video_area.setText(
+                    "❌ VideoThread non disponibile\n\nFunzionalità avanzate webcam limitate"
+                )
                 return
 
             self.webcam_active = True
@@ -1024,9 +1147,13 @@ class WebcamTestWindow(QMainWindow):
                 self.video_area.setText("❌ Errore creazione VideoThread")
                 return
 
-            self.video_thread.change_pixmap_signal.connect(self.update_webcam_feed_pixmap)
+            self.video_thread.change_pixmap_signal.connect(
+                self.update_webcam_feed_pixmap
+            )
             self.video_thread.status_signal.connect(self.on_video_thread_status)
-            self.video_thread.human_position_signal.connect(self.on_hand_position_update)
+            self.video_thread.human_position_signal.connect(
+                self.on_hand_position_update
+            )
             self.video_thread.gesture_detected_signal.connect(self.on_gesture_detected)
 
             # Connect human detection signals (LIDAR-like)
@@ -1036,7 +1163,9 @@ class WebcamTestWindow(QMainWindow):
             # TUTTI I TRACCIAMENTI DISABILITATI PER DEFAULT
             self.video_thread.hand_detection_enabled = False
             self.video_thread.gesture_recognition_enabled = False
-            self.video_thread.human_detection_enabled = False  # Rilevamento umano disabilitato
+            self.video_thread.human_detection_enabled = (
+                False  # Rilevamento umano disabilitato
+            )
 
             # Forza tutti i controlli di tracciamento come disabilitati
             self.video_thread.face_detection_enabled = False
@@ -1049,6 +1178,7 @@ class WebcamTestWindow(QMainWindow):
 
             # Piccolo ritardo per assicurarsi che il thread sia operativo
             from PyQt6.QtCore import QTimer
+
             QTimer.singleShot(500, self.finalize_webcam_startup)  # 500ms di attesa
 
             self.status_label.setText("Status: Webcam attiva con gesture recognition")
@@ -1064,8 +1194,12 @@ class WebcamTestWindow(QMainWindow):
     def finalize_webcam_startup(self):
         """Finalizza l'avvio della webcam dopo che il thread è operativo."""
         if self.video_thread and self.video_thread.isRunning():
-            self.status_label.setText("Status: Webcam attiva - tutti i tracciamenti disabilitati")
-            print("✅ Webcam completamente operativa - tutti i tracciamenti disabilitati")
+            self.status_label.setText(
+                "Status: Webcam attiva - tutti i tracciamenti disabilitati"
+            )
+            print(
+                "✅ Webcam completamente operativa - tutti i tracciamenti disabilitati"
+            )
 
             # Sincronizza i pulsanti con lo stato attuale
             self.face_tracking_btn.setChecked(False)
@@ -1118,15 +1252,15 @@ class WebcamTestWindow(QMainWindow):
             self.update_button_style()
 
             self.status_label.setText("Status: Test fermato")
-            self.video_area.setText("📹 Webcam Fermata\n\nClicca 'Avvia Test' per ricominciare")
+            self.video_area.setText(
+                "📹 Webcam Fermata\n\nClicca 'Avvia Test' per ricominciare"
+            )
 
             print("🧪 Test webcam fermato")
 
         except Exception as e:
             print(f"❌ Errore arresto test webcam: {e}")
             self.status_label.setText(f"Status: Errore arresto - {str(e)}")
-
-
 
     def capture_frame(self):
         """Cattura un frame dalla webcam usando VideoThread."""
@@ -1138,7 +1272,11 @@ class WebcamTestWindow(QMainWindow):
 
                 # Get current frame from video thread
                 # Since VideoThread processes frames internally, we'll capture from its cap
-                if hasattr(self.video_thread, 'cap') and self.video_thread.cap and self.video_thread.cap.isOpened():
+                if (
+                    hasattr(self.video_thread, "cap")
+                    and self.video_thread.cap
+                    and self.video_thread.cap.isOpened()
+                ):
                     ret, frame = self.video_thread.cap.read()
                     if ret:
                         # Flip frame horizontally for mirror effect
@@ -1146,22 +1284,36 @@ class WebcamTestWindow(QMainWindow):
 
                         # Generate filename with timestamp
                         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        screenshot_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Screenshot")
+                        screenshot_dir = os.path.join(
+                            os.path.dirname(os.path.dirname(__file__)), "Screenshot"
+                        )
                         os.makedirs(screenshot_dir, exist_ok=True)
-                        filename = os.path.join(screenshot_dir, f"webcam_capture_{timestamp}.png")
+                        filename = os.path.join(
+                            screenshot_dir, f"webcam_capture_{timestamp}.png"
+                        )
 
                         # Save the image
                         cv2.imwrite(filename, frame)
 
-                        self.status_label.setText(f"Status: Frame salvato - {os.path.basename(filename)}")
+                        self.status_label.setText(
+                            f"Status: Frame salvato - {os.path.basename(filename)}"
+                        )
                         print(f"📸 Frame catturato e salvato: {filename}")
 
                         # Mostra messaggio di successo
                         if self.parent_window:
                             try:
-                                show_success_message(self.parent_window, "Cattura frame", f"Frame salvato come {os.path.basename(filename)}")
+                                show_success_message(
+                                    self.parent_window,
+                                    "Cattura frame",
+                                    f"Frame salvato come {os.path.basename(filename)}",
+                                )
                             except:
-                                QMessageBox.information(self, "Successo", f"Frame catturato e salvato con successo")
+                                QMessageBox.information(
+                                    self,
+                                    "Successo",
+                                    f"Frame catturato e salvato con successo",
+                                )
                     else:
                         self.status_label.setText("Status: Errore cattura frame")
                         print("❌ Impossibile catturare il frame dalla webcam")
@@ -1180,13 +1332,15 @@ class WebcamTestWindow(QMainWindow):
         """Configura la colonna sinistra per il display della webcam."""
         # Container per la webcam
         self.video_container = QWidget()
-        self.video_container.setStyleSheet("""
+        self.video_container.setStyleSheet(
+            """
             QWidget {
                 background: #000;
                 border: 2px solid #333;
                 border-radius: 8px;
             }
-        """)
+        """
+        )
 
         video_layout = QVBoxLayout(self.video_container)
         video_layout.setContentsMargins(5, 5, 5, 5)
@@ -1194,7 +1348,8 @@ class WebcamTestWindow(QMainWindow):
         # Etichetta per il video
         self.video_area = QLabel("📹 Webcam Feed\n\nClicca 'Avvia Test' per iniziare")
         self.video_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.video_area.setStyleSheet("""
+        self.video_area.setStyleSheet(
+            """
             QLabel {
                 color: #666;
                 font-size: 16px;
@@ -1203,7 +1358,8 @@ class WebcamTestWindow(QMainWindow):
                 border-radius: 4px;
                 padding: 20px;
             }
-        """)
+        """
+        )
         self.video_area.setMinimumSize(320, 240)
 
         video_layout.addWidget(self.video_area)
@@ -1213,13 +1369,15 @@ class WebcamTestWindow(QMainWindow):
         """Configura la colonna destra per l'area di trascinamento."""
         # Container per l'area di trascinamento
         self.drag_container = QWidget()
-        self.drag_container.setStyleSheet("""
+        self.drag_container.setStyleSheet(
+            """
             QWidget {
                 background: #f8f9fa;
                 border: 2px solid #dee2e6;
                 border-radius: 8px;
             }
-        """)
+        """
+        )
 
         drag_layout = QVBoxLayout(self.drag_container)
         drag_layout.setContentsMargins(5, 5, 5, 5)
@@ -1227,26 +1385,30 @@ class WebcamTestWindow(QMainWindow):
         # Titolo area di trascinamento
         drag_title = QLabel("🎯 Drag Area")
         drag_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        drag_title.setStyleSheet("""
+        drag_title.setStyleSheet(
+            """
             QLabel {
                 color: #495057;
                 font-size: 14px;
                 font-weight: bold;
                 margin-bottom: 10px;
             }
-        """)
+        """
+        )
         drag_layout.addWidget(drag_title)
 
         # Area di trascinamento con cerchio
         self.drag_area = QWidget()
-        self.drag_area.setStyleSheet("""
+        self.drag_area.setStyleSheet(
+            """
             QWidget {
                 background: #ffffff;
                 border: 1px solid #ced4da;
                 border-radius: 4px;
                 min-height: 240px;
             }
-        """)
+        """
+        )
         self.drag_area.setMinimumSize(320, 240)
 
         # Layout per l'area di trascinamento
@@ -1255,14 +1417,16 @@ class WebcamTestWindow(QMainWindow):
 
         # Cerchio trascinabile
         self.drag_circle = QLabel("●")
-        self.drag_circle.setStyleSheet("""
+        self.drag_circle.setStyleSheet(
+            """
             QLabel {
                 color: #007bff;
                 font-size: 40px;
                 background: transparent;
                 border: none;
             }
-        """)
+        """
+        )
         self.drag_circle.setFixedSize(50, 50)
         self.drag_circle.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -1292,7 +1456,8 @@ class WebcamTestWindow(QMainWindow):
         self.hands_enabled = not self.hands_enabled
         if self.hands_enabled:
             self.hands_btn.setText("🤚 Mani ON")
-            self.hands_btn.setStyleSheet("""
+            self.hands_btn.setStyleSheet(
+                """
                 QPushButton {
                     background: #17a2b8;
                     color: white;
@@ -1308,11 +1473,13 @@ class WebcamTestWindow(QMainWindow):
                 QPushButton:pressed {
                     background: #117a8b;
                 }
-            """)
+            """
+            )
             print("🤚 Rilevamento mani attivato")
         else:
             self.hands_btn.setText("🤚 Mani OFF")
-            self.hands_btn.setStyleSheet("""
+            self.hands_btn.setStyleSheet(
+                """
                 QPushButton {
                     background: #6c757d;
                     color: white;
@@ -1328,7 +1495,8 @@ class WebcamTestWindow(QMainWindow):
                 QPushButton:pressed {
                     background: #545b62;
                 }
-            """)
+            """
+            )
             print("🤚 Rilevamento mani disattivato")
 
         # TODO: Integrazione con VideoThread per toggle mani
@@ -1343,7 +1511,8 @@ class WebcamTestWindow(QMainWindow):
         self.gestures_enabled = not self.gestures_enabled
         if self.gestures_enabled:
             self.gestures_btn.setText("👋 Gesti ON")
-            self.gestures_btn.setStyleSheet("""
+            self.gestures_btn.setStyleSheet(
+                """
                 QPushButton {
                     background: #ffc107;
                     color: black;
@@ -1359,11 +1528,13 @@ class WebcamTestWindow(QMainWindow):
                 QPushButton:pressed {
                     background: #d39e00;
                 }
-            """)
+            """
+            )
             print("👋 Rilevamento gesti attivato")
         else:
             self.gestures_btn.setText("👋 Gesti OFF")
-            self.gestures_btn.setStyleSheet("""
+            self.gestures_btn.setStyleSheet(
+                """
                 QPushButton {
                     background: #6c757d;
                     color: white;
@@ -1379,7 +1550,8 @@ class WebcamTestWindow(QMainWindow):
                 QPushButton:pressed {
                     background: #545b62;
                 }
-            """)
+            """
+            )
             print("👋 Rilevamento gesti disattivato")
 
         # TODO: Integrazione con VideoThread per toggle gesti
@@ -1394,7 +1566,8 @@ class WebcamTestWindow(QMainWindow):
         self.expressions_enabled = not self.expressions_enabled
         if self.expressions_enabled:
             self.expressions_btn.setText("😊 Espressioni ON")
-            self.expressions_btn.setStyleSheet("""
+            self.expressions_btn.setStyleSheet(
+                """
                 QPushButton {
                     background: #fd7e14;
                     color: white;
@@ -1410,11 +1583,13 @@ class WebcamTestWindow(QMainWindow):
                 QPushButton:pressed {
                     background: #d8430b;
                 }
-            """)
+            """
+            )
             print("😊 Rilevamento espressioni attivato")
         else:
             self.expressions_btn.setText("😊 Espressioni OFF")
-            self.expressions_btn.setStyleSheet("""
+            self.expressions_btn.setStyleSheet(
+                """
                 QPushButton {
                     background: #6c757d;
                     color: white;
@@ -1430,7 +1605,8 @@ class WebcamTestWindow(QMainWindow):
                 QPushButton:pressed {
                     background: #545b62;
                 }
-            """)
+            """
+            )
             print("😊 Rilevamento espressioni disattivato")
 
         # TODO: Integrazione con VideoThread per toggle espressioni
@@ -1446,6 +1622,7 @@ class WebcamTestWindow(QMainWindow):
         mediapipe_available = False
         try:
             import mediapipe as mp  # type: ignore
+
             mediapipe_available = True
         except ImportError:
             pass
@@ -1454,7 +1631,8 @@ class WebcamTestWindow(QMainWindow):
             if mediapipe_available:
                 self.current_backend = "mediapipe"
                 self.backend_btn.setText("🔄 MediaPipe")
-                self.backend_btn.setStyleSheet("""
+                self.backend_btn.setStyleSheet(
+                    """
                     QPushButton {
                         background: #e83e8c;
                         color: white;
@@ -1470,7 +1648,8 @@ class WebcamTestWindow(QMainWindow):
                     QPushButton:pressed {
                         background: #c8237c;
                     }
-                """)
+                """
+                )
                 print("🔄 Backend cambiato: MediaPipe")
                 self.status_label.setText("Status: Backend MediaPipe attivo")
             else:
@@ -1480,7 +1659,8 @@ class WebcamTestWindow(QMainWindow):
         else:
             self.current_backend = "opencv"
             self.backend_btn.setText("🔄 OpenCV")
-            self.backend_btn.setStyleSheet("""
+            self.backend_btn.setStyleSheet(
+                """
                 QPushButton {
                     background: #6f42c1;
                     color: white;
@@ -1496,14 +1676,15 @@ class WebcamTestWindow(QMainWindow):
                 QPushButton:pressed {
                     background: #4c2d85;
                 }
-            """)
+            """
+            )
             print("🔄 Backend cambiato: OpenCV")
             self.status_label.setText("Status: Backend OpenCV attivo")
 
         # Applica il cambio di backend al VideoThread
         if self.video_thread:
             self.video_thread.current_backend = self.current_backend
-            if hasattr(self.video_thread, 'set_backend'):
+            if hasattr(self.video_thread, "set_backend"):
                 self.video_thread.set_backend(self.current_backend)
 
     def toggle_vm_mode(self):
@@ -1515,7 +1696,8 @@ class WebcamTestWindow(QMainWindow):
 
         if self.vm_mode:
             self.vm_btn.setText("🖥️ VM ON")
-            self.vm_btn.setStyleSheet("""
+            self.vm_btn.setStyleSheet(
+                """
                 QPushButton {
                     background: #dc3545;
                     color: white;
@@ -1531,15 +1713,25 @@ class WebcamTestWindow(QMainWindow):
                 QPushButton:pressed {
                     background: #bd2130;
                 }
-            """)
+            """
+            )
             print("🖥️ Modalità VM attivata per MediaPipe")
             self.status_label.setText("Status: Modalità VM attiva")
 
             # Inizializza la configurazione VM
-            vm_config_path = os.path.join(os.path.dirname(__file__), 'Artificial_Intelligence', 'Video', 'mediapipe', 'config', 'mediapipe_vm_config.py')
+            vm_config_path = os.path.join(
+                os.path.dirname(__file__),
+                "Artificial_Intelligence",
+                "Video",
+                "mediapipe",
+                "config",
+                "mediapipe_vm_config.py",
+            )
             if os.path.exists(vm_config_path):
                 try:
-                    spec = importlib.util.spec_from_file_location("mediapipe_vm_config", vm_config_path)
+                    spec = importlib.util.spec_from_file_location(
+                        "mediapipe_vm_config", vm_config_path
+                    )
                     if spec and spec.loader:
                         mediapipe_vm_config = importlib.util.module_from_spec(spec)
                         spec.loader.exec_module(mediapipe_vm_config)
@@ -1575,7 +1767,8 @@ class WebcamTestWindow(QMainWindow):
                 return
         else:
             self.vm_btn.setText("🖥️ VM OFF")
-            self.vm_btn.setStyleSheet("""
+            self.vm_btn.setStyleSheet(
+                """
                 QPushButton {
                     background: #20c997;
                     color: white;
@@ -1591,14 +1784,24 @@ class WebcamTestWindow(QMainWindow):
                 QPushButton:pressed {
                     background: #138496;
                 }
-            """)
+            """
+            )
             print("🖥️ Modalità VM disattivata")
 
             # Ferma il servizio VM
-            vm_config_path = os.path.join(os.path.dirname(__file__), 'Artificial_Intelligence', 'Video', 'mediapipe', 'config', 'mediapipe_vm_config.py')
+            vm_config_path = os.path.join(
+                os.path.dirname(__file__),
+                "Artificial_Intelligence",
+                "Video",
+                "mediapipe",
+                "config",
+                "mediapipe_vm_config.py",
+            )
             if os.path.exists(vm_config_path):
                 try:
-                    spec = importlib.util.spec_from_file_location("mediapipe_vm_config", vm_config_path)
+                    spec = importlib.util.spec_from_file_location(
+                        "mediapipe_vm_config", vm_config_path
+                    )
                     if spec and spec.loader:
                         mediapipe_vm_config = importlib.util.module_from_spec(spec)
                         spec.loader.exec_module(mediapipe_vm_config)
@@ -1612,13 +1815,15 @@ class WebcamTestWindow(QMainWindow):
         # Aggiorna il VideoThread con la modalità VM
         if self.video_thread:
             self.video_thread.vm_mode = self.vm_mode
-            if hasattr(self.video_thread, 'set_vm_mode'):
+            if hasattr(self.video_thread, "set_vm_mode"):
                 self.video_thread.set_vm_mode(self.vm_mode)
+
 
 # Import per OCR
 try:
     import pytesseract
     from PIL import Image
+
     OCR_AVAILABLE = True
 except ImportError:
     pytesseract = None
@@ -1628,11 +1833,14 @@ except ImportError:
 # Import VideoThread for advanced webcam features
 try:
     from Artificial_Intelligence.Video.visual_background import VideoThread
+
     VIDEO_THREAD_AVAILABLE = True
 except ImportError:
     VideoThread = None
     VIDEO_THREAD_AVAILABLE = False
-    logging.warning("VideoThread non disponibile - funzionalità avanzate webcam limitate")
+    logging.warning(
+        "VideoThread non disponibile - funzionalità avanzate webcam limitate"
+    )
 
 # Import PyQt6 signals for hand gesture integration
 from PyQt6.QtCore import pyqtSignal
@@ -1653,9 +1861,12 @@ class WorkAreaWidget(QWidget):
 
     def dragEnterEvent(self, a0):
         """Accetta il drag se contiene testo o dati del widget."""
-        if a0 is not None and hasattr(a0, 'mimeData'):
+        if a0 is not None and hasattr(a0, "mimeData"):
             mime_data = a0.mimeData()
-            if mime_data and (mime_data.hasText() or mime_data.hasFormat("application/x-draggable-widget")):
+            if mime_data and (
+                mime_data.hasText()
+                or mime_data.hasFormat("application/x-draggable-widget")
+            ):
                 a0.acceptProposedAction()
                 # Accetta sia MoveAction che CopyAction
                 a0.setDropAction(Qt.DropAction.CopyAction)
@@ -1667,7 +1878,7 @@ class WorkAreaWidget(QWidget):
 
             # Ottieni il testo dal drop
             text = ""
-            if a0 is not None and hasattr(a0, 'mimeData'):
+            if a0 is not None and hasattr(a0, "mimeData"):
                 mime_data = a0.mimeData()
                 if mime_data and mime_data.hasText():
                     text = mime_data.text()
@@ -1704,12 +1915,15 @@ class PensieriniWidget(QWidget):
     def dragEnterEvent(self, a0):
         """Accetta il drag se contiene testo o dati del widget."""
         try:
-            if a0 and hasattr(a0, 'mimeData') and a0.mimeData():
+            if a0 and hasattr(a0, "mimeData") and a0.mimeData():
                 mime_data = a0.mimeData()
-                if mime_data and (mime_data.hasText() or mime_data.hasFormat("application/x-draggable-widget")):
-                    if hasattr(a0, 'acceptProposedAction'):
+                if mime_data and (
+                    mime_data.hasText()
+                    or mime_data.hasFormat("application/x-draggable-widget")
+                ):
+                    if hasattr(a0, "acceptProposedAction"):
                         a0.acceptProposedAction()
-                    if hasattr(a0, 'setDropAction'):
+                    if hasattr(a0, "setDropAction"):
                         a0.setDropAction(Qt.DropAction.CopyAction)
         except Exception:
             logging.error("Errore in dragEnterEvent: {e}")
@@ -1721,7 +1935,7 @@ class PensieriniWidget(QWidget):
 
             # Ottieni il testo dal drop
             text = ""
-            if a0 and hasattr(a0, 'mimeData') and a0.mimeData():
+            if a0 and hasattr(a0, "mimeData") and a0.mimeData():
                 mime_data = a0.mimeData()
                 if mime_data and mime_data.hasText():
                     text = mime_data.text()
@@ -1735,16 +1949,16 @@ class PensieriniWidget(QWidget):
                 existing_widget = self._find_existing_widget(text.strip())
                 if existing_widget is not None:
                     # Esiste già un pensierino con lo stesso testo - non creare duplicato
-                    if hasattr(a0, 'ignore'):
+                    if hasattr(a0, "ignore"):
                         a0.ignore()
                     return
 
                 # Crea un nuovo widget trascinabile con tutte le funzionalità
                 widget = DraggableTextWidget(text, self.settings)
                 # Aggiungi il widget al layout dei pensierini
-                if hasattr(self, 'pensierini_layout') and self.pensierini_layout:
+                if hasattr(self, "pensierini_layout") and self.pensierini_layout:
                     self.pensierini_layout.addWidget(widget)
-                if hasattr(a0, 'acceptProposedAction'):
+                if hasattr(a0, "acceptProposedAction"):
                     a0.acceptProposedAction()
 
         except Exception:
@@ -1753,7 +1967,7 @@ class PensieriniWidget(QWidget):
     def _find_existing_widget(self, text):
         """Cerca se esiste già un widget con lo stesso testo nei pensierini."""
         try:
-            if not hasattr(self, 'pensierini_layout') or not self.pensierini_layout:
+            if not hasattr(self, "pensierini_layout") or not self.pensierini_layout:
                 return None
 
             for i in range(self.pensierini_layout.count()):
@@ -1761,14 +1975,15 @@ class PensieriniWidget(QWidget):
                 if item:
                     widget = item.widget()
                     if widget:
-                        text_label = getattr(widget, 'text_label', None)
-                        if text_label and hasattr(text_label, 'text'):
+                        text_label = getattr(widget, "text_label", None)
+                        if text_label and hasattr(text_label, "text"):
                             existing_text = text_label.text().strip()
                             if existing_text == text:
                                 return widget
         except Exception:
             logging.error("Errore in _find_existing_widget: {e}")
         return None
+
 
 # Classe MainWindow integrata da aircraft.py
 
@@ -1804,6 +2019,7 @@ class MainWindow(QMainWindow):
 
         # Timer per aggiornare l'orario nel footer ogni minuto
         from PyQt6.QtCore import QTimer
+
         self.footer_timer = QTimer()
         self.footer_timer.timeout.connect(self._update_time_labels)
         self.footer_timer.start(60000)  # Aggiorna ogni 60 secondi
@@ -1821,7 +2037,8 @@ class MainWindow(QMainWindow):
         if self.project_name_input.text().strip():
             # Campo con contenuto: placeholder diverso e sfondo semi-trasparente
             self.project_name_input.setPlaceholderText("Inserisci nome progetto")
-            self.project_name_input.setStyleSheet("""
+            self.project_name_input.setStyleSheet(
+                """
                 QLineEdit {
                     background: rgba(40, 167, 69, 0.1);
                     border: 1px solid #28a745;
@@ -1830,11 +2047,13 @@ class MainWindow(QMainWindow):
                     color: #155724;
                     font-weight: bold;
                 }
-            """)
+            """
+            )
         else:
             # Campo vuoto: placeholder originale e sfondo normale
             self.project_name_input.setPlaceholderText("Nome progetto...")
-            self.project_name_input.setStyleSheet("""
+            self.project_name_input.setStyleSheet(
+                """
                 QLineEdit {
                     background: rgba(255, 255, 255, 0.95);
                     border: 1px solid #dee2e6;
@@ -1842,7 +2061,8 @@ class MainWindow(QMainWindow):
                     padding: 4px 8px;
                     color: #495057;
                 }
-            """)
+            """
+            )
 
     def send_footer_pensierino(self):
         """Invia un pensierino dalla sezione footer alla colonna A (pensierini)."""
@@ -1853,23 +2073,35 @@ class MainWindow(QMainWindow):
             if not text:
                 # Campo vuoto, mostra messaggio informativo
                 from PyQt6.QtWidgets import QMessageBox
-                QMessageBox.information(self, "Campo Vuoto", "Scrivi qualcosa nel campo prima di inviare! 💭")
+
+                QMessageBox.information(
+                    self,
+                    "Campo Vuoto",
+                    "Scrivi qualcosa nel campo prima di inviare! 💭",
+                )
                 return
 
             # Crea il nuovo widget pensierino
             from UI.draggable_text_widget import DraggableTextWidget
+
             if DraggableTextWidget:
                 widget = DraggableTextWidget(text, self.settings)
 
                 # Aggiungi alla colonna A (pensierini)
-                if hasattr(self, 'pensierini_widget') and self.pensierini_widget and hasattr(self.pensierini_widget, 'pensierini_layout'):
+                if (
+                    hasattr(self, "pensierini_widget")
+                    and self.pensierini_widget
+                    and hasattr(self.pensierini_widget, "pensierini_layout")
+                ):
                     self.pensierini_widget.pensierini_layout.addWidget(widget)
 
                     # Scroll automatico alla fine della colonna pensierini
-                    if hasattr(self, 'pensierini_scroll') and self.pensierini_scroll:
+                    if hasattr(self, "pensierini_scroll") and self.pensierini_scroll:
                         scroll_bar = self.pensierini_scroll.verticalScrollBar()
                         if scroll_bar:
-                            QTimer.singleShot(100, lambda: scroll_bar.setValue(scroll_bar.maximum()))
+                            QTimer.singleShot(
+                                100, lambda: scroll_bar.setValue(scroll_bar.maximum())
+                            )
 
                 # Svuota il campo dopo l'invio
                 self.footer_pensierini_input.clear()
@@ -1882,12 +2114,18 @@ class MainWindow(QMainWindow):
 
             else:
                 from PyQt6.QtWidgets import QMessageBox
-                QMessageBox.warning(self, "Errore", "Sistema di pensierini non disponibile.")
+
+                QMessageBox.warning(
+                    self, "Errore", "Sistema di pensierini non disponibile."
+                )
 
         except Exception as e:
             print(f"❌ Errore invio pensierino footer: {e}")
             from PyQt6.QtWidgets import QMessageBox
-            QMessageBox.critical(self, "Errore", f"Errore durante l'invio del pensierino:\n{str(e)}")
+
+            QMessageBox.critical(
+                self, "Errore", f"Errore durante l'invio del pensierino:\n{str(e)}"
+            )
 
     def show_quick_help(self):
         """Mostra la guida rapida dell'applicazione."""
@@ -1941,7 +2179,14 @@ class MainWindow(QMainWindow):
         <p><b>💡 Suggerimento:</b> Usa il trascinamento per organizzare i tuoi pensierini!</p>
         """
 
-        from PyQt6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QTextEdit, QPushButton, QHBoxLayout
+        from PyQt6.QtWidgets import (
+            QMessageBox,
+            QDialog,
+            QVBoxLayout,
+            QTextEdit,
+            QPushButton,
+            QHBoxLayout,
+        )
 
         # Crea dialog personalizzato per la guida
         dialog = QDialog(self)
@@ -1954,7 +2199,8 @@ class MainWindow(QMainWindow):
         help_display = QTextEdit()
         help_display.setHtml(help_text)
         help_display.setReadOnly(True)
-        help_display.setStyleSheet("""
+        help_display.setStyleSheet(
+            """
             QTextEdit {
                 background: rgba(255, 255, 255, 0.95);
                 border: 1px solid #dee2e6;
@@ -1962,7 +2208,8 @@ class MainWindow(QMainWindow):
                 padding: 10px;
                 font-size: 12px;
             }
-        """)
+        """
+        )
         layout.addWidget(help_display)
 
         # Pulsanti
@@ -1971,7 +2218,8 @@ class MainWindow(QMainWindow):
 
         ok_button = QPushButton("✅ Capito!")
         ok_button.clicked.connect(dialog.accept)
-        ok_button.setStyleSheet("""
+        ok_button.setStyleSheet(
+            """
             QPushButton {
                 background: #28a745;
                 border: 1px solid #1e7e34;
@@ -1983,7 +2231,8 @@ class MainWindow(QMainWindow):
             QPushButton:hover {
                 background: #218838;
             }
-        """)
+        """
+        )
         buttons_layout.addWidget(ok_button)
 
         layout.addLayout(buttons_layout)
@@ -2000,45 +2249,48 @@ class MainWindow(QMainWindow):
             # Posizioni e dimensioni dei pulsanti nella top bar
             buttons_info = {}
             try:
-                if hasattr(self, 'options_button') and self.options_button is not None:
+                if hasattr(self, "options_button") and self.options_button is not None:
                     pos = self.options_button.pos()
                     size = self.options_button.size()
-                    buttons_info['options_button'] = {
-                        'pos': (pos.x(), pos.y()),
-                        'size': (size.width(), size.height())
+                    buttons_info["options_button"] = {
+                        "pos": (pos.x(), pos.y()),
+                        "size": (size.width(), size.height()),
                     }
             except Exception as e:
                 print(f"Error getting options_button metrics: {e}")
 
             try:
-                if hasattr(self, 'toggle_tools_button') and self.toggle_tools_button is not None:
+                if (
+                    hasattr(self, "toggle_tools_button")
+                    and self.toggle_tools_button is not None
+                ):
                     pos = self.toggle_tools_button.pos()
                     size = self.toggle_tools_button.size()
-                    buttons_info['toggle_tools_button'] = {
-                        'pos': (pos.x(), pos.y()),
-                        'size': (size.width(), size.height())
+                    buttons_info["toggle_tools_button"] = {
+                        "pos": (pos.x(), pos.y()),
+                        "size": (size.width(), size.height()),
                     }
             except Exception as e:
                 print(f"Error getting toggle_tools_button metrics: {e}")
 
             try:
-                if hasattr(self, 'save_button') and self.save_button is not None:
+                if hasattr(self, "save_button") and self.save_button is not None:
                     pos = self.save_button.pos()
                     size = self.save_button.size()
-                    buttons_info['save_button'] = {
-                        'pos': (pos.x(), pos.y()),
-                        'size': (size.width(), size.height())
+                    buttons_info["save_button"] = {
+                        "pos": (pos.x(), pos.y()),
+                        "size": (size.width(), size.height()),
                     }
             except Exception as e:
                 print(f"Error getting save_button metrics: {e}")
 
             try:
-                if hasattr(self, 'load_button') and self.load_button is not None:
+                if hasattr(self, "load_button") and self.load_button is not None:
                     pos = self.load_button.pos()
                     size = self.load_button.size()
-                    buttons_info['load_button'] = {
-                        'pos': (pos.x(), pos.y()),
-                        'size': (size.width(), size.height())
+                    buttons_info["load_button"] = {
+                        "pos": (pos.x(), pos.y()),
+                        "size": (size.width(), size.height()),
                     }
             except Exception as e:
                 print(f"Error getting load_button metrics: {e}")
@@ -2046,40 +2298,46 @@ class MainWindow(QMainWindow):
             # Dimensioni del layout principale
             main_layout_geometry = None
             try:
-                if hasattr(self, 'centralWidget') and self.centralWidget():
+                if hasattr(self, "centralWidget") and self.centralWidget():
                     cw = self.centralWidget()
                     if cw:
                         geom = cw.geometry()
-                        main_layout_geometry = (geom.x(), geom.y(), geom.width(), geom.height())
+                        main_layout_geometry = (
+                            geom.x(),
+                            geom.y(),
+                            geom.width(),
+                            geom.height(),
+                        )
             except Exception as e:
                 print(f"Error getting central widget geometry: {e}")
 
             # Dimensioni dello splitter verticale
             splitter_sizes = None
-            if hasattr(self, 'vertical_splitter'):
+            if hasattr(self, "vertical_splitter"):
                 splitter_sizes = self.vertical_splitter.sizes()
 
             metrics = {
-                'context': context,
-                'timestamp': datetime.now().isoformat(),
-                'window': {
-                    'size': (window_size.width(), window_size.height()),
-                    'pos': (window_pos.x(), window_pos.y())
+                "context": context,
+                "timestamp": datetime.now().isoformat(),
+                "window": {
+                    "size": (window_size.width(), window_size.height()),
+                    "pos": (window_pos.x(), window_pos.y()),
                 },
-                'buttons': buttons_info,
-                'main_layout': main_layout_geometry,
-                'splitter_sizes': splitter_sizes
+                "buttons": buttons_info,
+                "main_layout": main_layout_geometry,
+                "splitter_sizes": splitter_sizes,
             }
 
             # Salva in un file di log per analisi
             import json
             import os
+
             log_dir = os.path.join(os.path.dirname(__file__), "debug_logs")
             os.makedirs(log_dir, exist_ok=True)
             log_file = os.path.join(log_dir, "ui_metrics.jsonl")
 
-            with open(log_file, 'a', encoding='utf-8') as f:
-                f.write(json.dumps(metrics, ensure_ascii=False) + '\n')
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(metrics, ensure_ascii=False) + "\n")
 
             print(f"📊 UI Metrics logged - Context: {context}")
             print(f"   Window size: {window_size.width()}x{window_size.height()}")
@@ -2104,7 +2362,8 @@ class MainWindow(QMainWindow):
         # QSplitter orizzontale per pensierini + strumenti
         tools_splitter = QSplitter(Qt.Orientation.Horizontal)
         tools_splitter.setHandleWidth(4)
-        tools_splitter.setStyleSheet("""
+        tools_splitter.setStyleSheet(
+            """
             QSplitter::handle {
                 background: rgba(108, 117, 125, 0.4);
                 border: 1px solid rgba(108, 117, 125, 0.6);
@@ -2114,7 +2373,8 @@ class MainWindow(QMainWindow):
                 background: rgba(74, 144, 226, 0.6);
                 border-color: rgba(74, 144, 226, 0.8);
             }
-        """)
+        """
+        )
 
         # === Colonna unica: Strumenti con input pensierini in basso ===
         tools_section = self.create_unified_tools_section_content()
@@ -2126,22 +2386,24 @@ class MainWindow(QMainWindow):
         unified_layout.addWidget(tools_splitter)
         return unified_section
 
-
-
     def clear_column_a(self):
         """Pulisce la colonna A (pensierini)"""
         try:
             # Per ora, mostriamo solo un messaggio informativo
             # La pulizia effettiva dei pensierini richiede l'implementazione specifica
             print("✅ Colonna A (pensierini) - pulizia pianificata")
-            QMessageBox.information(self, "Info Pulizia", "La pulizia della colonna A sarà implementata nella prossima versione.")
+            QMessageBox.information(
+                self,
+                "Info Pulizia",
+                "La pulizia della colonna A sarà implementata nella prossima versione.",
+            )
         except Exception as e:
             print(f"⚠️ Errore pulizia colonna A: {e}")
 
     def clear_column_b(self):
         """Pulisce la colonna B (area di lavoro)"""
         try:
-            if hasattr(self, 'work_area_layout') and self.work_area_layout:
+            if hasattr(self, "work_area_layout") and self.work_area_layout:
                 # Rimuove tutti i widget dalla colonna B in modo sicuro
                 count = self.work_area_layout.count()
                 for i in range(count - 1, -1, -1):  # Scorri al contrario per sicurezza
@@ -2158,7 +2420,7 @@ class MainWindow(QMainWindow):
     def clear_column_c(self):
         """Pulisce la colonna C (dettagli)"""
         try:
-            if hasattr(self, 'details_layout') and self.details_layout:
+            if hasattr(self, "details_layout") and self.details_layout:
                 # Rimuove tutti i widget dalla colonna C in modo sicuro
                 count = self.details_layout.count()
                 for i in range(count - 1, -1, -1):  # Scorri al contrario per sicurezza
@@ -2176,7 +2438,7 @@ class MainWindow(QMainWindow):
         """Pulisce i campi di input testo"""
         cleared = False
         # Nota: input_text_area e quick_input sono stati rimossi con la sezione pensierini
-        if hasattr(self, 'footer_pensierini_input'):
+        if hasattr(self, "footer_pensierini_input"):
             self.footer_pensierini_input.clear()
             cleared = True
         if cleared:
@@ -2200,7 +2462,7 @@ class MainWindow(QMainWindow):
             "Questa operazione è IRREVERSIBILE.\n\n"
             "Vuoi continuare?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.No,
         )
 
         if reply == QMessageBox.StandardButton.Yes:
@@ -2217,7 +2479,7 @@ class MainWindow(QMainWindow):
                 "• Campo di input: VUOTO\n"
                 "• Colonna A: VUOTA\n"
                 "• Colonna B: VUOTA\n"
-                "• Colonna C: VUOTA"
+                "• Colonna C: VUOTA",
             )
         else:
             print("❌ Pulizia annullata dall'utente")
@@ -2251,8 +2513,6 @@ class MainWindow(QMainWindow):
 
         return tools_group
 
-
-
     def _create_subject_buttons(self):
         """Crea i pulsanti delle materie e li restituisce come lista"""
         # Dati dei pulsanti delle materie
@@ -2269,7 +2529,11 @@ class MainWindow(QMainWindow):
             ("🌌 Astronomia", "astronomy_button", self.handle_astronomy_button),
             ("📐 Mat.Sup.", "advanced_math_button", self.handle_advanced_math_button),
             ("⚖️ Diritto", "law_button", self.handle_law_button),
-            ("📊 Statistica", "probability_stats_button", self.handle_probability_stats_button),
+            (
+                "📊 Statistica",
+                "probability_stats_button",
+                self.handle_probability_stats_button,
+            ),
             ("🇺🇸 Inglese", "english_button", self.handle_english_button),
             ("🇩🇪 Tedesco", "german_button", self.handle_german_button),
             ("🇪🇸 Spagnolo", "spanish_button", self.handle_spanish_button),
@@ -2292,7 +2556,14 @@ class MainWindow(QMainWindow):
 
     def create_tools_tabs(self):
         """Crea il widget con griglia 2 colonne a sinistra e contenuto a destra"""
-        from PyQt6.QtWidgets import QSplitter, QStackedWidget, QVBoxLayout, QWidget, QGridLayout, QPushButton
+        from PyQt6.QtWidgets import (
+            QSplitter,
+            QStackedWidget,
+            QVBoxLayout,
+            QWidget,
+            QGridLayout,
+            QPushButton,
+        )
 
         # Widget principale con splitter
         main_widget = QWidget()
@@ -2301,11 +2572,13 @@ class MainWindow(QMainWindow):
 
         # Widget contenitore per la griglia 2 colonne
         grid_container = QWidget()
-        grid_container.setMaximumWidth(170)  # Larghezza aumentata per ospitare 20px di spaziatura
+        grid_container.setMaximumWidth(
+            170
+        )  # Larghezza aumentata per ospitare 20px di spaziatura
         grid_layout = QGridLayout(grid_container)
         grid_layout.setContentsMargins(5, 5, 5, 5)
         grid_layout.setHorizontalSpacing(20)  # 20px tra colonne
-        grid_layout.setVerticalSpacing(8)     # 8px tra righe (mantenuto)
+        grid_layout.setVerticalSpacing(8)  # 8px tra righe (mantenuto)
 
         # Stili comuni per i pulsanti
         button_style = """
@@ -2361,10 +2634,10 @@ class MainWindow(QMainWindow):
 
         # Disponi i pulsanti in griglia 2 colonne
         grid_layout.addWidget(self.transcription_btn, 0, 0)  # Riga 0, Colonna 0
-        grid_layout.addWidget(self.ai_media_btn, 0, 1)      # Riga 0, Colonna 1
-        grid_layout.addWidget(self.subjects_btn, 1, 0)      # Riga 1, Colonna 0
-        grid_layout.addWidget(self.utilities_btn, 1, 1)     # Riga 1, Colonna 1
-        grid_layout.addWidget(self.iot_btn, 2, 0)           # Riga 2, Colonna 0
+        grid_layout.addWidget(self.ai_media_btn, 0, 1)  # Riga 0, Colonna 1
+        grid_layout.addWidget(self.subjects_btn, 1, 0)  # Riga 1, Colonna 0
+        grid_layout.addWidget(self.utilities_btn, 1, 1)  # Riga 1, Colonna 1
+        grid_layout.addWidget(self.iot_btn, 2, 0)  # Riga 2, Colonna 0
 
         # Stacked widget per il contenuto a destra
         self.tools_stack = QStackedWidget()
@@ -2393,7 +2666,13 @@ class MainWindow(QMainWindow):
             self.iot_btn.setChecked(False)
 
             # Seleziona il pulsante corrente
-            buttons = [self.transcription_btn, self.ai_media_btn, self.subjects_btn, self.utilities_btn, self.iot_btn]
+            buttons = [
+                self.transcription_btn,
+                self.ai_media_btn,
+                self.subjects_btn,
+                self.utilities_btn,
+                self.iot_btn,
+            ]
             if 0 <= index < len(buttons):
                 buttons[index].setChecked(True)
 
@@ -2415,8 +2694,6 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.tools_stack)
 
         return main_widget
-
-
 
     def create_transcription_tab(self):
         """Crea la scheda Trascrizione con stile unificato"""
@@ -2444,7 +2721,8 @@ class MainWindow(QMainWindow):
 
         # Gruppo riconoscimento con stile unificato
         recognition_group = QGroupBox("👁️ Riconoscimento")
-        recognition_group.setStyleSheet("""
+        recognition_group.setStyleSheet(
+            """
             QGroupBox {
                 font-weight: bold;
                 font-size: 11px;
@@ -2462,7 +2740,8 @@ class MainWindow(QMainWindow):
                 color: #495057;
                 font-weight: bold;
             }
-        """)
+        """
+        )
         recognition_layout = QVBoxLayout(recognition_group)
         recognition_layout.setSpacing(4)
         recognition_layout.setContentsMargins(8, 8, 8, 8)
@@ -2485,13 +2764,15 @@ class MainWindow(QMainWindow):
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll.setStyleSheet("""
+        scroll.setStyleSheet(
+            """
             QScrollArea {
                 border: 1px solid #dee2e6;
                 border-radius: 4px;
                 background: rgba(255, 255, 255, 0.9);
             }
-        """)
+        """
+        )
 
         subjects_widget = QWidget()
         subjects_layout = QGridLayout(subjects_widget)
@@ -2537,8 +2818,6 @@ class MainWindow(QMainWindow):
         layout.addStretch()  # Spazio flessibile unificato
         return widget
 
-
-
     def _create_all_buttons(self):
         """Crea tutti i pulsanti necessari per il nuovo layout unificato"""
         # Crea pulsanti di trascrizione
@@ -2550,7 +2829,9 @@ class MainWindow(QMainWindow):
         self.audio_transcription_button = QPushButton("🎵 Audio → Testo")
         self.audio_transcription_button.setObjectName("audio_transcription_button")
         self.audio_transcription_button.setMinimumWidth(140)
-        self.audio_transcription_button.clicked.connect(self.handle_audio_transcription_button)
+        self.audio_transcription_button.clicked.connect(
+            self.handle_audio_transcription_button
+        )
 
         self.ocr_button = QPushButton("📄 OCR → Testo")
         self.ocr_button.setObjectName("ocr_button")
@@ -2630,19 +2911,19 @@ class MainWindow(QMainWindow):
             # Ricalcola le proporzioni con 2 sezioni
             current_sizes = self.vertical_splitter.sizes()
             main_content_size = current_sizes[0]  # Contenuto principale
-            tools_size = current_sizes[1]         # Sezione strumenti
+            tools_size = current_sizes[1]  # Sezione strumenti
 
             # Tutto lo spazio va al contenuto principale
             total_available = main_content_size + tools_size
             self.vertical_splitter.setSizes([total_available, 0])
 
             # Aggiorna il testo del pulsante
-            if hasattr(self, 'toggle_tools_button'):
+            if hasattr(self, "toggle_tools_button"):
                 self.toggle_tools_button.setText("🔧 Cassetta degli attrezzi")
 
             # Salva nelle preferenze
-            self.settings['ui'] = self.settings.get('ui', {})
-            self.settings['ui']['tools_panel_visible'] = False
+            self.settings["ui"] = self.settings.get("ui", {})
+            self.settings["ui"]["tools_panel_visible"] = False
         else:
             # Mostra la sezione unificata strumenti
             self.tools_group.setVisible(True)
@@ -2657,39 +2938,42 @@ class MainWindow(QMainWindow):
             self.vertical_splitter.setSizes([main_new, tools_new])
 
             # Aggiorna il testo del pulsante
-            if hasattr(self, 'toggle_tools_button'):
+            if hasattr(self, "toggle_tools_button"):
                 self.toggle_tools_button.setText("🔧 Cassetta degli attrezzi")
 
             # Salva nelle preferenze
-            self.settings['ui'] = self.settings.get('ui', {})
-            self.settings['ui']['tools_panel_visible'] = True
+            self.settings["ui"] = self.settings.get("ui", {})
+            self.settings["ui"]["tools_panel_visible"] = True
 
         # Log metriche DOPO il toggle
         QTimer.singleShot(100, lambda: self.log_ui_metrics("AFTER_TOGGLE"))
 
         # Salva le impostazioni
         from .main_03_configurazione_e_opzioni import save_settings
+
         save_settings(self.settings)
 
     def set_safe_font(self):
         """Imposta un font sicuro e standard per evitare artefatti di rendering, usando le preferenze utente."""
         try:
             # Ottieni le preferenze font dalle impostazioni utente
-            user_font_family = self.settings.get('fonts', {}).get('main_font_family', 'Arial')
-            user_font_size = self.settings.get('fonts', {}).get('main_font_size', 12)
+            user_font_family = self.settings.get("fonts", {}).get(
+                "main_font_family", "Arial"
+            )
+            user_font_size = self.settings.get("fonts", {}).get("main_font_size", 12)
 
             # Lista di font sicuri e standard, ordinati per priorità
             safe_fonts = [
                 user_font_family,  # Prima priorità: font scelto dall'utente
-                'Segoe UI',      # Windows moderno
-                'SF Pro Display',  # macOS moderno
-                'Ubuntu',        # Linux moderno
-                'Arial',         # Universale
-                'Helvetica',     # Universale
-                'DejaVu Sans',   # Linux comune
-                'Liberation Sans',  # Linux comune
-                'Verdana',       # Windows comune
-                'Tahoma'         # Windows comune
+                "Segoe UI",  # Windows moderno
+                "SF Pro Display",  # macOS moderno
+                "Ubuntu",  # Linux moderno
+                "Arial",  # Universale
+                "Helvetica",  # Universale
+                "DejaVu Sans",  # Linux comune
+                "Liberation Sans",  # Linux comune
+                "Verdana",  # Windows comune
+                "Tahoma",  # Windows comune
             ]
 
             # Trova il primo font disponibile
@@ -2707,13 +2991,17 @@ class MainWindow(QMainWindow):
                 safe_font.setWeight(QFont.Weight.Normal)
                 safe_font.setStyleHint(QFont.StyleHint.System)  # Hint per sistema
                 QApplication.setFont(safe_font)
-                logging.info(f"✅ Font sicuro impostato: {selected_font} ({user_font_size}pt)")
+                logging.info(
+                    f"✅ Font sicuro impostato: {selected_font} ({user_font_size}pt)"
+                )
             else:
                 # Fallback al font di sistema con dimensione utente
                 system_font = QApplication.font()
                 system_font.setPointSize(user_font_size)
                 QApplication.setFont(system_font)
-                logging.info(f"✅ Font di sistema impostato come fallback ({user_font_size}pt)")
+                logging.info(
+                    f"✅ Font di sistema impostato come fallback ({user_font_size}pt)"
+                )
 
         except Exception as e:
             logging.error(f"❌ Errore impostazione font sicuro: {e}")
@@ -2727,10 +3015,10 @@ class MainWindow(QMainWindow):
 
         # Stato fullscreen
         self.is_fullscreen = False
-        self.original_width = 0   # Per salvare la larghezza originale
+        self.original_width = 0  # Per salvare la larghezza originale
         self.original_height = 0  # Per salvare l'altezza originale
-        self.original_x = 0       # Per salvare la posizione X originale
-        self.original_y = 0       # Per salvare la posizione Y originale
+        self.original_x = 0  # Per salvare la posizione X originale
+        self.original_y = 0  # Per salvare la posizione Y originale
 
         # Stato webcam
         self.webcam_active = False
@@ -2762,8 +3050,6 @@ class MainWindow(QMainWindow):
             except:
                 QMessageBox.critical(self, "Errore", f"Errore webcam: {str(e)}")
 
-
-
     def create_new_pensierino(self):
         """Crea un nuovo pensierino tramite dialogo."""
         try:
@@ -2774,16 +3060,21 @@ class MainWindow(QMainWindow):
                 self,
                 "💭 Crea Nuovo Pensierino",
                 "Inserisci il testo del pensierino:",
-                ""
+                "",
             )
 
             if ok and text and text.strip():
                 # Crea il nuovo widget pensierino
                 from UI.draggable_text_widget import DraggableTextWidget
+
                 widget = DraggableTextWidget(text.strip(), self.settings)
 
                 # Aggiungi alla colonna A (pensierini)
-                if hasattr(self, 'pensierini_widget') and self.pensierini_widget and hasattr(self.pensierini_widget, 'pensierini_layout'):
+                if (
+                    hasattr(self, "pensierini_widget")
+                    and self.pensierini_widget
+                    and hasattr(self.pensierini_widget, "pensierini_layout")
+                ):
                     self.pensierini_widget.pensierini_layout.addWidget(widget)
 
                 print(f"💭 Nuovo pensierino creato: {text.strip()[:50]}...")
@@ -2802,7 +3093,7 @@ class MainWindow(QMainWindow):
             time_str = now.strftime("⌚️ %d/%m/%Y %H:%M")
 
             # Aggiorna l'etichetta del tempo in basso a sinistra
-            if hasattr(self, 'left_time_label'):
+            if hasattr(self, "left_time_label"):
                 self.left_time_label.setText(time_str)
 
         except Exception as e:
@@ -2811,7 +3102,7 @@ class MainWindow(QMainWindow):
     def _stop_webcam(self):
         """Ferma la webcam e chiude la finestra."""
         try:
-            if hasattr(self, 'webcam_window') and self.webcam_window:
+            if hasattr(self, "webcam_window") and self.webcam_window:
                 self.webcam_window.close()
                 self.webcam_window = None
 
@@ -2823,13 +3114,17 @@ class MainWindow(QMainWindow):
         try:
             # Placeholder per l'effetto specchio
             # In futuro: applicare trasformazione di flip orizzontale al video
-            if hasattr(self, 'webcam_window') and self.webcam_window:
+            if hasattr(self, "webcam_window") and self.webcam_window:
                 # Simula un leggero effetto visivo ogni secondo
                 current_time = datetime.now().strftime("%S")
                 if int(current_time) % 2 == 0:
-                    self.webcam_window.setStyleSheet("QWidget { background: rgba(240, 248, 255, 0.1); }")
+                    self.webcam_window.setStyleSheet(
+                        "QWidget { background: rgba(240, 248, 255, 0.1); }"
+                    )
                 else:
-                    self.webcam_window.setStyleSheet("QWidget { background: rgba(255, 248, 240, 0.1); }")
+                    self.webcam_window.setStyleSheet(
+                        "QWidget { background: rgba(255, 248, 240, 0.1); }"
+                    )
         except Exception as e:
             print(f"Errore effetto specchio: {e}")
 
@@ -2837,7 +3132,7 @@ class MainWindow(QMainWindow):
         """Gestisce la risposta ricevuta da Ollama."""
         try:
             # Riabilita il pulsante di riformulazione se era disabilitato
-            if hasattr(self, 'rephrase_button'):
+            if hasattr(self, "rephrase_button"):
                 self.rephrase_button.setEnabled(True)
 
             # Controlla se è una risposta di riformulazione
@@ -2855,7 +3150,9 @@ class MainWindow(QMainWindow):
                 full_content = f"📤 Richiesta:\n{prompt}\n\n{'=' * 50}\n\n🤖 Risposta AI (llama2:7b):\n\n{response}"
 
                 # Log della risposta ricevuta
-                logging.info(f"Risposta AI ricevuta per prompt: {prompt[:50]}... (lunghezza: {len(response)} caratteri)")
+                logging.info(
+                    f"Risposta AI ricevuta per prompt: {prompt[:50]}... (lunghezza: {len(response)} caratteri)"
+                )
 
                 # Mostra anche nei dettagli per compatibilità
                 self.show_text_in_details(full_content)
@@ -2865,7 +3162,7 @@ class MainWindow(QMainWindow):
             error_msg = f"❌ Errore nella gestione della risposta AI:\n{str(e)}"
             show_user_friendly_error(self, e, "risposta AI")
             # Riabilita il pulsante in caso di errore
-            if hasattr(self, 'rephrase_button'):
+            if hasattr(self, "rephrase_button"):
                 self.rephrase_button.setEnabled(True)
 
     def _on_ai_error_occurred(self, error_msg):
@@ -2879,33 +3176,37 @@ class MainWindow(QMainWindow):
         """Aggiorna le informazioni di stato nel footer - versione precedente."""
         try:
             from datetime import datetime
+
             current_time = datetime.now().strftime("%H:%M:%S")
-            status_text = f"🕐 {current_time} | 👤 Sessione attiva | 📊 Sistema operativo"
+            status_text = (
+                f"🕐 {current_time} | 👤 Sessione attiva | 📊 Sistema operativo"
+            )
         except Exception as e:
             logging.error(f"Errore nell'aggiornamento del footer: {e}")
 
     def setup_ui(self):
 
         # Usa le dimensioni dalla configurazione globale
-        window_width = self.settings.get('ui', {}).get('window_width', 1200)
-        window_height = self.settings.get('ui', {}).get('window_height', 800)
-
+        window_width = self.settings.get("ui", {}).get("window_width", 1200)
+        window_height = self.settings.get("ui", {}).get("window_height", 800)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
         # Applica stile globale con font sicuro
         # Carica colori dalle impostazioni centralizzate
-        colors = self.settings.get('colors', {})
-        button_text_colors = colors.get('button_text_colors', {})
-        button_border_colors = colors.get('button_border_colors', {})
-        button_background_colors = colors.get('button_background_colors', {})
-        button_hover_colors = colors.get('button_hover_colors', {})
-        button_pressed_colors = colors.get('button_pressed_colors', {})
+        colors = self.settings.get("colors", {})
+        button_text_colors = colors.get("button_text_colors", {})
+        button_border_colors = colors.get("button_border_colors", {})
+        button_background_colors = colors.get("button_background_colors", {})
+        button_hover_colors = colors.get("button_hover_colors", {})
+        button_pressed_colors = colors.get("button_pressed_colors", {})
 
         # Carica preferenze font dalle impostazioni
-        main_font_size = self.settings.get('fonts', {}).get('main_font_size', 13)
-        pensierini_font_size = self.settings.get('fonts', {}).get('pensierini_font_size', 12)
+        main_font_size = self.settings.get("fonts", {}).get("main_font_size", 13)
+        pensierini_font_size = self.settings.get("fonts", {}).get(
+            "pensierini_font_size", 12
+        )
 
         # CSS dinamico basato sulle impostazioni colori - REMOVED
 
@@ -2923,7 +3224,9 @@ class MainWindow(QMainWindow):
         top_layout.addStretch()
         self.project_name_input = QLineEdit()
         self.project_name_input.setPlaceholderText("Nome progetto...")
-        self.project_name_input.textChanged.connect(self.update_project_name_input_style)
+        self.project_name_input.textChanged.connect(
+            self.update_project_name_input_style
+        )
         top_layout.addWidget(self.project_name_input)
         top_layout.addStretch()
 
@@ -2944,8 +3247,11 @@ class MainWindow(QMainWindow):
 
         # Create splitter for resizable columns
         self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.main_splitter.setHandleWidth(8)  # Increased divider width for better visibility
-        self.main_splitter.setStyleSheet("""
+        self.main_splitter.setHandleWidth(
+            8
+        )  # Increased divider width for better visibility
+        self.main_splitter.setStyleSheet(
+            """
             QSplitter::handle {
                 background: rgba(108, 117, 125, 0.4);
                 border: 1px solid rgba(108, 117, 125, 0.6);
@@ -2959,16 +3265,21 @@ class MainWindow(QMainWindow):
                 background: rgba(74, 144, 226, 0.8);
                 border-color: rgba(74, 144, 226, 1.0);
             }
-        """)
+        """
+        )
 
         # Column A: Pensierini
         self.column_a_group = QGroupBox("📝 Contenuti pensierini creativi (A)")
         self.column_a_group.setObjectName("pensierini")  # ID per CSS
-        self.column_a_group.setMinimumWidth(250)  # Improved minimum width for better usability
+        self.column_a_group.setMinimumWidth(
+            250
+        )  # Improved minimum width for better usability
         column_a_layout = QVBoxLayout(self.column_a_group)
         self.pensierini_scroll = QScrollArea()
         self.pensierini_scroll.setWidgetResizable(True)
-        self.pensierini_widget = PensieriniWidget(self.settings, None)  # Layout sarà impostato dopo
+        self.pensierini_widget = PensieriniWidget(
+            self.settings, None
+        )  # Layout sarà impostato dopo
         self.pensierini_layout = QVBoxLayout(self.pensierini_widget)
         self.pensierini_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         # Aggiorna il riferimento al layout nel widget pensierini
@@ -2992,7 +3303,9 @@ class MainWindow(QMainWindow):
         column_c_layout = QVBoxLayout(self.column_c_group)
         self.details_scroll = QScrollArea()
         self.details_scroll.setWidgetResizable(True)
-        self.details_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.details_scroll.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
         self.details_widget = QWidget()
         self.details_widget.setObjectName("details_widget")
         self.details_layout = QVBoxLayout(self.details_widget)
@@ -3006,8 +3319,6 @@ class MainWindow(QMainWindow):
 
         # main_splitter will be added to vertical_splitter later
 
-
-
         # ===========================================
         # === SEZIONE STRUMENTI AVANZATI ===
         # ===========================================
@@ -3018,7 +3329,8 @@ class MainWindow(QMainWindow):
         self.tools_toolbox = QToolBox()
         self.tools_toolbox.setObjectName("tools_toolbox")
         self.tools_toolbox.setMinimumHeight(320)
-        self.tools_toolbox.setStyleSheet("""
+        self.tools_toolbox.setStyleSheet(
+            """
             QToolBox {
                 background: rgba(255, 255, 255, 0.95);
                 border: 1px solid #dee2e6;
@@ -3057,7 +3369,8 @@ class MainWindow(QMainWindow):
                 border: none;
                 background: transparent;
             }
-        """)
+        """
+        )
 
         # Crea le pagine per il QToolBox (Accordion)
         # Ogni categoria avrà la sua pagina espandibile
@@ -3080,7 +3393,9 @@ class MainWindow(QMainWindow):
         self.audio_transcription_button = QPushButton("🎵 Audio → Testo")
         self.audio_transcription_button.setObjectName("audio_transcription_button")
         self.audio_transcription_button.setMinimumWidth(140)
-        self.audio_transcription_button.clicked.connect(self.handle_audio_transcription_button)
+        self.audio_transcription_button.clicked.connect(
+            self.handle_audio_transcription_button
+        )
         transcription_layout.addWidget(self.audio_transcription_button)
 
         self.ocr_button = QPushButton("📄 OCR → Testo")
@@ -3112,7 +3427,8 @@ class MainWindow(QMainWindow):
         # Sottogruppo riconoscimento
         recognition_group = QGroupBox("👁️ Riconoscimento")
         recognition_group.setObjectName("recognition_subgroup")
-        recognition_group.setStyleSheet("""
+        recognition_group.setStyleSheet(
+            """
             QGroupBox#recognition_subgroup {
                 font-weight: bold;
                 font-size: 12px;
@@ -3134,7 +3450,8 @@ class MainWindow(QMainWindow):
                 background: rgba(248, 249, 250, 0.8);
                 border-radius: 3px;
             }
-        """)
+        """
+        )
         recognition_layout = QVBoxLayout(recognition_group)
         recognition_layout.setSpacing(8)
         recognition_layout.setContentsMargins(8, 20, 8, 8)
@@ -3177,7 +3494,11 @@ class MainWindow(QMainWindow):
             ("🌌 Astronomia", "astronomy_button", self.handle_astronomy_button),
             ("📐 Mat.Sup.", "advanced_math_button", self.handle_advanced_math_button),
             ("⚖️ Diritto", "law_button", self.handle_law_button),
-            ("📊 Statistica", "probability_stats_button", self.handle_probability_stats_button),
+            (
+                "📊 Statistica",
+                "probability_stats_button",
+                self.handle_probability_stats_button,
+            ),
             ("🇺🇸 Inglese", "english_button", self.handle_english_button),
             ("🇩🇪 Tedesco", "german_button", self.handle_german_button),
             ("🇪🇸 Spagnolo", "spanish_button", self.handle_spanish_button),
@@ -3272,9 +3593,11 @@ class MainWindow(QMainWindow):
 
         # Create unified vertical splitter with 2 rows: main content + unified tools section
         from PyQt6.QtWidgets import QSplitter
+
         vertical_splitter = QSplitter(Qt.Orientation.Vertical)
         vertical_splitter.setHandleWidth(6)  # Slightly wider for better visibility
-        vertical_splitter.setStyleSheet("""
+        vertical_splitter.setStyleSheet(
+            """
             QSplitter::handle {
                 background: rgba(74, 144, 226, 0.4);
                 border: 1px solid rgba(74, 144, 226, 0.6);
@@ -3288,7 +3611,8 @@ class MainWindow(QMainWindow):
                 background: rgba(74, 144, 226, 0.8);
                 border-color: rgba(74, 144, 226, 1.0);
             }
-        """)
+        """
+        )
 
         # ROW 1: Main content (columns A, B, C)
         vertical_splitter.addWidget(self.main_splitter)
@@ -3299,8 +3623,6 @@ class MainWindow(QMainWindow):
         # ROW 2: Tools section
         vertical_splitter.addWidget(unified_tools_section)
 
-
-
         # Save reference to vertical_splitter
         self.vertical_splitter = vertical_splitter
         self.tools_group = unified_tools_section  # For toggle compatibility
@@ -3309,7 +3631,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1000, 850)
 
         # Check preferences for initial tools panel state
-        tools_visible = self.settings.get('ui', {}).get('tools_panel_visible', True)
+        tools_visible = self.settings.get("ui", {}).get("tools_panel_visible", True)
 
         if tools_visible:
             vertical_splitter.setSizes([500, 300])  # Main content, tools
@@ -3320,7 +3642,7 @@ class MainWindow(QMainWindow):
         self.tools_group.setVisible(tools_visible)
 
         # Update button states
-        if hasattr(self, 'toggle_tools_button'):
+        if hasattr(self, "toggle_tools_button"):
             self.toggle_tools_button.setChecked(tools_visible)
             self.toggle_tools_button.setText("🔧 Cassetta degli attrezzi")
 
@@ -3336,8 +3658,9 @@ class MainWindow(QMainWindow):
         # Orario in basso a sinistra
         self.left_time_label = QLabel("⌚️")
         self.left_time_label.setObjectName("left_time_label")
-        time_font_size = self.settings.get('fonts', {}).get('main_font_size', 13) - 1
-        self.left_time_label.setStyleSheet(f"""
+        time_font_size = self.settings.get("fonts", {}).get("main_font_size", 13) - 1
+        self.left_time_label.setStyleSheet(
+            f"""
             QLabel#left_time_label {{
                 color: #495057;
                 font-size: {time_font_size}px;
@@ -3350,13 +3673,15 @@ class MainWindow(QMainWindow):
                 min-height: 20px;
                 max-width: 150px;
             }}
-        """)
+        """
+        )
 
         # Catturatore eventi mouse (click_status_label) in basso a sinistra
         self.click_status_label = QLabel("Clicca su un elemento...")
         self.click_status_label.setObjectName("click_status_label")
-        click_font_size = self.settings.get('fonts', {}).get('main_font_size', 13) - 1
-        self.click_status_label.setStyleSheet(f"""
+        click_font_size = self.settings.get("fonts", {}).get("main_font_size", 13) - 1
+        self.click_status_label.setStyleSheet(
+            f"""
             QLabel#click_status_label {{
                 color: #666;
                 font-size: {click_font_size}px;
@@ -3369,7 +3694,8 @@ class MainWindow(QMainWindow):
                 min-height: 20px;
                 max-width: 200px;
             }}
-        """)
+        """
+        )
 
         # Pulsante webcam in basso a destra
         self.webcam_button = QPushButton("📹 Webcam")
@@ -3379,8 +3705,9 @@ class MainWindow(QMainWindow):
         self.webcam_button.setMaximumWidth(100)
         self.webcam_button.clicked.connect(self.toggle_webcam)
         self.webcam_button.setToolTip("Attiva/disattiva webcam in modalità speculare")
-        webcam_font_size = self.settings.get('fonts', {}).get('main_font_size', 13) - 1
-        self.webcam_button.setStyleSheet(f"""
+        webcam_font_size = self.settings.get("fonts", {}).get("main_font_size", 13) - 1
+        self.webcam_button.setStyleSheet(
+            f"""
             QPushButton#webcam_button {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                     stop:0 rgba(255, 255, 255, 0.95), stop:1 rgba(248, 249, 250, 0.95));
@@ -3403,7 +3730,8 @@ class MainWindow(QMainWindow):
                 border-color: #28a745;
                 color: #155724;
             }}
-        """)
+        """
+        )
 
         # === CAMPO PENSERINI NEL FOOTER ===
         # Layout orizzontale per campo pensierini + pulsante invio
@@ -3412,11 +3740,14 @@ class MainWindow(QMainWindow):
 
         # Campo di testo per pensierini nel footer
         self.footer_pensierini_input = QLineEdit()
-        self.footer_pensierini_input.setPlaceholderText("💭 Scrivi pensierino rapido...")
+        self.footer_pensierini_input.setPlaceholderText(
+            "💭 Scrivi pensierino rapido..."
+        )
         self.footer_pensierini_input.setMinimumWidth(200)
         self.footer_pensierini_input.setMaximumWidth(300)
         self.footer_pensierini_input.setMinimumHeight(28)
-        self.footer_pensierini_input.setStyleSheet("""
+        self.footer_pensierini_input.setStyleSheet(
+            """
             QLineEdit {
                 background: rgba(255, 255, 255, 0.95);
                 border: 1px solid #dee2e6;
@@ -3429,7 +3760,8 @@ class MainWindow(QMainWindow):
                 border-color: #4a90e2;
                 background: rgba(255, 255, 255, 1.0);
             }
-        """)
+        """
+        )
         # Connetti il tasto Invio per inviare il pensierino
         self.footer_pensierini_input.returnPressed.connect(self.send_footer_pensierino)
         pensierini_footer_layout.addWidget(self.footer_pensierini_input)
@@ -3438,7 +3770,8 @@ class MainWindow(QMainWindow):
         self.footer_send_pensierino_button = QPushButton("📤 Invia")
         self.footer_send_pensierino_button.setMinimumHeight(28)
         self.footer_send_pensierino_button.setMinimumWidth(60)
-        self.footer_send_pensierino_button.setStyleSheet("""
+        self.footer_send_pensierino_button.setStyleSheet(
+            """
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                     stop:0 #4a90e2, stop:1 #357abd);
@@ -3456,7 +3789,8 @@ class MainWindow(QMainWindow):
             QPushButton:pressed {
                 background: #2e5c8a;
             }
-        """)
+        """
+        )
         self.footer_send_pensierino_button.clicked.connect(self.send_footer_pensierino)
         pensierini_footer_layout.addWidget(self.footer_send_pensierino_button)
 
@@ -3464,7 +3798,8 @@ class MainWindow(QMainWindow):
         self.clear_input_button = QPushButton("🧽 Cancella testo")
         self.clear_input_button.setMinimumHeight(28)
         self.clear_input_button.setMinimumWidth(100)
-        self.clear_input_button.setStyleSheet("""
+        self.clear_input_button.setStyleSheet(
+            """
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                     stop:0 #f8f9fa, stop:1 #e9ecef);
@@ -3481,7 +3816,8 @@ class MainWindow(QMainWindow):
             QPushButton:pressed {
                 background: #dee2e6;
             }
-        """)
+        """
+        )
         self.clear_input_button.clicked.connect(self.clear_input_text)
         pensierini_footer_layout.addWidget(self.clear_input_button)
 
@@ -3489,7 +3825,8 @@ class MainWindow(QMainWindow):
         self.clear_all_button = QPushButton("🗑️ Cancella tutto")
         self.clear_all_button.setMinimumHeight(28)
         self.clear_all_button.setMinimumWidth(100)
-        self.clear_all_button.setStyleSheet("""
+        self.clear_all_button.setStyleSheet(
+            """
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                     stop:0 #f8f9fa, stop:1 #e9ecef);
@@ -3506,8 +3843,11 @@ class MainWindow(QMainWindow):
             QPushButton:pressed {
                 background: #dee2e6;
             }
-        """)
-        self.clear_all_button.clicked.connect(self.clear_all_pensierini_with_confirmation)
+        """
+        )
+        self.clear_all_button.clicked.connect(
+            self.clear_all_pensierini_with_confirmation
+        )
         pensierini_footer_layout.addWidget(self.clear_all_button)
 
         # Aggiungi il layout pensierini al footer
@@ -3521,8 +3861,6 @@ class MainWindow(QMainWindow):
         self.toggle_tools_button.clicked.connect(self.toggle_tools_panel)
         footer_layout.addWidget(self.toggle_tools_button)
 
-
-
         footer_layout.addStretch()  # Spazio centrale
 
         # Orario a sinistra
@@ -3534,13 +3872,12 @@ class MainWindow(QMainWindow):
         # Pulsante webcam aggiunto qui
         footer_layout.addWidget(self.webcam_button)
 
-
-
         # === GUIDA RAPIDA IN BASSO A DESTRA ===
         self.quick_help_button = QPushButton("❓ Guida")
         self.quick_help_button.setMinimumHeight(28)
         self.quick_help_button.setMinimumWidth(70)
-        self.quick_help_button.setStyleSheet("""
+        self.quick_help_button.setStyleSheet(
+            """
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                     stop:0 #17a2b8, stop:1 #138496);
@@ -3558,7 +3895,8 @@ class MainWindow(QMainWindow):
             QPushButton:pressed {
                 background: #117a8b;
             }
-        """)
+        """
+        )
         self.quick_help_button.setToolTip("Mostra guida rapida dell'applicazione")
         self.quick_help_button.clicked.connect(self.show_quick_help)
         footer_layout.addWidget(self.quick_help_button)
@@ -3570,8 +3908,6 @@ class MainWindow(QMainWindow):
 
         # Apply modern UI improvements
         QTimer.singleShot(200, self._apply_modern_ui_styles)
-
-
 
     def _apply_modern_ui_styles(self):
         """Applica stili moderni e miglioramenti all'interfaccia utente."""
@@ -3858,7 +4194,7 @@ class MainWindow(QMainWindow):
                 }
             """
 
-                # Applica gli stili moderni
+            # Applica gli stili moderni
             self.setStyleSheet(self.styleSheet() + modern_css)
 
             # Aggiungi animazioni per alcuni elementi
@@ -3879,14 +4215,18 @@ class MainWindow(QMainWindow):
         """Aggiunge animazioni fluide per migliorare l'esperienza utente."""
         try:
             # Animazione per il pulsante toggle tools
-            if hasattr(self, 'toggle_tools_button'):
-                self.toggle_animation = QPropertyAnimation(self.toggle_tools_button, b"geometry")
+            if hasattr(self, "toggle_tools_button"):
+                self.toggle_animation = QPropertyAnimation(
+                    self.toggle_tools_button, b"geometry"
+                )
                 self.toggle_animation.setDuration(300)
                 self.toggle_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
 
             # Animazione per il click status label
-            if hasattr(self, 'click_status_label'):
-                self.click_label_animation = QPropertyAnimation(self.click_status_label, b"windowOpacity")
+            if hasattr(self, "click_status_label"):
+                self.click_label_animation = QPropertyAnimation(
+                    self.click_status_label, b"windowOpacity"
+                )
                 self.click_label_animation.setDuration(200)
                 self.click_label_animation.setStartValue(0.7)
                 self.click_label_animation.setEndValue(1.0)
@@ -3899,75 +4239,95 @@ class MainWindow(QMainWindow):
         """Aggiunge tooltip informativi per migliorare l'usabilità."""
         try:
             # Tooltip per i pulsanti della top bar
-            if hasattr(self, 'options_button'):
-                self.options_button.setToolTip("⚙️ Configura le impostazioni dell'applicazione\n"
-                                             "Personalizza colori, font e preferenze")
+            if hasattr(self, "options_button"):
+                self.options_button.setToolTip(
+                    "⚙️ Configura le impostazioni dell'applicazione\n"
+                    "Personalizza colori, font e preferenze"
+                )
 
-            if hasattr(self, 'toggle_tools_button'):
-                self.toggle_tools_button.setToolTip("🔧 Mostra/Nasconde il pannello degli strumenti\n"
-                                                  "Contiene tutte le funzionalità avanzate")
+            if hasattr(self, "toggle_tools_button"):
+                self.toggle_tools_button.setToolTip(
+                    "🔧 Mostra/Nasconde il pannello degli strumenti\n"
+                    "Contiene tutte le funzionalità avanzate"
+                )
 
-            if hasattr(self, 'save_button'):
-                self.save_button.setToolTip("💾 Salva il progetto corrente\n"
-                                          "Salva tutti i pensierini e le impostazioni")
+            if hasattr(self, "save_button"):
+                self.save_button.setToolTip(
+                    "💾 Salva il progetto corrente\n"
+                    "Salva tutti i pensierini e le impostazioni"
+                )
 
-            if hasattr(self, 'load_button'):
-                self.load_button.setToolTip("📂 Carica un progetto salvato\n"
-                                          "Ripristina pensierini e impostazioni precedenti")
+            if hasattr(self, "load_button"):
+                self.load_button.setToolTip(
+                    "📂 Carica un progetto salvato\n"
+                    "Ripristina pensierini e impostazioni precedenti"
+                )
 
             # Tooltip per i pulsanti di input - rimosso con la sezione pensierini
 
             # Tooltip per i pulsanti degli strumenti
-            if hasattr(self, 'voice_button'):
-                self.voice_button.setToolTip("🎤 Riconoscimento vocale\n"
-                                           "Converte la voce in testo usando Vosk\n"
-                                           "Premi e parla chiaramente nel microfono")
+            if hasattr(self, "voice_button"):
+                self.voice_button.setToolTip(
+                    "🎤 Riconoscimento vocale\n"
+                    "Converte la voce in testo usando Vosk\n"
+                    "Premi e parla chiaramente nel microfono"
+                )
 
-            if hasattr(self, 'audio_transcription_button'):
-                self.audio_transcription_button.setToolTip("🎵 Trascrizione file audio\n"
-                                                         "Converte file audio in testo\n"
-                                                         "Supporta vari formati audio")
+            if hasattr(self, "audio_transcription_button"):
+                self.audio_transcription_button.setToolTip(
+                    "🎵 Trascrizione file audio\n"
+                    "Converte file audio in testo\n"
+                    "Supporta vari formati audio"
+                )
 
-            if hasattr(self, 'ocr_button'):
-                self.ocr_button.setToolTip("📄 Riconoscimento ottico caratteri\n"
-                                         "Estrae testo dalle immagini\n"
-                                         "Supporta screenshot e file immagine")
+            if hasattr(self, "ocr_button"):
+                self.ocr_button.setToolTip(
+                    "📄 Riconoscimento ottico caratteri\n"
+                    "Estrae testo dalle immagini\n"
+                    "Supporta screenshot e file immagine"
+                )
 
-            if hasattr(self, 'ai_button'):
-                self.ai_button.setToolTip("🧠 Chiedi all'Intelligenza Artificiale\n"
-                                        "AI utilizzata: Llama 2 (7B parametri)\n"
-                                        "Invia richieste a Ollama AI\n"
-                                        "Ottieni risposte intelligenti e riformulazioni")
+            if hasattr(self, "ai_button"):
+                self.ai_button.setToolTip(
+                    "🧠 Chiedi all'Intelligenza Artificiale\n"
+                    "AI utilizzata: Llama 2 (7B parametri)\n"
+                    "Invia richieste a Ollama AI\n"
+                    "Ottieni risposte intelligenti e riformulazioni"
+                )
 
-            if hasattr(self, 'face_button'):
-                self.face_button.setToolTip("❌ Riconoscimento facciale\n"
-                                          "Attiva/disattiva il riconoscimento facce\n"
-                                          "Funzionalità in sviluppo")
+            if hasattr(self, "face_button"):
+                self.face_button.setToolTip(
+                    "❌ Riconoscimento facciale\n"
+                    "Attiva/disattiva il riconoscimento facce\n"
+                    "Funzionalità in sviluppo"
+                )
 
-            if hasattr(self, 'hand_button'):
-                self.hand_button.setToolTip("❌ Riconoscimento gesti\n"
-                                          "Attiva/disattiva il riconoscimento gesti\n"
-                                          "Funzionalità in sviluppo")
+            if hasattr(self, "hand_button"):
+                self.hand_button.setToolTip(
+                    "❌ Riconoscimento gesti\n"
+                    "Attiva/disattiva il riconoscimento gesti\n"
+                    "Funzionalità in sviluppo"
+                )
 
             # Tooltip per i pulsanti delle materie
             subject_tooltips = {
-                'ipa_button': "📝 Fonetica Internazionale\nPronuncia e simboli IPA",
-                'math_button': "🔢 Matematica\nCalcoli e formule matematiche",
-                'chemistry_button': "⚗️ Chimica\nReazioni e composti chimici",
-                'physics_button': "⚛️ Fisica\nLeggi fisiche e meccanica",
-                'biology_button': "🧬 Biologia\nScienze della vita e organismi",
-                'italian_button': "🇮🇹 Italiano\nGrammatica e letteratura italiana",
-                'history_button': "📚 Storia\nEventi storici e civiltà",
-                'computer_science_button': "💻 Informatica\nProgrammazione e algoritmi",
-                'astronomy_button': "🌌 Astronomia\nStelle, pianeti e universo",
-                'advanced_math_button': "📐 Matematica Avanzata\nAnalisi e geometria",
-                'law_button': "⚖️ Diritto\nLeggi e giurisprudenza",
-                'english_button': "🇺🇸 Inglese\nLingua e letteratura inglese",
-                'spanish_button': "🇪🇸 Spagnolo\nLingua e cultura ispanica",
-                'german_button': "🇩🇪 Tedesco\nLingua e letteratura tedesca",
-                'japanese_button': "🇯🇵 Giapponese\nLingua e cultura giapponese",
-                'chinese_button': "🇨🇳 Cinese\nLingua e cultura cinese",
-                'russian_button': "🇷🇺 Russo\nLingua e letteratura russa"
+                "ipa_button": "📝 Fonetica Internazionale\nPronuncia e simboli IPA",
+                "math_button": "🔢 Matematica\nCalcoli e formule matematiche",
+                "chemistry_button": "⚗️ Chimica\nReazioni e composti chimici",
+                "physics_button": "⚛️ Fisica\nLeggi fisiche e meccanica",
+                "biology_button": "🧬 Biologia\nScienze della vita e organismi",
+                "italian_button": "🇮🇹 Italiano\nGrammatica e letteratura italiana",
+                "history_button": "📚 Storia\nEventi storici e civiltà",
+                "computer_science_button": "💻 Informatica\nProgrammazione e algoritmi",
+                "astronomy_button": "🌌 Astronomia\nStelle, pianeti e universo",
+                "advanced_math_button": "📐 Matematica Avanzata\nAnalisi e geometria",
+                "law_button": "⚖️ Diritto\nLeggi e giurisprudenza",
+                "english_button": "🇺🇸 Inglese\nLingua e letteratura inglese",
+                "spanish_button": "🇪🇸 Spagnolo\nLingua e cultura ispanica",
+                "german_button": "🇩🇪 Tedesco\nLingua e letteratura tedesca",
+                "japanese_button": "🇯🇵 Giapponese\nLingua e cultura giapponese",
+                "chinese_button": "🇨🇳 Cinese\nLingua e cultura cinese",
+                "russian_button": "🇷🇺 Russo\nLingua e letteratura russa",
             }
 
             # Applica i tooltip alle materie
@@ -3977,40 +4337,53 @@ class MainWindow(QMainWindow):
                     button.setToolTip(f"{tooltip}\nFunzionalità in sviluppo")
 
             # Tooltip per gli altri pulsanti
-            if hasattr(self, 'media_button'):
-                self.media_button.setToolTip("📁 Carica file multimediali\n"
-                                           "Immagini, audio, video e documenti")
+            if hasattr(self, "media_button"):
+                self.media_button.setToolTip(
+                    "📁 Carica file multimediali\n" "Immagini, audio, video e documenti"
+                )
 
-            if hasattr(self, 'clean_button'):
-                self.clean_button.setToolTip("🧹 Pulisci tutto\n"
-                                           "Rimuovi tutti i pensierini e resetta l'area di lavoro")
+            if hasattr(self, "clean_button"):
+                self.clean_button.setToolTip(
+                    "🧹 Pulisci tutto\n"
+                    "Rimuovi tutti i pensierini e resetta l'area di lavoro"
+                )
 
-            if hasattr(self, 'log_button'):
-                self.log_button.setToolTip("📋 Mostra/Nasconde il pannello log\n"
-                                         "Visualizza i messaggi di sistema e debug")
+            if hasattr(self, "log_button"):
+                self.log_button.setToolTip(
+                    "📋 Mostra/Nasconde il pannello log\n"
+                    "Visualizza i messaggi di sistema e debug"
+                )
 
             # Tooltip per i controlli di navigazione
-            if hasattr(self, 'back_button'):
-                self.back_button.setToolTip("⬅️ Pagina precedente\n"
-                                          "Torna alla pagina precedente del testo")
+            if hasattr(self, "back_button"):
+                self.back_button.setToolTip(
+                    "⬅️ Pagina precedente\n" "Torna alla pagina precedente del testo"
+                )
 
-            if hasattr(self, 'forward_button'):
-                self.forward_button.setToolTip("➡️ Pagina successiva\n"
-                                             "Vai alla pagina successiva del testo")
+            if hasattr(self, "forward_button"):
+                self.forward_button.setToolTip(
+                    "➡️ Pagina successiva\n" "Vai alla pagina successiva del testo"
+                )
 
-            if hasattr(self, 'copy_button'):
-                self.copy_button.setToolTip("📋 Copia tutto il testo\n"
-                                          "Copia il contenuto completo negli appunti")
+            if hasattr(self, "copy_button"):
+                self.copy_button.setToolTip(
+                    "📋 Copia tutto il testo\n"
+                    "Copia il contenuto completo negli appunti"
+                )
 
-            if hasattr(self, 'rephrase_button'):
-                self.rephrase_button.setToolTip("🧠 Riformula intensamente\n"
-                                              "Usa AI per migliorare e riformulare il testo")
+            if hasattr(self, "rephrase_button"):
+                self.rephrase_button.setToolTip(
+                    "🧠 Riformula intensamente\n"
+                    "Usa AI per migliorare e riformulare il testo"
+                )
 
             # Tooltip per le aree di input - input_text_area rimosso con la sezione pensierini
 
-            if hasattr(self, 'project_name_input'):
-                self.project_name_input.setToolTip("Nome del progetto corrente\n"
-                                                "Viene usato per salvare/caricare progetti")
+            if hasattr(self, "project_name_input"):
+                self.project_name_input.setToolTip(
+                    "Nome del progetto corrente\n"
+                    "Viene usato per salvare/caricare progetti"
+                )
 
             logging.info("✅ Tooltip informativi aggiunti con successo")
 
@@ -4025,24 +4398,46 @@ class MainWindow(QMainWindow):
             QShortcut(QKeySequence("Ctrl+O"), self).activated.connect(self.load_project)
             QShortcut(QKeySequence("Ctrl+N"), self).activated.connect(self._new_project)
             QShortcut(QKeySequence("F1"), self).activated.connect(self._show_help)
-            QShortcut(QKeySequence("Ctrl+T"), self).activated.connect(self.toggle_tools_panel)
-            QShortcut(QKeySequence("Ctrl+L"), self).activated.connect(self._toggle_log_panel)
+            QShortcut(QKeySequence("Ctrl+T"), self).activated.connect(
+                self.toggle_tools_panel
+            )
+            QShortcut(QKeySequence("Ctrl+L"), self).activated.connect(
+                self._toggle_log_panel
+            )
 
             # Scorciatoie per funzioni comuni
-            QShortcut(QKeySequence("F2"), self).activated.connect(self._focus_input_area)
+            QShortcut(QKeySequence("F2"), self).activated.connect(
+                self._focus_input_area
+            )
             QShortcut(QKeySequence("F3"), self).activated.connect(self._focus_search)
-            QShortcut(QKeySequence("Ctrl+Return"), self).activated.connect(self.add_text_from_input_area)
+            QShortcut(QKeySequence("Ctrl+Return"), self).activated.connect(
+                self.add_text_from_input_area
+            )
 
             # Scorciatoie per navigazione
-            QShortcut(QKeySequence("Ctrl+1"), self).activated.connect(lambda: self._focus_column(0))
-            QShortcut(QKeySequence("Ctrl+2"), self).activated.connect(lambda: self._focus_column(1))
-            QShortcut(QKeySequence("Ctrl+3"), self).activated.connect(lambda: self._focus_column(2))
+            QShortcut(QKeySequence("Ctrl+1"), self).activated.connect(
+                lambda: self._focus_column(0)
+            )
+            QShortcut(QKeySequence("Ctrl+2"), self).activated.connect(
+                lambda: self._focus_column(1)
+            )
+            QShortcut(QKeySequence("Ctrl+3"), self).activated.connect(
+                lambda: self._focus_column(2)
+            )
 
             # Scorciatoie per funzioni AI e media
-            QShortcut(QKeySequence("Ctrl+A"), self).activated.connect(self.handle_ai_button)
-            QShortcut(QKeySequence("Ctrl+V"), self).activated.connect(self.handle_voice_button)
-            QShortcut(QKeySequence("Ctrl+M"), self).activated.connect(self.handle_media_button)
-            QShortcut(QKeySequence("Ctrl+Z"), self).activated.connect(self.undo_last_action)
+            QShortcut(QKeySequence("Ctrl+A"), self).activated.connect(
+                self.handle_ai_button
+            )
+            QShortcut(QKeySequence("Ctrl+V"), self).activated.connect(
+                self.handle_voice_button
+            )
+            QShortcut(QKeySequence("Ctrl+M"), self).activated.connect(
+                self.handle_media_button
+            )
+            QShortcut(QKeySequence("Ctrl+Z"), self).activated.connect(
+                self.undo_last_action
+            )
 
             logging.info("✅ Scorciatoie da tastiera aggiunte con successo")
 
@@ -4052,24 +4447,28 @@ class MainWindow(QMainWindow):
     def _new_project(self):
         """Crea un nuovo progetto (resetta tutto)."""
         try:
-            reply = QMessageBox.question(self, "Nuovo Progetto",
-                                       "Vuoi creare un nuovo progetto?\n"
-                                       "Tutti i pensierini non salvati andranno persi.",
-                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            reply = QMessageBox.question(
+                self,
+                "Nuovo Progetto",
+                "Vuoi creare un nuovo progetto?\n"
+                "Tutti i pensierini non salvati andranno persi.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
 
             if reply == QMessageBox.StandardButton.Yes:
                 # Pulisci tutti i pensierini
                 self._clear_all_pensierini()
                 # Reset nome progetto
-                if hasattr(self, 'project_name_input'):
+                if hasattr(self, "project_name_input"):
                     self.project_name_input.clear()
                 # Reset area di lavoro
                 self._clear_work_area()
                 # Reset dettagli
                 self._clear_details()
 
-                QMessageBox.information(self, "Nuovo Progetto",
-                                      "✅ Nuovo progetto creato con successo!")
+                QMessageBox.information(
+                    self, "Nuovo Progetto", "✅ Nuovo progetto creato con successo!"
+                )
 
         except Exception as e:
             logging.error(f"Errore nella creazione del nuovo progetto: {e}")
@@ -4125,7 +4524,7 @@ class MainWindow(QMainWindow):
 
     def _toggle_log_panel(self):
         """Mostra/Nasconde il pannello log."""
-        if hasattr(self, 'log_button'):
+        if hasattr(self, "log_button"):
             self.log_button.click()
 
     def _focus_input_area(self):
@@ -4141,11 +4540,11 @@ class MainWindow(QMainWindow):
     def _focus_column(self, column_index):
         """Imposta il focus su una colonna specifica."""
         try:
-            if column_index == 0 and hasattr(self, 'pensierini_scroll'):
+            if column_index == 0 and hasattr(self, "pensierini_scroll"):
                 self.pensierini_scroll.setFocus()
-            elif column_index == 1 and hasattr(self, 'work_area_scroll'):
+            elif column_index == 1 and hasattr(self, "work_area_scroll"):
                 self.work_area_scroll.setFocus()
-            elif column_index == 2 and hasattr(self, 'details_scroll'):
+            elif column_index == 2 and hasattr(self, "details_scroll"):
                 self.details_scroll.setFocus()
         except Exception as e:
             logging.error(f"Errore nel focus della colonna {column_index}: {e}")
@@ -4153,12 +4552,16 @@ class MainWindow(QMainWindow):
     def _clear_all_pensierini(self):
         """Pulisce tutti i pensierini dalla colonna A."""
         try:
-            if hasattr(self, 'pensierini_widget') and self.pensierini_widget and hasattr(self.pensierini_widget, 'pensierini_layout'):
+            if (
+                hasattr(self, "pensierini_widget")
+                and self.pensierini_widget
+                and hasattr(self.pensierini_widget, "pensierini_layout")
+            ):
                 while self.pensierini_widget.pensierini_layout.count():
                     item = self.pensierini_widget.pensierini_layout.takeAt(0)
                     if item:
                         widget = item.widget()
-                        if widget and hasattr(widget, 'deleteLater'):
+                        if widget and hasattr(widget, "deleteLater"):
                             widget.deleteLater()
         except Exception as e:
             logging.error(f"Errore nella pulizia dei pensierini: {e}")
@@ -4166,12 +4569,12 @@ class MainWindow(QMainWindow):
     def _clear_work_area(self):
         """Pulisce l'area di lavoro."""
         try:
-            if hasattr(self, 'work_area_layout') and self.work_area_layout:
+            if hasattr(self, "work_area_layout") and self.work_area_layout:
                 while self.work_area_layout.count():
                     item = self.work_area_layout.takeAt(0)
                     if item:
                         widget = item.widget()
-                        if widget and hasattr(widget, 'deleteLater'):
+                        if widget and hasattr(widget, "deleteLater"):
                             widget.deleteLater()
         except Exception as e:
             logging.error(f"Errore nella pulizia dell'area di lavoro: {e}")
@@ -4201,256 +4604,314 @@ class MainWindow(QMainWindow):
     # === FUNZIONI PLACEHOLDER PER LE MATERIE SCOLASTICHE ===
     def handle_ipa_button_placeholder(self):
         """Gestisce il pulsante IPA - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "📝 IPA",
-                                "🔤 Funzionalità IPA in Sviluppo\n\n"
-                                "📚 Questa sezione sarà dedicata a:\n"
-                                "• Pronuncia fonetica internazionale\n"
-                                "• Simboli IPA interattivi\n"
-                                "• Esercizi di pronuncia\n"
-                                "• Dizionario fonetico\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "📝 IPA",
+            "🔤 Funzionalità IPA in Sviluppo\n\n"
+            "📚 Questa sezione sarà dedicata a:\n"
+            "• Pronuncia fonetica internazionale\n"
+            "• Simboli IPA interattivi\n"
+            "• Esercizi di pronuncia\n"
+            "• Dizionario fonetico\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_math_button(self):
         """Gestisce il pulsante Matematica - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🔢 Matematica",
-                                "📚 Funzionalità Matematica in Sviluppo\n\n"
-                                "🧮 Questa sezione sarà dedicata a:\n"
-                                "• Calcoli matematici interattivi\n"
-                                "• Risoluzione di equazioni\n"
-                                "• Geometria e algebra\n"
-                                "• Statistica e probabilità\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🔢 Matematica",
+            "📚 Funzionalità Matematica in Sviluppo\n\n"
+            "🧮 Questa sezione sarà dedicata a:\n"
+            "• Calcoli matematici interattivi\n"
+            "• Risoluzione di equazioni\n"
+            "• Geometria e algebra\n"
+            "• Statistica e probabilità\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_history_button(self):
         """Gestisce il pulsante Storia - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "📚 Storia",
-                                "🏛️ Funzionalità Storia in Sviluppo\n\n"
-                                "📜 Questa sezione sarà dedicata a:\n"
-                                "• Linee temporali interattive\n"
-                                "• Eventi storici importanti\n"
-                                "• Biografie di personaggi storici\n"
-                                "• Mappe storiche\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "📚 Storia",
+            "🏛️ Funzionalità Storia in Sviluppo\n\n"
+            "📜 Questa sezione sarà dedicata a:\n"
+            "• Linee temporali interattive\n"
+            "• Eventi storici importanti\n"
+            "• Biografie di personaggi storici\n"
+            "• Mappe storiche\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_italian_button(self):
         """Gestisce il pulsante Italiano - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🇮🇹 Italiano",
-                                "📖 Funzionalità Italiano in Sviluppo\n\n"
-                                "✍️ Questa sezione sarà dedicata a:\n"
-                                "• Grammatica italiana\n"
-                                "• Analisi del testo\n"
-                                "• Letteratura italiana\n"
-                                "• Ortografia e sintassi\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🇮🇹 Italiano",
+            "📖 Funzionalità Italiano in Sviluppo\n\n"
+            "✍️ Questa sezione sarà dedicata a:\n"
+            "• Grammatica italiana\n"
+            "• Analisi del testo\n"
+            "• Letteratura italiana\n"
+            "• Ortografia e sintassi\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_chemistry_button(self):
         """Gestisce il pulsante Chimica - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "⚗️ Chimica",
-                                "🧪 Funzionalità Chimica in Sviluppo\n\n"
-                                "🔬 Questa sezione sarà dedicata a:\n"
-                                "• Tavola periodica interattiva\n"
-                                "• Reazioni chimiche\n"
-                                "• Struttura molecolare\n"
-                                "• Esperimenti virtuali\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "⚗️ Chimica",
+            "🧪 Funzionalità Chimica in Sviluppo\n\n"
+            "🔬 Questa sezione sarà dedicata a:\n"
+            "• Tavola periodica interattiva\n"
+            "• Reazioni chimiche\n"
+            "• Struttura molecolare\n"
+            "• Esperimenti virtuali\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_physics_button(self):
         """Gestisce il pulsante Fisica - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "⚛️ Fisica",
-                                "🔭 Funzionalità Fisica in Sviluppo\n\n"
-                                "⚡ Questa sezione sarà dedicata a:\n"
-                                "• Leggi della fisica\n"
-                                "• Meccanica e termodinamica\n"
-                                "• Elettricità e magnetismo\n"
-                                "• Fisica quantistica\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "⚛️ Fisica",
+            "🔭 Funzionalità Fisica in Sviluppo\n\n"
+            "⚡ Questa sezione sarà dedicata a:\n"
+            "• Leggi della fisica\n"
+            "• Meccanica e termodinamica\n"
+            "• Elettricità e magnetismo\n"
+            "• Fisica quantistica\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_biology_button(self):
         """Gestisce il pulsante Scienza dei 5 Regni - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🧬 Scienza dei 5 Regni",
-                                "🌿 Funzionalità Biologia in Sviluppo\n\n"
-                                "🦠 Questa sezione sarà dedicata a:\n"
-                                "• Classificazione dei 5 regni\n"
-                                "• Anatomia e fisiologia\n"
-                                "• Ecologia e ambiente\n"
-                                "• Genetica e evoluzione\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🧬 Scienza dei 5 Regni",
+            "🌿 Funzionalità Biologia in Sviluppo\n\n"
+            "🦠 Questa sezione sarà dedicata a:\n"
+            "• Classificazione dei 5 regni\n"
+            "• Anatomia e fisiologia\n"
+            "• Ecologia e ambiente\n"
+            "• Genetica e evoluzione\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_astronomy_button(self):
         """Gestisce il pulsante Astronomia - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🌌 Astronomia",
-                                "🪐 Funzionalità Astronomia in Sviluppo\n\n"
-                                "🌟 Questa sezione sarà dedicata a:\n"
-                                "• Sistema solare\n"
-                                "• Stelle e galassie\n"
-                                "• Cosmologia\n"
-                                "• Osservazione astronomica\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🌌 Astronomia",
+            "🪐 Funzionalità Astronomia in Sviluppo\n\n"
+            "🌟 Questa sezione sarà dedicata a:\n"
+            "• Sistema solare\n"
+            "• Stelle e galassie\n"
+            "• Cosmologia\n"
+            "• Osservazione astronomica\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_computer_science_button(self):
         """Gestisce il pulsante Informatica - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "💻 Informatica",
-                                "🖥️ Funzionalità Informatica in Sviluppo\n\n"
-                                "💾 Questa sezione sarà dedicata a:\n"
-                                "• Programmazione e algoritmi\n"
-                                "• Strutture dati\n"
-                                "• Reti e sicurezza informatica\n"
-                                "• Intelligenza artificiale\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "💻 Informatica",
+            "🖥️ Funzionalità Informatica in Sviluppo\n\n"
+            "💾 Questa sezione sarà dedicata a:\n"
+            "• Programmazione e algoritmi\n"
+            "• Strutture dati\n"
+            "• Reti e sicurezza informatica\n"
+            "• Intelligenza artificiale\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_os_scripting_button(self):
         """Gestisce il pulsante Sistemi Operativi e Script - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🖥️ Sistemi Operativi e Script",
-                                "🔧 Funzionalità Sistemi Operativi in Sviluppo\n\n"
-                                "⚙️ Questa sezione sarà dedicata a:\n"
-                                "• Sistemi operativi (Linux, Windows, macOS)\n"
-                                "• Scripting (Bash, PowerShell, Python)\n"
-                                "• Automazione processi\n"
-                                "• Amministrazione sistemi\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🖥️ Sistemi Operativi e Script",
+            "🔧 Funzionalità Sistemi Operativi in Sviluppo\n\n"
+            "⚙️ Questa sezione sarà dedicata a:\n"
+            "• Sistemi operativi (Linux, Windows, macOS)\n"
+            "• Scripting (Bash, PowerShell, Python)\n"
+            "• Automazione processi\n"
+            "• Amministrazione sistemi\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_advanced_math_button(self):
         """Gestisce il pulsante Matematica delle Superiori - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "📐 Matematica delle Superiori",
-                                "🔬 Funzionalità Matematica Avanzata in Sviluppo\n\n"
-                                "📊 Questa sezione sarà dedicata a:\n"
-                                "• Analisi matematica\n"
-                                "• Geometria analitica\n"
-                                "• Algebra lineare\n"
-                                "• Calcolo differenziale e integrale\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "📐 Matematica delle Superiori",
+            "🔬 Funzionalità Matematica Avanzata in Sviluppo\n\n"
+            "📊 Questa sezione sarà dedicata a:\n"
+            "• Analisi matematica\n"
+            "• Geometria analitica\n"
+            "• Algebra lineare\n"
+            "• Calcolo differenziale e integrale\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_law_button(self):
         """Gestisce il pulsante Diritto - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "⚖️ Diritto",
-                                "📋 Funzionalità Diritto in Sviluppo\n\n"
-                                "🏛️ Questa sezione sarà dedicata a:\n"
-                                "• Diritto civile e penale\n"
-                                "• Diritto costituzionale\n"
-                                "• Diritto internazionale\n"
-                                "• Casi giuridici e sentenze\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "⚖️ Diritto",
+            "📋 Funzionalità Diritto in Sviluppo\n\n"
+            "🏛️ Questa sezione sarà dedicata a:\n"
+            "• Diritto civile e penale\n"
+            "• Diritto costituzionale\n"
+            "• Diritto internazionale\n"
+            "• Casi giuridici e sentenze\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_probability_stats_button(self):
         """Gestisce il pulsante Calcolo Probabilità e Statistica - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "📊 Probabilità e Statistica",
-                                "📈 Funzionalità Statistica in Sviluppo\n\n"
-                                "🔢 Questa sezione sarà dedicata a:\n"
-                                "• Teoria delle probabilità\n"
-                                "• Statistica descrittiva\n"
-                                "• Inferenza statistica\n"
-                                "• Analisi dati e modelli\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "📊 Probabilità e Statistica",
+            "📈 Funzionalità Statistica in Sviluppo\n\n"
+            "🔢 Questa sezione sarà dedicata a:\n"
+            "• Teoria delle probabilità\n"
+            "• Statistica descrittiva\n"
+            "• Inferenza statistica\n"
+            "• Analisi dati e modelli\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_english_button(self):
         """Gestisce il pulsante Inglese - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🇺🇸 Inglese",
-                                "📚 Funzionalità Inglese in Sviluppo\n\n"
-                                "🇬🇧 Questa sezione sarà dedicata a:\n"
-                                "• Grammatica inglese\n"
-                                "• Vocabolario e frasi comuni\n"
-                                "• Pronuncia e fonetica\n"
-                                "• Letteratura inglese\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🇺🇸 Inglese",
+            "📚 Funzionalità Inglese in Sviluppo\n\n"
+            "🇬🇧 Questa sezione sarà dedicata a:\n"
+            "• Grammatica inglese\n"
+            "• Vocabolario e frasi comuni\n"
+            "• Pronuncia e fonetica\n"
+            "• Letteratura inglese\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_german_button(self):
         """Gestisce il pulsante Tedesco - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🇩🇪 Tedesco",
-                                "📚 Funzionalità Tedesco in Sviluppo\n\n"
-                                "🇩🇪 Questa sezione sarà dedicata a:\n"
-                                "• Grammatica tedesca\n"
-                                "• Vocabolario essenziale\n"
-                                "• Pronuncia corretta\n"
-                                "• Cultura germanica\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🇩🇪 Tedesco",
+            "📚 Funzionalità Tedesco in Sviluppo\n\n"
+            "🇩🇪 Questa sezione sarà dedicata a:\n"
+            "• Grammatica tedesca\n"
+            "• Vocabolario essenziale\n"
+            "• Pronuncia corretta\n"
+            "• Cultura germanica\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_spanish_button(self):
         """Gestisce il pulsante Spagnolo - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🇪🇸 Spagnolo",
-                                "📚 Funzionalità Spagnolo in Sviluppo\n\n"
-                                "🇪🇸 Questa sezione sarà dedicata a:\n"
-                                "• Grammatica spagnola\n"
-                                "• Vocabolario e espressioni\n"
-                                "• Pronuncia e accenti\n"
-                                "• Letteratura ispanica\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🇪🇸 Spagnolo",
+            "📚 Funzionalità Spagnolo in Sviluppo\n\n"
+            "🇪🇸 Questa sezione sarà dedicata a:\n"
+            "• Grammatica spagnola\n"
+            "• Vocabolario e espressioni\n"
+            "• Pronuncia e accenti\n"
+            "• Letteratura ispanica\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_sicilian_button(self):
         """Gestisce il pulsante Siciliano - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🏛️ Siciliano",
-                                "📚 Funzionalità Siciliano in Sviluppo\n\n"
-                                "🇮🇹 Questa sezione sarà dedicata a:\n"
-                                "• Grammatica siciliana\n"
-                                "• Vocabolario regionale\n"
-                                "• Pronuncia tradizionale\n"
-                                "• Letteratura siciliana\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🏛️ Siciliano",
+            "📚 Funzionalità Siciliano in Sviluppo\n\n"
+            "🇮🇹 Questa sezione sarà dedicata a:\n"
+            "• Grammatica siciliana\n"
+            "• Vocabolario regionale\n"
+            "• Pronuncia tradizionale\n"
+            "• Letteratura siciliana\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_japanese_button(self):
         """Gestisce il pulsante Giapponese - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🇯🇵 Giapponese",
-                                "📚 Funzionalità Giapponese in Sviluppo\n\n"
-                                "🇯🇵 Questa sezione sarà dedicata a:\n"
-                                "• Hiragana e Katakana\n"
-                                "• Kanji essenziali\n"
-                                "• Grammatica giapponese\n"
-                                "• Cultura tradizionale\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🇯🇵 Giapponese",
+            "📚 Funzionalità Giapponese in Sviluppo\n\n"
+            "🇯🇵 Questa sezione sarà dedicata a:\n"
+            "• Hiragana e Katakana\n"
+            "• Kanji essenziali\n"
+            "• Grammatica giapponese\n"
+            "• Cultura tradizionale\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_chinese_button(self):
         """Gestisce il pulsante Cinese - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🇨🇳 Cinese",
-                                "📚 Funzionalità Cinese in Sviluppo\n\n"
-                                "🇨🇳 Questa sezione sarà dedicata a:\n"
-                                "• Caratteri cinesi semplificati\n"
-                                "• Pinyin e pronuncia\n"
-                                "• Grammatica cinese\n"
-                                "• Cultura cinese\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🇨🇳 Cinese",
+            "📚 Funzionalità Cinese in Sviluppo\n\n"
+            "🇨🇳 Questa sezione sarà dedicata a:\n"
+            "• Caratteri cinesi semplificati\n"
+            "• Pinyin e pronuncia\n"
+            "• Grammatica cinese\n"
+            "• Cultura cinese\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_russian_button(self):
         """Gestisce il pulsante Russo - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🇷🇺 Russo",
-                                "📚 Funzionalità Russo in Sviluppo\n\n"
-                                "🇷🇺 Questa sezione sarà dedicata a:\n"
-                                "• Alfabeto cirillico\n"
-                                "• Grammatica russa\n"
-                                "• Vocabolario essenziale\n"
-                                "• Letteratura russa\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🇷🇺 Russo",
+            "📚 Funzionalità Russo in Sviluppo\n\n"
+            "🇷🇺 Questa sezione sarà dedicata a:\n"
+            "• Alfabeto cirillico\n"
+            "• Grammatica russa\n"
+            "• Vocabolario essenziale\n"
+            "• Letteratura russa\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def eventFilter(self, a0, a1):
         """Event filter per intercettare eventi della tastiera e del mouse."""
         from PyQt6.QtCore import Qt, QEvent
         from PyQt6.QtGui import QMouseEvent
 
-
-
         # Handle all mouse events for tracking
         try:
-            if a1 and hasattr(a1, 'type'):
-                event_type = getattr(a1, 'type', lambda: None)()
+            if a1 and hasattr(a1, "type"):
+                event_type = getattr(a1, "type", lambda: None)()
 
                 # Handle mouse button press events
                 if event_type == QEvent.Type.MouseButtonPress:
-                    event_button = getattr(a1, 'button', lambda: None)()
+                    event_button = getattr(a1, "button", lambda: None)()
                     self._handle_mouse_event(a0, "PRESS", event_button)
 
                 # Handle mouse button release events
                 elif event_type == QEvent.Type.MouseButtonRelease:
-                    event_button = getattr(a1, 'button', lambda: None)()
+                    event_button = getattr(a1, "button", lambda: None)()
                     self._handle_mouse_event(a0, "RELEASE", event_button)
 
                 # Handle mouse double click events
                 elif event_type == QEvent.Type.MouseButtonDblClick:
-                    event_button = getattr(a1, 'button', lambda: None)()
+                    event_button = getattr(a1, "button", lambda: None)()
                     self._handle_mouse_event(a0, "DOUBLE_CLICK", event_button)
 
                 # Handle mouse wheel events
                 elif event_type == QEvent.Type.Wheel:
-                    delta = getattr(a1, 'angleDelta', lambda: None)()
+                    delta = getattr(a1, "angleDelta", lambda: None)()
                     if delta:
-                        if hasattr(delta, 'y'):
+                        if hasattr(delta, "y"):
                             direction = "SU" if delta.y() > 0 else "GIÙ"
                             self._handle_mouse_wheel(a0, direction)
 
@@ -4465,14 +4926,14 @@ class MainWindow(QMainWindow):
     def _handle_mouse_event(self, widget, event_type, button):
         """Gestisce tutti gli eventi del mouse per identificare l'elemento e il tipo di evento."""
         try:
-            if not hasattr(self, 'click_status_label'):
+            if not hasattr(self, "click_status_label"):
                 return
 
             # Get widget information
             widget_name = ""
             widget_type = ""
 
-            if hasattr(widget, 'objectName') and widget.objectName():
+            if hasattr(widget, "objectName") and widget.objectName():
                 widget_name = widget.objectName()
 
             widget_type = type(widget).__name__
@@ -4496,23 +4957,23 @@ class MainWindow(QMainWindow):
             self.click_status_label.setText(info)
 
             # Trigger animation if available
-            if hasattr(self, 'click_label_animation'):
+            if hasattr(self, "click_label_animation"):
                 self.click_label_animation.start()
 
         except Exception as e:
             logging.error(f"Errore in _handle_mouse_event: {e}")
-            if hasattr(self, 'click_status_label'):
+            if hasattr(self, "click_status_label"):
                 self.click_status_label.setText("❌ Errore evento mouse")
 
     def _handle_mouse_wheel(self, widget, direction):
         """Gestisce gli eventi della rotella del mouse."""
         try:
-            if not hasattr(self, 'click_status_label'):
+            if not hasattr(self, "click_status_label"):
                 return
 
             # Get widget information
             widget_name = ""
-            if hasattr(widget, 'objectName') and widget.objectName():
+            if hasattr(widget, "objectName") and widget.objectName():
                 widget_name = widget.objectName()
 
             widget_type = type(widget).__name__
@@ -4529,7 +4990,7 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             logging.error(f"Errore in _handle_mouse_wheel: {e}")
-            if hasattr(self, 'click_status_label'):
+            if hasattr(self, "click_status_label"):
                 self.click_status_label.setText("❌ Errore rotella mouse")
 
     def _get_button_name(self, button):
@@ -4569,23 +5030,23 @@ class MainWindow(QMainWindow):
 
     def _get_widget_icon(self, widget_name, widget_type):
         """Restituisce l'icona per il tipo di widget."""
-        if 'button' in widget_name.lower() or widget_type == 'QPushButton':
+        if "button" in widget_name.lower() or widget_type == "QPushButton":
             return "🔘"
-        elif 'checkbox' in widget_name.lower() or widget_type == 'QCheckBox':
+        elif "checkbox" in widget_name.lower() or widget_type == "QCheckBox":
             return "☑️"
-        elif 'lineedit' in widget_name.lower() or widget_type == 'QLineEdit':
+        elif "lineedit" in widget_name.lower() or widget_type == "QLineEdit":
             return "📝"
-        elif 'textedit' in widget_name.lower() or widget_type == 'QTextEdit':
+        elif "textedit" in widget_name.lower() or widget_type == "QTextEdit":
             return "📄"
-        elif 'combobox' in widget_name.lower() or widget_type == 'QComboBox':
+        elif "combobox" in widget_name.lower() or widget_type == "QComboBox":
             return "📋"
-        elif 'slider' in widget_name.lower() or widget_type == 'QSlider':
+        elif "slider" in widget_name.lower() or widget_type == "QSlider":
             return "🎚️"
-        elif 'groupbox' in widget_name.lower() or widget_type == 'QGroupBox':
+        elif "groupbox" in widget_name.lower() or widget_type == "QGroupBox":
             return "📁"
-        elif 'scrollarea' in widget_name.lower() or widget_type == 'QScrollArea':
+        elif "scrollarea" in widget_name.lower() or widget_type == "QScrollArea":
             return "📜"
-        elif 'splitter' in widget_name.lower() or widget_type == 'QSplitter':
+        elif "splitter" in widget_name.lower() or widget_type == "QSplitter":
             return "📏"
         else:
             return "📦"
@@ -4598,12 +5059,16 @@ class MainWindow(QMainWindow):
     def add_text_from_input_area(self):
         """Aggiunge testo dall'area di input come pensierino - sezione pensierini rimossa."""
         # La sezione pensierini è stata completamente rimossa
-        logging.info("Funzione add_text_from_input_area non disponibile - sezione pensierini rimossa")
+        logging.info(
+            "Funzione add_text_from_input_area non disponibile - sezione pensierini rimossa"
+        )
 
     def handle_ai_button(self):
         """Gestisce la funzione AI: invia richiesta a Ollama e mostra risposta."""
         # La sezione pensierini è stata rimossa, usa un dialogo per l'input
-        text, ok = QInputDialog.getText(self, "Richiesta AI", "Inserisci la tua richiesta per l'AI:")
+        text, ok = QInputDialog.getText(
+            self, "Richiesta AI", "Inserisci la tua richiesta per l'AI:"
+        )
         if not ok or not text.strip():
             return
         text = text.strip()
@@ -4623,7 +5088,9 @@ class MainWindow(QMainWindow):
             if DraggableTextWidget:
                 # Aggiungi pensierino alla colonna A con indicatore AI
                 ai_pensierino_text = f"🤖 {truncated_text}"
-                pensierino_widget = DraggableTextWidget(ai_pensierino_text, self.settings)
+                pensierino_widget = DraggableTextWidget(
+                    ai_pensierino_text, self.settings
+                )
                 self.pensierini_layout.addWidget(pensierino_widget)
 
             # Mostra richiesta nell'area risultati
@@ -4633,7 +5100,9 @@ class MainWindow(QMainWindow):
             self.ollama_bridge.sendPrompt(text, default_model)
 
             # Log dell'invio richiesta
-            logging.info(f"Richiesta AI inviata: {text[:50]}... (modello: {default_model})")
+            logging.info(
+                f"Richiesta AI inviata: {text[:50]}... (modello: {default_model})"
+            )
 
         except Exception as e:
             logging.error(f"Errore nell'invio richiesta AI: {e}")
@@ -4651,11 +5120,19 @@ class MainWindow(QMainWindow):
 
     def create_paginated_text_widget(self, full_text):
         """Crea un widget con testo paginato per i dettagli."""
-        from PyQt6.QtWidgets import QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QWidget
+        from PyQt6.QtWidgets import (
+            QVBoxLayout,
+            QLabel,
+            QPushButton,
+            QHBoxLayout,
+            QWidget,
+        )
 
         # Carica preferenze font dalle impostazioni
-        main_font_size = self.settings.get('fonts', {}).get('main_font_size', 13)
-        page_button_font_size = main_font_size - 1  # Un po' più piccolo per il pulsante pagina
+        main_font_size = self.settings.get("fonts", {}).get("main_font_size", 13)
+        page_button_font_size = (
+            main_font_size - 1
+        )  # Un po' più piccolo per il pulsante pagina
 
         # Widget contenitore
         container = QWidget()
@@ -4671,17 +5148,27 @@ class MainWindow(QMainWindow):
         self.details_text_label = QTextEdit()
         self.details_text_label.setReadOnly(True)
         # Imposta altezza minima per mostrare circa 10 righe
-        self.details_text_label.setMinimumHeight(300)  # Circa 10 righe con font personalizzato
+        self.details_text_label.setMinimumHeight(
+            300
+        )  # Circa 10 righe con font personalizzato
         # Imposta size policy per espansione massima
         from PyQt6.QtWidgets import QSizePolicy
-        self.details_text_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+
+        self.details_text_label.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         # Rimuovi entrambe le scrollbar per massimizzare lo spazio
-        self.details_text_label.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.details_text_label.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.details_text_label.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.details_text_label.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
 
         # Usa dimensione font dalle preferenze per i dettagli
         details_font_size = main_font_size + 3  # Un po' più grande per i dettagli
-        self.details_text_label.setStyleSheet(f"""
+        self.details_text_label.setStyleSheet(
+            f"""
             QTextEdit {{
                 background: rgba(221, 160, 221, 0.9); /* Viola chiaro per il testo */
                 border: 2px solid #6f42c1;
@@ -4749,7 +5236,8 @@ class MainWindow(QMainWindow):
             }}
 
 
-        """)
+        """
+        )
 
         # Pulsante per tornare indietro
         self.back_button = QPushButton("⬅️ Pagina precedente")
@@ -4766,8 +5254,11 @@ class MainWindow(QMainWindow):
         self.rephrase_button.setObjectName("rephrase_button")
 
         # Usa dimensione font dalle preferenze per il pulsante riformula
-        rephrase_button_font_size = self.settings.get('fonts', {}).get('main_font_size', 13)
-        self.rephrase_button.setStyleSheet(f"""
+        rephrase_button_font_size = self.settings.get("fonts", {}).get(
+            "main_font_size", 13
+        )
+        self.rephrase_button.setStyleSheet(
+            f"""
             QPushButton {{
                 background-color: #17a2b8;
                 color: white;
@@ -4786,13 +5277,15 @@ class MainWindow(QMainWindow):
                 background-color: #adb5bd;
                 color: #6c757d;
             }}
-        """)
+        """
+        )
         self.rephrase_button.clicked.connect(self.handle_rephrase_button)
 
         # Layout principale per controlli (verticale)
         main_controls_layout = QVBoxLayout()
         # Imposta size policy per mantenere i controlli compatti
         from PyQt6.QtWidgets import QSizePolicy
+
         main_controls_layout.setSizeConstraint(QVBoxLayout.SizeConstraint.SetFixedSize)
 
         # Prima riga: pulsante copia, riformula con numero pagina accanto
@@ -4803,7 +5296,8 @@ class MainWindow(QMainWindow):
         self.copy_button = QPushButton("📋 Copia")
         self.copy_button.setObjectName("copy_button")
         self.copy_button.clicked.connect(self.handle_copy_button)
-        self.copy_button.setStyleSheet(f"""
+        self.copy_button.setStyleSheet(
+            f"""
             QPushButton {{
                 background-color: #007bff;
                 color: white;
@@ -4819,7 +5313,8 @@ class MainWindow(QMainWindow):
                 background-color: #0056b3;
                 border-color: #004085;
             }}
-        """)
+        """
+        )
         rephrase_layout.addWidget(self.copy_button)
 
         rephrase_layout.addWidget(self.rephrase_button)
@@ -4830,8 +5325,11 @@ class MainWindow(QMainWindow):
         self.page_info_label.setEnabled(False)  # Non cliccabile
 
         # Usa dimensione font dalle preferenze per il pulsante pagina
-        page_button_font_size = self.settings.get('fonts', {}).get('main_font_size', 13) - 1  # Un po' più piccolo per il pulsante pagina
-        self.page_info_label.setStyleSheet(f"""
+        page_button_font_size = (
+            self.settings.get("fonts", {}).get("main_font_size", 13) - 1
+        )  # Un po' più piccolo per il pulsante pagina
+        self.page_info_label.setStyleSheet(
+            f"""
             QPushButton {{
                 color: #495057;
                 font-weight: bold;
@@ -4845,7 +5343,8 @@ class MainWindow(QMainWindow):
                 text-align: center;
                 margin-left: 5px;
             }}
-        """)
+        """
+        )
         rephrase_layout.addWidget(self.page_info_label)
         rephrase_layout.addStretch()
         main_controls_layout.addLayout(rephrase_layout)
@@ -4866,7 +5365,8 @@ class MainWindow(QMainWindow):
         # Usa QSplitter per rendere resizable la sezione testo e controlli
         details_splitter = QSplitter(Qt.Orientation.Vertical)
         details_splitter.setHandleWidth(3)
-        details_splitter.setStyleSheet("""
+        details_splitter.setStyleSheet(
+            """
             QSplitter::handle {
                 background: rgba(108, 117, 125, 0.3);
                 border-radius: 2px;
@@ -4874,7 +5374,8 @@ class MainWindow(QMainWindow):
             QSplitter::handle:hover {
                 background: rgba(108, 117, 125, 0.6);
             }
-        """)
+        """
+        )
 
         # Widget contenitore per il testo
         text_container = QWidget()
@@ -4946,7 +5447,9 @@ class MainWindow(QMainWindow):
 
         # Aggiorna stato pulsanti navigazione
         self.back_button.setEnabled(self.current_page > 0)
-        self.forward_button.setEnabled(True)  # Sempre abilitato (per tornare all'inizio)
+        self.forward_button.setEnabled(
+            True
+        )  # Sempre abilitato (per tornare all'inizio)
 
     def _clear_details(self):
         """Pulisce la colonna dettagli."""
@@ -4955,7 +5458,7 @@ class MainWindow(QMainWindow):
                 item = self.details_layout.takeAt(0)
                 if item:
                     widget = item.widget()
-                    if widget and hasattr(widget, 'deleteLater'):
+                    if widget and hasattr(widget, "deleteLater"):
                         widget.deleteLater()
         except Exception:
             logging.error("Errore pulizia dettagli: {e}")
@@ -4963,8 +5466,12 @@ class MainWindow(QMainWindow):
     def handle_voice_button(self):
         """Avvia il riconoscimento vocale utilizzando il modulo Riconoscimento_Vocale."""
         if not SpeechRecognitionThread:
-            QMessageBox.critical(self, "Errore", "Modulo di riconoscimento vocale non disponibile.\n\n"
-                                 "Assicurati che le librerie 'vosk' e 'pyaudio' siano installate.")
+            QMessageBox.critical(
+                self,
+                "Errore",
+                "Modulo di riconoscimento vocale non disponibile.\n\n"
+                "Assicurati che le librerie 'vosk' e 'pyaudio' siano installate.",
+            )
             return
 
         # Disabilita il pulsante durante il riconoscimento
@@ -4972,15 +5479,22 @@ class MainWindow(QMainWindow):
         self.voice_button.setText("🎤 In ascolto...")
 
         # Ottieni il modello Vosk dalle impostazioni
-        vosk_model = self.settings.get('vosk_model', 'vosk-model-it-0.22')
+        vosk_model = self.settings.get("vosk_model", "vosk-model-it-0.22")
 
         # Se il modello non è configurato, usa quello italiano di default
-        if not vosk_model or vosk_model == 'auto':
-            vosk_model = 'vosk-model-it-0.22'
+        if not vosk_model or vosk_model == "auto":
+            vosk_model = "vosk-model-it-0.22"
 
         # Verifica che il modello esista e scaricalo se necessario
         import os
-        model_path = os.path.join("Artificial_Intelligence", "Riconoscimento_Vocale", "models", "vosk_models", vosk_model)
+
+        model_path = os.path.join(
+            "Artificial_Intelligence",
+            "Riconoscimento_Vocale",
+            "models",
+            "vosk_models",
+            vosk_model,
+        )
         if not os.path.exists(model_path):
             if ensure_vosk_model_available:
                 # Mostra dialog di progresso per il download
@@ -4997,43 +5511,59 @@ class MainWindow(QMainWindow):
                 # Tenta di scaricare il modello
                 if not ensure_vosk_model_available(vosk_model, progress_callback):
                     progress_msg.close()
-                    QMessageBox.critical(self, "Download Fallito",
-                                         "Impossibile scaricare il modello '{vosk_model}'.\n\n"
-                                         "Verifica la connessione internet e riprova.")
+                    QMessageBox.critical(
+                        self,
+                        "Download Fallito",
+                        "Impossibile scaricare il modello '{vosk_model}'.\n\n"
+                        "Verifica la connessione internet e riprova.",
+                    )
                     self.voice_button.setEnabled(True)
                     self.voice_button.setText("🎤 Trascrivi la mia voce")
                     return
 
                 progress_msg.close()
-                QMessageBox.information(self, "Download Completato",
-                                        "✅ Modello '{vosk_model}' scaricato con successo!")
+                QMessageBox.information(
+                    self,
+                    "Download Completato",
+                    "✅ Modello '{vosk_model}' scaricato con successo!",
+                )
             else:
-                QMessageBox.warning(self, "Funzione Download Non Disponibile",
-                                    "Il modello Vosk '{vosk_model}' non è stato trovato.\n\n"
-                                    "Percorso: {model_path}\n\n"
-                                    "La funzione di download automatico non è disponibile.")
+                QMessageBox.warning(
+                    self,
+                    "Funzione Download Non Disponibile",
+                    "Il modello Vosk '{vosk_model}' non è stato trovato.\n\n"
+                    "Percorso: {model_path}\n\n"
+                    "La funzione di download automatico non è disponibile.",
+                )
                 self.voice_button.setEnabled(True)
                 self.voice_button.setText("🎤 Trascrivi la mia voce")
                 return
 
         try:
             # Crea il thread di riconoscimento vocale con callback
-            self.speech_thread = SpeechRecognitionThread(vosk_model, text_callback=self._on_voice_recognized)
+            self.speech_thread = SpeechRecognitionThread(
+                vosk_model, text_callback=self._on_voice_recognized
+            )
 
             # Connetti i segnali come fallback
             self.speech_thread.recognized_text.connect(self._on_voice_recognized)
             self.speech_thread.recognition_error.connect(self._on_voice_error)
-            self.speech_thread.stopped_by_silence.connect(self._on_voice_stopped_by_silence)
+            self.speech_thread.stopped_by_silence.connect(
+                self._on_voice_stopped_by_silence
+            )
             self.speech_thread.finished.connect(self._on_voice_finished)
 
             # Avvia il riconoscimento
             self.speech_thread.start()
 
-            QMessageBox.information(self, "Riconoscimento Vocale",
-                                    "🎤 Riconoscimento vocale avviato!\n\n"
-                                    "Parla chiaramente nel microfono.\n"
-                                    "Il testo riconosciuto verrà aggiunto direttamente ai pensierini.\n"
-                                    "Il riconoscimento si fermerà automaticamente dopo 3 secondi di silenzio.")
+            QMessageBox.information(
+                self,
+                "Riconoscimento Vocale",
+                "🎤 Riconoscimento vocale avviato!\n\n"
+                "Parla chiaramente nel microfono.\n"
+                "Il testo riconosciuto verrà aggiunto direttamente ai pensierini.\n"
+                "Il riconoscimento si fermerà automaticamente dopo 3 secondi di silenzio.",
+            )
 
         except Exception as e:
             show_user_friendly_error(self, e, "riconoscimento vocale")
@@ -5048,44 +5578,64 @@ class MainWindow(QMainWindow):
             logging.info("📝 Testo valido ricevuto: '{text.strip()}'")
 
             # Inserisci il testo direttamente nella colonna dei pensierini
-            if hasattr(self, 'pensierini_layout') and self.pensierini_layout:
+            if hasattr(self, "pensierini_layout") and self.pensierini_layout:
                 logging.info("✅ pensierini_layout disponibile")
 
                 # Crea un nuovo pensierino con il testo riconosciuto
                 if DraggableTextWidget:
                     try:
-                        widget = DraggableTextWidget(f"🎤 {text.strip()}", self.settings)
+                        widget = DraggableTextWidget(
+                            f"🎤 {text.strip()}", self.settings
+                        )
                         self.pensierini_layout.addWidget(widget)
-                        logging.info(f"✅ Widget creato e aggiunto ai pensierini: {text[:50]}...")
+                        logging.info(
+                            f"✅ Widget creato e aggiunto ai pensierini: {text[:50]}..."
+                        )
                     except Exception as e:
                         logging.error(f"❌ Errore creazione widget: {e}")
                         # Fallback: mostra in un messaggio (sezione pensierini rimossa)
-                        QMessageBox.information(self, "Testo Riconosciuto", f"Testo: {text.strip()}")
+                        QMessageBox.information(
+                            self, "Testo Riconosciuto", f"Testo: {text.strip()}"
+                        )
                 else:
-                    logging.warning("⚠️ DraggableTextWidget non disponibile, uso fallback")
+                    logging.warning(
+                        "⚠️ DraggableTextWidget non disponibile, uso fallback"
+                    )
                     # Fallback: mostra in un messaggio (sezione pensierini rimossa)
-                    QMessageBox.information(self, "Testo Riconosciuto", f"Testo: {text.strip()}")
+                    QMessageBox.information(
+                        self, "Testo Riconosciuto", f"Testo: {text.strip()}"
+                    )
             else:
                 logging.error("❌ pensierini_layout non disponibile")
 
             # Mostra notifica di successo
-            QMessageBox.information(self, "Testo Riconosciuto",
-                                    f"✅ Testo riconosciuto con successo!\n\n"
-                                    f"📝 \"{text.strip()[:100]}{'...' if len(text.strip()) > 100 else ''}\"\n\n"
-                                    f"💭 Aggiunto ai pensierini!")
+            QMessageBox.information(
+                self,
+                "Testo Riconosciuto",
+                f"✅ Testo riconosciuto con successo!\n\n"
+                f"📝 \"{text.strip()[:100]}{'...' if len(text.strip()) > 100 else ''}\"\n\n"
+                f"💭 Aggiunto ai pensierini!",
+            )
         else:
             logging.warning("⚠️ Testo vuoto o None ricevuto: '{text}'")
 
     def _on_voice_error(self, error_msg):
         """Callback per gestire errori del riconoscimento vocale."""
-        QMessageBox.warning(self, "Errore Riconoscimento", "Errore durante il riconoscimento vocale:\n\n{error_msg}")
+        QMessageBox.warning(
+            self,
+            "Errore Riconoscimento",
+            "Errore durante il riconoscimento vocale:\n\n{error_msg}",
+        )
         self._reset_voice_button()
 
     def _on_voice_stopped_by_silence(self):
         """Callback quando il riconoscimento si ferma per silenzio."""
-        QMessageBox.information(self, "Riconoscimento Completato",
-                                "🎤 Riconoscimento vocale completato!\n\n"
-                                "Il sistema si è fermato automaticamente dopo 3 secondi di silenzio.")
+        QMessageBox.information(
+            self,
+            "Riconoscimento Completato",
+            "🎤 Riconoscimento vocale completato!\n\n"
+            "Il sistema si è fermato automaticamente dopo 3 secondi di silenzio.",
+        )
         self._reset_voice_button()
 
     def _on_voice_finished(self):
@@ -5094,14 +5644,16 @@ class MainWindow(QMainWindow):
 
     def _reset_voice_button(self):
         """Riporta il pulsante voce allo stato normale."""
-        if hasattr(self, 'voice_button'):
+        if hasattr(self, "voice_button"):
             self.voice_button.setEnabled(True)
             self.voice_button.setText("🎤 Trascrivi la mia voce")
 
     def handle_copy_button(self):
         """Copia tutto il testo dei dettagli negli appunti."""
-        if not hasattr(self, 'full_text') or not self.full_text:
-            QMessageBox.warning(self, "Nessun Contenuto", "Non c'è contenuto da copiare nei dettagli.")
+        if not hasattr(self, "full_text") or not self.full_text:
+            QMessageBox.warning(
+                self, "Nessun Contenuto", "Non c'è contenuto da copiare nei dettagli."
+            )
             return
 
         try:
@@ -5110,41 +5662,60 @@ class MainWindow(QMainWindow):
             if clipboard:
                 clipboard.setText(self.full_text)
             else:
-                QMessageBox.critical(self, "Errore Appunti", "Impossibile accedere agli appunti del sistema.")
+                QMessageBox.critical(
+                    self,
+                    "Errore Appunti",
+                    "Impossibile accedere agli appunti del sistema.",
+                )
                 return
 
             # Mostra notifica di successo
-            QMessageBox.information(self, "Copia Completata",
-                                    "✅ Testo copiato negli appunti!\n\n"
-                                    "📝 {len(self.full_text)} caratteri copiati")
+            QMessageBox.information(
+                self,
+                "Copia Completata",
+                "✅ Testo copiato negli appunti!\n\n"
+                "📝 {len(self.full_text)} caratteri copiati",
+            )
 
             logging.info("Testo copiato negli appunti: {len(self.full_text)} caratteri")
 
         except Exception:
             logging.error("Errore durante la copia: {e}")
-            QMessageBox.critical(self, "Errore Copia", "Errore durante la copia del testo:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore Copia", "Errore durante la copia del testo:\n{str(e)}"
+            )
 
     def handle_rephrase_button(self):
         """Gestisce la riformulazione intensa del contenuto nei dettagli usando LLM."""
-        if not hasattr(self, 'full_text') or not self.full_text:
-            QMessageBox.warning(self, "Nessun Contenuto", "Non c'è contenuto da riformulare nei dettagli.")
+        if not hasattr(self, "full_text") or not self.full_text:
+            QMessageBox.warning(
+                self,
+                "Nessun Contenuto",
+                "Non c'è contenuto da riformulare nei dettagli.",
+            )
             return
 
         # Controlla se il bridge Ollama è disponibile
         if not self.ollama_bridge:
-            QMessageBox.critical(self, "AI Non Disponibile",
-                                 "Il servizio AI non è disponibile. Verifica che Ollama sia installato e funzionante.")
+            QMessageBox.critical(
+                self,
+                "AI Non Disponibile",
+                "Il servizio AI non è disponibile. Verifica che Ollama sia installato e funzionante.",
+            )
             return
 
         # Verifica connessione con Ollama
         if not self.ollama_bridge.checkConnection():
-            QMessageBox.critical(self, "Connessione AI Fallita",
-                                 "Impossibile connettersi al servizio AI Ollama.\n"
-                                 "Assicurati che Ollama sia in esecuzione con: ollama serve")
+            QMessageBox.critical(
+                self,
+                "Connessione AI Fallita",
+                "Impossibile connettersi al servizio AI Ollama.\n"
+                "Assicurati che Ollama sia in esecuzione con: ollama serve",
+            )
             return
 
         # Disabilita il pulsante durante l'elaborazione
-        if hasattr(self, 'rephrase_button'):
+        if hasattr(self, "rephrase_button"):
             self.rephrase_button.setEnabled(False)
             self.rephrase_button.setText("⏳ Riformulazione...")
 
@@ -5168,13 +5739,17 @@ Riformulazione intensa:"""
             default_model = "gemma:2b"  # Modello raccomandato
             self.ollama_bridge.sendPrompt(prompt, default_model)
 
-            logging.info(f"Richiesta riformulazione inviata: {len(self.full_text)} caratteri (modello: {default_model})")
+            logging.info(
+                f"Richiesta riformulazione inviata: {len(self.full_text)} caratteri (modello: {default_model})"
+            )
 
         except Exception as e:
             logging.error(f"Errore nell'invio richiesta riformulazione: {e}")
-            QMessageBox.critical(self, "Errore AI", f"Errore nell'invio della richiesta AI:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore AI", f"Errore nell'invio della richiesta AI:\n{str(e)}"
+            )
             # Riabilita il pulsante in caso di errore
-            if hasattr(self, 'rephrase_button'):
+            if hasattr(self, "rephrase_button"):
                 self.rephrase_button.setEnabled(True)
                 self.rephrase_button.setText("🧠 Riformula intensamente")
 
@@ -5184,7 +5759,9 @@ Riformulazione intensa:"""
             # Apri dialog per selezionare file
             file_dialog = QFileDialog(self)
             file_dialog.setWindowTitle("Seleziona file multimediale")
-            file_dialog.setNameFilter("File multimediali (*.mp3 *.wav *.mp4 *.avi *.mkv *.mov);;Audio (*.mp3 *.wav);;Video (*.mp4 *.avi *.mkv *.mov);;Tutti i file (*)")
+            file_dialog.setNameFilter(
+                "File multimediali (*.mp3 *.wav *.mp4 *.avi *.mkv *.mov);;Audio (*.mp3 *.wav);;Video (*.mp4 *.avi *.mkv *.mov);;Tutti i file (*)"
+            )
 
             if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
                 selected_files = file_dialog.selectedFiles()
@@ -5194,7 +5771,9 @@ Riformulazione intensa:"""
 
         except Exception:
             logging.error("Errore caricamento file multimediale: {e}")
-            QMessageBox.critical(self, "Errore", "Errore durante il caricamento del file:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore", "Errore durante il caricamento del file:\n{str(e)}"
+            )
 
     def process_media_file(self, file_path):
         """Elabora il file multimediale selezionato."""
@@ -5205,8 +5784,8 @@ Riformulazione intensa:"""
         file_ext = Path(file_path).suffix.lower()
 
         # Determina il tipo di file
-        audio_extensions = ['.mp3', '.wav', '.flac', '.aac', '.ogg']
-        video_extensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv']
+        audio_extensions = [".mp3", ".wav", ".flac", ".aac", ".ogg"]
+        video_extensions = [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv"]
 
         if file_ext in audio_extensions:
             self.create_audio_widget(file_path, file_name)
@@ -5239,7 +5818,9 @@ Riformulazione intensa:"""
 
             # Pulsanti play/pausa/stop
             self.play_button = QPushButton("▶️ Play")
-            self.play_button.clicked.connect(lambda: self.toggle_audio_playback(file_path))
+            self.play_button.clicked.connect(
+                lambda: self.toggle_audio_playback(file_path)
+            )
             controls_layout.addWidget(self.play_button)
 
             self.pause_button = QPushButton("⏸️ Pausa")
@@ -5267,7 +5848,9 @@ Riformulazione intensa:"""
 
             # Placeholder per analizzatore spettro (implementazione futura)
             spectrum_label = QLabel("🎵 Analizzatore Spettro - In sviluppo")
-            spectrum_label.setStyleSheet("color: #666; font-style: italic; padding: 10px;")
+            spectrum_label.setStyleSheet(
+                "color: #666; font-style: italic; padding: 10px;"
+            )
             audio_layout.addWidget(spectrum_label)
 
             # Inizializza media player
@@ -5287,21 +5870,29 @@ Riformulazione intensa:"""
             # Aggiungi alla colonna pensierini
             if DraggableTextWidget:
                 # Crea un wrapper per rendere trascinabile
-                wrapper_widget = DraggableTextWidget("🎵 Audio: {file_name}", self.settings)
+                wrapper_widget = DraggableTextWidget(
+                    "🎵 Audio: {file_name}", self.settings
+                )
                 # Sostituisci il contenuto con il widget audio
                 wrapper_layout = QVBoxLayout(wrapper_widget)
                 wrapper_layout.addWidget(audio_widget)
                 self.pensierini_layout.addWidget(wrapper_widget)
 
-            QMessageBox.information(self, "File Audio Caricato",
-                                    "✅ File audio '{file_name}' caricato con successo!\n\n"
-                                    "🎵 Controlli multimediali disponibili\n"
-                                    "📊 Analizzatore spettro in sviluppo")
+            QMessageBox.information(
+                self,
+                "File Audio Caricato",
+                "✅ File audio '{file_name}' caricato con successo!\n\n"
+                "🎵 Controlli multimediali disponibili\n"
+                "📊 Analizzatore spettro in sviluppo",
+            )
 
         except ImportError as e:
-            QMessageBox.warning(self, "Funzionalità Limitata",
-                                "Alcune funzionalità audio potrebbero non essere disponibili:\n{str(e)}\n\n"
-                                "Il file è stato comunque aggiunto come elemento generico.")
+            QMessageBox.warning(
+                self,
+                "Funzionalità Limitata",
+                "Alcune funzionalità audio potrebbero non essere disponibili:\n{str(e)}\n\n"
+                "Il file è stato comunque aggiunto come elemento generico.",
+            )
             self.create_generic_media_widget(file_path, file_name)
 
     def create_video_widget(self, file_path, file_name):
@@ -5327,13 +5918,18 @@ Riformulazione intensa:"""
 
             # Aggiungi alla colonna pensierini
             if DraggableTextWidget:
-                wrapper_widget = DraggableTextWidget("🎥 Video: {file_name}", self.settings)
+                wrapper_widget = DraggableTextWidget(
+                    "🎥 Video: {file_name}", self.settings
+                )
                 wrapper_layout = QVBoxLayout(wrapper_widget)
                 wrapper_layout.addWidget(video_widget)
                 self.pensierini_layout.addWidget(wrapper_widget)
 
-            QMessageBox.information(self, "File Video Caricato",
-                                    "✅ File video '{file_name}' caricato con successo!")
+            QMessageBox.information(
+                self,
+                "File Video Caricato",
+                "✅ File video '{file_name}' caricato con successo!",
+            )
 
         except Exception:
             logging.error("Errore creazione widget video: {e}")
@@ -5357,32 +5953,42 @@ Riformulazione intensa:"""
 
             # Aggiungi alla colonna pensierini
             if DraggableTextWidget:
-                wrapper_widget = DraggableTextWidget("📄 File: {file_name}", self.settings)
+                wrapper_widget = DraggableTextWidget(
+                    "📄 File: {file_name}", self.settings
+                )
                 wrapper_layout = QVBoxLayout(wrapper_widget)
                 wrapper_layout.addWidget(generic_widget)
                 self.pensierini_layout.addWidget(wrapper_widget)
 
-            QMessageBox.information(self, "File Caricato",
-                                    "✅ File '{file_name}' caricato con successo!")
+            QMessageBox.information(
+                self, "File Caricato", "✅ File '{file_name}' caricato con successo!"
+            )
 
         except Exception:
             logging.error("Errore creazione widget generico: {e}")
-            QMessageBox.critical(self, "Errore", "Errore durante la creazione del widget:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore", "Errore durante la creazione del widget:\n{str(e)}"
+            )
 
     def handle_ocr_button(self):
         """Gestisce la trascrizione OCR da documenti."""
         try:
             if not OCR_AVAILABLE:
-                QMessageBox.warning(self, "OCR Non Disponibile",
-                                    "La funzionalità OCR richiede pytesseract e PIL.\n\n"
-                                    "Installa con: pip install pytesseract pillow\n\n"
-                                    "Inoltre assicurati che Tesseract-OCR sia installato sul sistema.")
+                QMessageBox.warning(
+                    self,
+                    "OCR Non Disponibile",
+                    "La funzionalità OCR richiede pytesseract e PIL.\n\n"
+                    "Installa con: pip install pytesseract pillow\n\n"
+                    "Inoltre assicurati che Tesseract-OCR sia installato sul sistema.",
+                )
                 return
 
             # Apri dialog per selezionare immagine/documento
             file_dialog = QFileDialog(self)
             file_dialog.setWindowTitle("Seleziona documento per OCR")
-            file_dialog.setNameFilter("Immagini e documenti (*.png *.jpg *.jpeg *.bmp *.tiff *.pdf);;Immagini (*.png *.jpg *.jpeg *.bmp *.tiff);;PDF (*.pdf);;Tutti i file (*)")
+            file_dialog.setNameFilter(
+                "Immagini e documenti (*.png *.jpg *.jpeg *.bmp *.tiff *.pdf);;Immagini (*.png *.jpg *.jpeg *.bmp *.tiff);;PDF (*.pdf);;Tutti i file (*)"
+            )
 
             if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
                 selected_files = file_dialog.selectedFiles()
@@ -5392,7 +5998,9 @@ Riformulazione intensa:"""
 
         except Exception:
             logging.error("Errore caricamento file OCR: {e}")
-            QMessageBox.critical(self, "Errore", "Errore durante il caricamento del file:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore", "Errore durante il caricamento del file:\n{str(e)}"
+            )
 
     def process_ocr_file(self, file_path):
         """Elabora il file per l'OCR."""
@@ -5412,7 +6020,7 @@ Riformulazione intensa:"""
             progress_msg.show()
 
             # Esegui OCR
-            if file_ext.lower() == '.pdf':
+            if file_ext.lower() == ".pdf":
                 # Per PDF, dovremmo estrarre le immagini prima
                 text = self.extract_text_from_pdf(file_path)
             else:
@@ -5428,29 +6036,41 @@ Riformulazione intensa:"""
 
                 # Crea anche un pensierino con il testo estratto
                 if DraggableTextWidget:
-                    ocr_pensierino_text = "📄 OCR: {file_name[:30]}... ({len(text)} caratteri)"
-                    pensierino_widget = DraggableTextWidget(ocr_pensierino_text, self.settings)
+                    ocr_pensierino_text = (
+                        "📄 OCR: {file_name[:30]}... ({len(text)} caratteri)"
+                    )
+                    pensierino_widget = DraggableTextWidget(
+                        ocr_pensierino_text, self.settings
+                    )
                     self.pensierini_layout.addWidget(pensierino_widget)
 
-                QMessageBox.information(self, "OCR Completato",
-                                        "✅ Testo estratto con successo!\n\n"
-                                        "📄 File: {file_name}\n"
-                                        "📝 Caratteri: {len(text)}\n"
-                                        "📊 Parole: {len(text.split())}")
+                QMessageBox.information(
+                    self,
+                    "OCR Completato",
+                    "✅ Testo estratto con successo!\n\n"
+                    "📄 File: {file_name}\n"
+                    "📝 Caratteri: {len(text)}\n"
+                    "📊 Parole: {len(text.split())}",
+                )
             else:
-                QMessageBox.warning(self, "OCR Fallito",
-                                    "Nessun testo rilevato nel documento.\n\n"
-                                    "Possibili cause:\n"
-                                    "• Immagine di bassa qualità\n"
-                                    "• Testo non chiaramente leggibile\n"
-                                    "• Orientamento del documento\n"
-                                    "• Carattere non supportato")
+                QMessageBox.warning(
+                    self,
+                    "OCR Fallito",
+                    "Nessun testo rilevato nel documento.\n\n"
+                    "Possibili cause:\n"
+                    "• Immagine di bassa qualità\n"
+                    "• Testo non chiaramente leggibile\n"
+                    "• Orientamento del documento\n"
+                    "• Carattere non supportato",
+                )
 
         except Exception:
             if progress_msg is not None:
                 progress_msg.close()
             logging.error("Errore OCR: {e}")
-            QMessageBox.critical(self, "Errore OCR", "Errore durante l'elaborazione OCR:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore OCR", "Errore durante l'elaborazione OCR:\n{str(e)}"
+            )
 
     def extract_text_from_image(self, image_path):
         """Estrae testo da un'immagine usando pytesseract."""
@@ -5465,7 +6085,9 @@ Riformulazione intensa:"""
             custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzàèéìòùÀÈÉÌÒÙ .,!?-()[]{}:;"\'\n'
 
             # Esegui OCR
-            text = pytesseract.image_to_string(image, lang='ita+eng', config=custom_config)
+            text = pytesseract.image_to_string(
+                image, lang="ita+eng", config=custom_config
+            )
 
             return text.strip()
 
@@ -5476,22 +6098,30 @@ Riformulazione intensa:"""
     def extract_text_from_pdf(self, pdf_path):
         """Estrae testo da un PDF (placeholder per implementazione futura)."""
         # Per ora restituiamo un messaggio che OCR su PDF non è ancora implementato
-        return "📄 OCR per PDF non ancora implementato.\n\n" \
-               "Converti prima il PDF in immagini per utilizzare l'OCR.\n\n" \
-               "Funzionalità futura: estrazione automatica immagini da PDF."
+        return (
+            "📄 OCR per PDF non ancora implementato.\n\n"
+            "Converti prima il PDF in immagini per utilizzare l'OCR.\n\n"
+            "Funzionalità futura: estrazione automatica immagini da PDF."
+        )
 
     def handle_audio_transcription_button(self):
         """Gestisce la trascrizione di file audio in testo."""
         try:
             if not AudioFileTranscriptionThread:
-                QMessageBox.critical(self, "Errore", "Modulo di trascrizione audio non disponibile.\n\n"
-                                     "Assicurati che le librerie 'vosk' e 'wave' siano installate.")
+                QMessageBox.critical(
+                    self,
+                    "Errore",
+                    "Modulo di trascrizione audio non disponibile.\n\n"
+                    "Assicurati che le librerie 'vosk' e 'wave' siano installate.",
+                )
                 return
 
             # Apri dialog per selezionare file audio
             file_dialog = QFileDialog(self)
             file_dialog.setWindowTitle("Seleziona file audio per trascrizione")
-            file_dialog.setNameFilter("File audio (*.wav *.mp3 *.flac *.aac *.ogg);;WAV (*.wav);;MP3 (*.mp3);;FLAC (*.flac);;AAC (*.aac);;OGG (*.ogg);;Tutti i file (*)")
+            file_dialog.setNameFilter(
+                "File audio (*.wav *.mp3 *.flac *.aac *.ogg);;WAV (*.wav);;MP3 (*.mp3);;FLAC (*.flac);;AAC (*.aac);;OGG (*.ogg);;Tutti i file (*)"
+            )
             file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
 
             if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
@@ -5502,7 +6132,9 @@ Riformulazione intensa:"""
 
         except Exception:
             logging.error("Errore caricamento file audio: {e}")
-            QMessageBox.critical(self, "Errore", "Errore durante il caricamento del file:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore", "Errore durante il caricamento del file:\n{str(e)}"
+            )
 
     def transcribe_audio_file(self, audio_file_path):
         """Trascrive un file audio in testo."""
@@ -5513,12 +6145,15 @@ Riformulazione intensa:"""
         file_ext = Path(audio_file_path).suffix.lower()
 
         # Verifica formato supportato
-        supported_formats = ['.wav', '.mp3', '.flac', '.aac', '.ogg']
+        supported_formats = [".wav", ".mp3", ".flac", ".aac", ".ogg"]
         if file_ext not in supported_formats:
-            QMessageBox.warning(self, "Formato Non Supportato",
-                                "Il formato '{file_ext}' non è attualmente supportato.\n\n"
-                                "Formati supportati: {', '.join(supported_formats)}\n\n"
-                                "Converti il file in uno dei formati supportati.")
+            QMessageBox.warning(
+                self,
+                "Formato Non Supportato",
+                "Il formato '{file_ext}' non è attualmente supportato.\n\n"
+                "Formati supportati: {', '.join(supported_formats)}\n\n"
+                "Converti il file in uno dei formati supportati.",
+            )
             return
 
         progress_msg = None
@@ -5531,15 +6166,22 @@ Riformulazione intensa:"""
             progress_msg.show()
 
             # Ottieni il modello Vosk dalle impostazioni
-            vosk_model = self.settings.get('vosk_model', 'vosk-model-it-0.22')
+            vosk_model = self.settings.get("vosk_model", "vosk-model-it-0.22")
 
             # Se il modello non è configurato, usa quello italiano di default
-            if not vosk_model or vosk_model == 'auto':
-                vosk_model = 'vosk-model-it-0.22'
+            if not vosk_model or vosk_model == "auto":
+                vosk_model = "vosk-model-it-0.22"
 
             # Verifica che il modello esista e scaricalo se necessario
             import os
-            model_path = os.path.join("Artificial_Intelligence", "Riconoscimento_Vocale", "models", "vosk_models", vosk_model)
+
+            model_path = os.path.join(
+                "Artificial_Intelligence",
+                "Riconoscimento_Vocale",
+                "models",
+                "vosk_models",
+                vosk_model,
+            )
             if not os.path.exists(model_path):
                 if ensure_vosk_model_available is not None:
                     # Mostra dialog di progresso per il download
@@ -5552,44 +6194,62 @@ Riformulazione intensa:"""
                     # Tenta di scaricare il modello
                     if not ensure_vosk_model_available(vosk_model, progress_callback):
                         progress_msg.close()
-                        QMessageBox.critical(self, "Download Fallito",
-                                             "Impossibile scaricare il modello '{vosk_model}'.\n\n"
-                                             "Verifica la connessione internet e riprova.")
+                        QMessageBox.critical(
+                            self,
+                            "Download Fallito",
+                            "Impossibile scaricare il modello '{vosk_model}'.\n\n"
+                            "Verifica la connessione internet e riprova.",
+                        )
                         return
 
                     progress_msg.close()
-                    QMessageBox.information(self, "Download Completato",
-                                            "✅ Modello '{vosk_model}' scaricato con successo!")
+                    QMessageBox.information(
+                        self,
+                        "Download Completato",
+                        "✅ Modello '{vosk_model}' scaricato con successo!",
+                    )
                 else:
                     progress_msg.close()
-                    QMessageBox.warning(self, "Funzione Download Non Disponibile",
-                                        "Il modello Vosk '{vosk_model}' non è stato trovato.\n\n"
-                                        "Percorso: {model_path}\n\n"
-                                        "La funzione di download automatico non è disponibile.")
+                    QMessageBox.warning(
+                        self,
+                        "Funzione Download Non Disponibile",
+                        "Il modello Vosk '{vosk_model}' non è stato trovato.\n\n"
+                        "Percorso: {model_path}\n\n"
+                        "La funzione di download automatico non è disponibile.",
+                    )
                     return
 
             progress_msg.close()
 
             # Mostra messaggio di inizio trascrizione
-            QMessageBox.information(self, "Trascrizione Avviata",
-                                    "🎵 Avvio trascrizione del file:\n{file_name}\n\n"
-                                    "📝 Il testo trascritto verrà aggiunto ai pensierini.\n"
-                                    "⏳ L'operazione potrebbe richiedere alcuni minuti...")
+            QMessageBox.information(
+                self,
+                "Trascrizione Avviata",
+                "🎵 Avvio trascrizione del file:\n{file_name}\n\n"
+                "📝 Il testo trascritto verrà aggiunto ai pensierini.\n"
+                "⏳ L'operazione potrebbe richiedere alcuni minuti...",
+            )
 
             # Crea il thread di trascrizione
             if AudioFileTranscriptionThread:
                 self.audio_transcription_thread = AudioFileTranscriptionThread(
                     audio_file_path,
                     vosk_model,
-                    text_callback=self._on_audio_transcription_completed
+                    text_callback=self._on_audio_transcription_completed,
                 )
             else:
                 raise ImportError("AudioFileTranscriptionThread non disponibile")
 
             # Connetti i segnali
-            self.audio_transcription_thread.transcription_progress.connect(self._on_transcription_progress)
-            self.audio_transcription_thread.transcription_completed.connect(self._on_audio_transcription_completed)
-            self.audio_transcription_thread.transcription_error.connect(self._on_transcription_error)
+            self.audio_transcription_thread.transcription_progress.connect(
+                self._on_transcription_progress
+            )
+            self.audio_transcription_thread.transcription_completed.connect(
+                self._on_audio_transcription_completed
+            )
+            self.audio_transcription_thread.transcription_error.connect(
+                self._on_transcription_error
+            )
 
             # Avvia la trascrizione
             self.audio_transcription_thread.start()
@@ -5598,7 +6258,9 @@ Riformulazione intensa:"""
             if progress_msg is not None:
                 progress_msg.close()
             logging.error("Errore avvio trascrizione: {e}")
-            QMessageBox.critical(self, "Errore Avvio", "Errore nell'avvio della trascrizione:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore Avvio", "Errore nell'avvio della trascrizione:\n{str(e)}"
+            )
 
     def _on_transcription_progress(self, message):
         """Gestisce gli aggiornamenti di progresso della trascrizione."""
@@ -5616,27 +6278,41 @@ Riformulazione intensa:"""
 
             # Crea anche un pensierino con il testo trascritto
             if DraggableTextWidget:
-                transcription_pensierino_text = "🎵 Trascrizione: {text[:50]}... ({len(text)} caratteri)"
-                pensierino_widget = DraggableTextWidget(transcription_pensierino_text, self.settings)
+                transcription_pensierino_text = (
+                    "🎵 Trascrizione: {text[:50]}... ({len(text)} caratteri)"
+                )
+                pensierino_widget = DraggableTextWidget(
+                    transcription_pensierino_text, self.settings
+                )
                 self.pensierini_layout.addWidget(pensierino_widget)
 
-            QMessageBox.information(self, "Trascrizione Completata",
-                                    "✅ Trascrizione completata con successo!\n\n"
-                                    "🎵 File audio elaborato\n"
-                                    "📝 Caratteri: {len(text)}\n"
-                                    "📊 Parole: {len(text.split())}")
+            QMessageBox.information(
+                self,
+                "Trascrizione Completata",
+                "✅ Trascrizione completata con successo!\n\n"
+                "🎵 File audio elaborato\n"
+                "📝 Caratteri: {len(text)}\n"
+                "📊 Parole: {len(text.split())}",
+            )
         else:
-            QMessageBox.warning(self, "Trascrizione Vuota",
-                                "La trascrizione non ha prodotto testo.\n\n"
-                                "Possibili cause:\n"
-                                "• File audio di bassa qualità\n"
-                                "• Audio senza parlato\n"
-                                "• Problemi di riconoscimento")
+            QMessageBox.warning(
+                self,
+                "Trascrizione Vuota",
+                "La trascrizione non ha prodotto testo.\n\n"
+                "Possibili cause:\n"
+                "• File audio di bassa qualità\n"
+                "• Audio senza parlato\n"
+                "• Problemi di riconoscimento",
+            )
 
     def _on_transcription_error(self, error_msg):
         """Gestisce gli errori della trascrizione."""
         logging.error("Errore trascrizione: {error_msg}")
-        QMessageBox.critical(self, "Errore Trascrizione", "Errore durante la trascrizione:\n\n{error_msg}")
+        QMessageBox.critical(
+            self,
+            "Errore Trascrizione",
+            "Errore durante la trascrizione:\n\n{error_msg}",
+        )
 
     def handle_face_recognition(self):
         """Gestisce il toggle per il riconoscimento facciale."""
@@ -5644,22 +6320,32 @@ Riformulazione intensa:"""
             if self.face_button.isChecked():
                 # Abilita riconoscimento facciale
                 self.face_button.setText("✅ Riconoscimento Faciale")
-                QMessageBox.information(self, "Funzione in Sviluppo",
-                                        "🔧 Riconoscimento Faciale\n\n"
-                                        "📋 Stato: ABILITATO\n\n"
-                                        "⚠️ In Manutenzione - WIP Work in progress\n\n"
-                                        "Questa funzione sarà disponibile nelle prossime versioni.")
+                QMessageBox.information(
+                    self,
+                    "Funzione in Sviluppo",
+                    "🔧 Riconoscimento Faciale\n\n"
+                    "📋 Stato: ABILITATO\n\n"
+                    "⚠️ In Manutenzione - WIP Work in progress\n\n"
+                    "Questa funzione sarà disponibile nelle prossime versioni.",
+                )
             else:
                 # Disabilita riconoscimento facciale
                 self.face_button.setText("❌ Riconoscimento Faciale")
-                QMessageBox.information(self, "Funzione Disabilitata",
-                                        "🔧 Riconoscimento Faciale\n\n"
-                                        "📋 Stato: DISABILITATO\n\n"
-                                        "La funzione è stata disabilitata.")
+                QMessageBox.information(
+                    self,
+                    "Funzione Disabilitata",
+                    "🔧 Riconoscimento Faciale\n\n"
+                    "📋 Stato: DISABILITATO\n\n"
+                    "La funzione è stata disabilitata.",
+                )
 
         except Exception:
             logging.error("Errore toggle riconoscimento facciale: {e}")
-            QMessageBox.critical(self, "Errore", "Errore durante la gestione del riconoscimento facciale:\n{str(e)}")
+            QMessageBox.critical(
+                self,
+                "Errore",
+                "Errore durante la gestione del riconoscimento facciale:\n{str(e)}",
+            )
 
     def handle_hand_gestures(self):
         """Gestisce il toggle per il riconoscimento gesti mani."""
@@ -5667,81 +6353,88 @@ Riformulazione intensa:"""
             if self.hand_button.isChecked():
                 # Abilita riconoscimento gesti mani
                 self.hand_button.setText("✅ Abilita Gesti Mani")
-                QMessageBox.information(self, "Funzione in Sviluppo",
-                                        "🔧 Riconoscimento Gesti Mani\n\n"
-                                        "📋 Stato: ABILITATO\n\n"
-                                        "⚠️ In Manutenzione - WIP Work in progress\n\n"
-                                        "Questa funzione sarà disponibile nelle prossime versioni.")
+                QMessageBox.information(
+                    self,
+                    "Funzione in Sviluppo",
+                    "🔧 Riconoscimento Gesti Mani\n\n"
+                    "📋 Stato: ABILITATO\n\n"
+                    "⚠️ In Manutenzione - WIP Work in progress\n\n"
+                    "Questa funzione sarà disponibile nelle prossime versioni.",
+                )
             else:
                 # Disabilita riconoscimento gesti mani
                 self.hand_button.setText("❌ Abilita Gesti Mani")
-                QMessageBox.information(self, "Funzione Disabilitata",
-                                        "🔧 Riconoscimento Gesti Mani\n\n"
-                                        "📋 Stato: DISABILITATO\n\n"
-                                        "La funzione è stata disabilitata.")
+                QMessageBox.information(
+                    self,
+                    "Funzione Disabilitata",
+                    "🔧 Riconoscimento Gesti Mani\n\n"
+                    "📋 Stato: DISABILITATO\n\n"
+                    "La funzione è stata disabilitata.",
+                )
 
         except Exception:
             logging.error("Errore toggle riconoscimento gesti mani: {e}")
-            QMessageBox.critical(self, "Errore", "Errore durante la gestione del riconoscimento gesti mani:\n{str(e)}")
+            QMessageBox.critical(
+                self,
+                "Errore",
+                "Errore durante la gestione del riconoscimento gesti mani:\n{str(e)}",
+            )
 
     def _ipa_to_pronunciation_text(self, symbol):
         """Converte un simbolo IPA in testo pronunciabile per il TTS."""
         # Mappa dei simboli IPA a testi pronunciabili in italiano
         ipa_mapping = {
             # Vocali
-            '[i]': 'i come in mìle',
-            '[e]': 'e come in mèta',
-            '[ɛ]': 'e aperta come in mèta',
-            '[a]': 'a come in casa',
-            '[ɔ]': 'o aperta come in còrso',
-            '[o]': 'o come in còrso',
-            '[u]': 'u come in cùpa',
-
+            "[i]": "i come in mìle",
+            "[e]": "e come in mèta",
+            "[ɛ]": "e aperta come in mèta",
+            "[a]": "a come in casa",
+            "[ɔ]": "o aperta come in còrso",
+            "[o]": "o come in còrso",
+            "[u]": "u come in cùpa",
             # Consonanti
-            '[p]': 'p come in pane',
-            '[b]': 'b come in buono',
-            '[t]': 't come in tavolo',
-            '[d]': 'd come in dono',
-            '[k]': 'c come in cane',
-            '[g]': 'g come in gatto',
-            '[f]': 'f come in fare',
-            '[v]': 'v come in vino',
-            '[s]': 's come in sole',
-            '[z]': 's sonora come in rosa',
-            '[ʃ]': 'sc come in scena',
-            '[ʒ]': 'j francese come in jour',
-            '[m]': 'm come in mamma',
-            '[n]': 'n come in nonna',
-            '[ɲ]': 'gn come in gnomo',
-            '[l]': 'l come in luna',
-            '[ʎ]': 'gl come in gli',
-            '[r]': 'r come in rosa',
-            '[ʁ]': 'r francese come in rouge',
-
+            "[p]": "p come in pane",
+            "[b]": "b come in buono",
+            "[t]": "t come in tavolo",
+            "[d]": "d come in dono",
+            "[k]": "c come in cane",
+            "[g]": "g come in gatto",
+            "[f]": "f come in fare",
+            "[v]": "v come in vino",
+            "[s]": "s come in sole",
+            "[z]": "s sonora come in rosa",
+            "[ʃ]": "sc come in scena",
+            "[ʒ]": "j francese come in jour",
+            "[m]": "m come in mamma",
+            "[n]": "n come in nonna",
+            "[ɲ]": "gn come in gnomo",
+            "[l]": "l come in luna",
+            "[ʎ]": "gl come in gli",
+            "[r]": "r come in rosa",
+            "[ʁ]": "r francese come in rouge",
             # Simboli speciali
-            '[ˈ]': 'accento principale',
-            '[ˌ]': 'accento secondario',
-            '[.]': 'sillaba',
-            '[:]': 'lunga',
-            '[̯]': 'semi vocale',
-            '[̃]': 'nasale',
-
+            "[ˈ]": "accento principale",
+            "[ˌ]": "accento secondario",
+            "[.]": "sillaba",
+            "[:]": "lunga",
+            "[̯]": "semi vocale",
+            "[̃]": "nasale",
             # Altri simboli comuni
-            '[t͡s]': 'z come in grazie',
-            '[d͡z]': 'z sonora come in zero',
-            '[t͡ʃ]': 'c come in cena',
-            '[d͡ʒ]': 'g come in giro',
+            "[t͡s]": "z come in grazie",
+            "[d͡z]": "z sonora come in zero",
+            "[t͡ʃ]": "c come in cena",
+            "[d͡ʒ]": "g come in giro",
         }
 
         # Rimuovi le parentesi quadre se presenti
-        clean_symbol = symbol.strip('[]')
+        clean_symbol = symbol.strip("[]")
 
         # Cerca corrispondenza esatta
         if symbol in ipa_mapping:
             return ipa_mapping[symbol]
 
         # Cerca corrispondenza senza parentesi
-        bracketed_symbol = f'[{clean_symbol}]'
+        bracketed_symbol = f"[{clean_symbol}]"
         if bracketed_symbol in ipa_mapping:
             return ipa_mapping[bracketed_symbol]
 
@@ -5754,10 +6447,15 @@ Riformulazione intensa:"""
 
         try:
             # Controlla la combinazione Ctrl+F per toggle fullscreen
-            if (a0 and hasattr(a0, 'key') and hasattr(a0, 'modifiers')
-                    and a0.key() == Qt.Key.Key_F and a0.modifiers() & Qt.KeyboardModifier.ControlModifier):
+            if (
+                a0
+                and hasattr(a0, "key")
+                and hasattr(a0, "modifiers")
+                and a0.key() == Qt.Key.Key_F
+                and a0.modifiers() & Qt.KeyboardModifier.ControlModifier
+            ):
                 self.toggle_fullscreen()
-                if hasattr(a0, 'accept'):
+                if hasattr(a0, "accept"):
                     a0.accept()  # Segnala che l'evento è stato gestito
             else:
                 # Passa l'evento al gestore predefinito
@@ -5775,6 +6473,7 @@ Riformulazione intensa:"""
 
                 # Piccola pausa per permettere alla finestra di stabilizzarsi
                 from PyQt6.QtCore import QTimer
+
                 QTimer.singleShot(10, self._restore_original_size)
 
                 self.is_fullscreen = False
@@ -5786,7 +6485,9 @@ Riformulazione intensa:"""
                     self.original_height = self.height()
                     self.original_x = self.x()
                     self.original_y = self.y()
-                    logging.info("Salvata dimensione originale: {self.original_width}x{self.original_height} at ({self.original_x}, {self.original_y})")
+                    logging.info(
+                        "Salvata dimensione originale: {self.original_width}x{self.original_height} at ({self.original_x}, {self.original_y})"
+                    )
 
                 # Entra in modalità fullscreen
                 self.showFullScreen()
@@ -5795,8 +6496,11 @@ Riformulazione intensa:"""
 
         except Exception:
             logging.error("Errore toggle fullscreen: {e}")
-            QMessageBox.critical(self, "Errore Fullscreen",
-                                 "Errore durante il cambio modalità schermo:\n{str(e)}")
+            QMessageBox.critical(
+                self,
+                "Errore Fullscreen",
+                "Errore durante il cambio modalità schermo:\n{str(e)}",
+            )
 
     def _restore_original_size(self):
         """Ripristina le dimensioni originali dopo l'uscita dal fullscreen."""
@@ -5816,7 +6520,9 @@ Riformulazione intensa:"""
                 self.raise_()
                 self.activateWindow()
 
-                logging.info("Ripristinate dimensioni originali: {self.original_width}x{self.original_height} at ({self.original_x}, {self.original_y})")
+                logging.info(
+                    "Ripristinate dimensioni originali: {self.original_width}x{self.original_height} at ({self.original_x}, {self.original_y})"
+                )
             else:
                 logging.warning("Nessuna dimensione originale da ripristinare")
 
@@ -5828,7 +6534,7 @@ Riformulazione intensa:"""
         try:
             if self.log_button.isChecked():
                 # Salva il contenuto attuale dei dettagli prima di sovrascriverlo
-                if hasattr(self, 'full_text'):
+                if hasattr(self, "full_text"):
                     self.previous_details_content = self.full_text
 
                 # Mostra il contenuto del log nei dettagli
@@ -5836,16 +6542,18 @@ Riformulazione intensa:"""
                 self.log_button.setText("📋 Log ✓")
             else:
                 # Nasconde il contenuto del log (torna alla visualizzazione precedente o pulisce)
-                if hasattr(self, 'previous_details_content'):
+                if hasattr(self, "previous_details_content"):
                     self.show_text_in_details(self.previous_details_content)
-                    delattr(self, 'previous_details_content')
+                    delattr(self, "previous_details_content")
                 else:
                     self._clear_details()
                 self.log_button.setText("📋 Log")
 
         except Exception:
             logging.error("Errore toggle log: {e}")
-            QMessageBox.critical(self, "Errore Log", "Errore durante il toggle del log:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore Log", "Errore durante il toggle del log:\n{str(e)}"
+            )
 
     def show_log_content(self):
         """Mostra il contenuto del log nei dettagli."""
@@ -5856,42 +6564,48 @@ Riformulazione intensa:"""
 
             # Ottieni il percorso del file di log
             log_config = get_config()
-            log_file = log_config.get_setting('files.log_file', 'Save/LOG/app.log')
+            log_file = log_config.get_setting("files.log_file", "Save/LOG/app.log")
 
             if not os.path.exists(log_file):
                 log_content = "📁 File log non trovato:\n{log_file}"
             else:
                 # Leggi il file di log
-                with open(log_file, 'r', encoding='utf-8') as f:
+                with open(log_file, "r", encoding="utf-8") as f:
                     log_content = f.read()
 
                 # Filtra solo errori e warning
-                lines = log_content.split('\n')
+                lines = log_content.split("\n")
                 filtered_lines = []
 
                 for line in lines:
                     line_lower = line.lower()
-                    if ('error' in line_lower
-                        or 'warning' in line_lower
-                        or 'critical' in line_lower
-                            or 'exception' in line_lower):
+                    if (
+                        "error" in line_lower
+                        or "warning" in line_lower
+                        or "critical" in line_lower
+                        or "exception" in line_lower
+                    ):
                         filtered_lines.append(line)
 
                 if not filtered_lines:
-                    log_content = "📋 LOG ERRORI E WARNING\n\n" \
-                        "✅ Nessun errore o warning trovato nel log!\n\n" \
-                        "📁 File log: {log_file}\n" \
-                        "📊 Righe totali nel log: {len(lines)}\n" \
+                    log_content = (
+                        "📋 LOG ERRORI E WARNING\n\n"
+                        "✅ Nessun errore o warning trovato nel log!\n\n"
+                        "📁 File log: {log_file}\n"
+                        "📊 Righe totali nel log: {len(lines)}\n"
                         "🔄 Ultimo aggiornamento: {datetime.now().strftime('%H:%M:%S')}"
+                    )
                 else:
-                    log_content = "📋 LOG ERRORI E WARNING\n\n" \
-                        "🔍 Trovati {len(filtered_lines)} errori/warning:\n\n" \
-                        "{'=' * 60}\n\n" \
-                        "{chr(10).join(filtered_lines[-50:])}\n\n" \
-                        "{'=' * 60}\n\n" \
-                        "📁 File log: {log_file}\n" \
-                        "📊 Righe totali nel log: {len(lines)}\n" \
+                    log_content = (
+                        "📋 LOG ERRORI E WARNING\n\n"
+                        "🔍 Trovati {len(filtered_lines)} errori/warning:\n\n"
+                        "{'=' * 60}\n\n"
+                        "{chr(10).join(filtered_lines[-50:])}\n\n"
+                        "{'=' * 60}\n\n"
+                        "📁 File log: {log_file}\n"
+                        "📊 Righe totali nel log: {len(lines)}\n"
                         "🔄 Ultimo aggiornamento: {datetime.now().strftime('%H:%M:%S')}"
+                    )
 
             # Mostra il contenuto nei dettagli
             self.show_text_in_details(log_content)
@@ -5901,47 +6615,58 @@ Riformulazione intensa:"""
             error_content = "❌ Errore lettura log:\n{str(e)}"
             self.show_text_in_details(error_content)
 
-    # def show_log_window(self):
-    #     """Metodo disabilitato - funzionalità log spostata in alto come label di stato."""
-    #     pass
+        # def show_log_window(self):
+        #     """Metodo disabilitato - funzionalità log spostata in alto come label di stato."""
+        #     pass
 
-    # def refresh_log_content(self):
-    #     """Metodo disabilitato - funzionalità log spostata in alto come label di stato."""
-    #     pass
+        # def refresh_log_content(self):
+        #     """Metodo disabilitato - funzionalità log spostata in alto come label di stato."""
+        #     pass
 
-    # def clear_log_file(self):
-    #     """Metodo disabilitato - funzionalità log spostata in alto come label di stato."""
+        # def clear_log_file(self):
+        #     """Metodo disabilitato - funzionalità log spostata in alto come label di stato."""
         try:
-            reply = QMessageBox.question(self, "Conferma Pulizia Log",
-                                         "Sei sicuro di voler pulire il file di log?\n\n"
-                                         "Questa azione rimuoverà tutti gli errori e warning registrati.",
-                                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            reply = QMessageBox.question(
+                self,
+                "Conferma Pulizia Log",
+                "Sei sicuro di voler pulire il file di log?\n\n"
+                "Questa azione rimuoverà tutti gli errori e warning registrati.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
 
             if reply == QMessageBox.StandardButton.Yes:
                 from .main_03_configurazione_e_opzioni import get_config
+
                 log_config = get_config()
-                log_file = log_config.get_setting('files.log_file', 'Save/LOG/app.log')
+                log_file = log_config.get_setting("files.log_file", "Save/LOG/app.log")
 
                 # Svuota il file di log
-                with open(log_file, 'w', encoding='utf-8') as f:
-                    f.write("[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] INFO Log pulito dall'utente\n")
+                with open(log_file, "w", encoding="utf-8") as f:
+                    f.write(
+                        "[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] INFO Log pulito dall'utente\n"
+                    )
 
                 # Log pulito, non è necessario aggiornare la visualizzazione
-                QMessageBox.information(self, "Log Pulito", "✅ File di log pulito con successo!")
+                QMessageBox.information(
+                    self, "Log Pulito", "✅ File di log pulito con successo!"
+                )
 
         except Exception:
             logging.error("Errore pulizia log: {e}")
-            QMessageBox.critical(self, "Errore Pulizia Log",
-                                 "Errore durante la pulizia del log:\n{str(e)}")
+            QMessageBox.critical(
+                self,
+                "Errore Pulizia Log",
+                "Errore durante la pulizia del log:\n{str(e)}",
+            )
 
     def hide_log_window(self):
         """Nasconde la visualizzazione del log nei dettagli."""
         try:
             # Nasconde il contenuto del log nei dettagli
-            if hasattr(self, 'log_button'):
+            if hasattr(self, "log_button"):
                 self.log_button.setChecked(False)
                 # Torna alla visualizzazione precedente o pulisce
-                if hasattr(self, 'previous_details_content'):
+                if hasattr(self, "previous_details_content"):
                     self.show_text_in_details(self.previous_details_content)
                 else:
                     self._clear_details()
@@ -5951,43 +6676,46 @@ Riformulazione intensa:"""
 
     def toggle_audio_playback(self, file_path):
         """Alterna play/pausa per l'audio."""
-        if hasattr(self, 'media_player') and self.media_player and QMediaPlayer:
+        if hasattr(self, "media_player") and self.media_player and QMediaPlayer:
             try:
-                if self.media_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+                if (
+                    self.media_player.playbackState()
+                    == QMediaPlayer.PlaybackState.PlayingState
+                ):
                     self.media_player.pause()
-                    if hasattr(self, 'play_button'):
+                    if hasattr(self, "play_button"):
                         self.play_button.setText("▶️ Play")
                 else:
                     self.media_player.play()
-                    if hasattr(self, 'play_button'):
+                    if hasattr(self, "play_button"):
                         self.play_button.setText("⏸️ Pausa")
             except Exception:
                 logging.error("Errore toggle audio playback: {e}")
 
     def pause_audio(self):
         """Mette in pausa l'audio."""
-        if hasattr(self, 'media_player'):
+        if hasattr(self, "media_player"):
             self.media_player.pause()
-            if hasattr(self, 'play_button'):
+            if hasattr(self, "play_button"):
                 self.play_button.setText("▶️ Play")
 
     def stop_audio(self):
         """Ferma l'audio."""
-        if hasattr(self, 'media_player'):
+        if hasattr(self, "media_player"):
             self.media_player.stop()
-            if hasattr(self, 'play_button'):
+            if hasattr(self, "play_button"):
                 self.play_button.setText("▶️ Play")
 
     def update_position(self, position):
         """Aggiorna la posizione del slider."""
-        if hasattr(self, 'position_slider'):
+        if hasattr(self, "position_slider"):
             self.position_slider.setValue(position)
 
     def update_duration(self, duration):
         """Aggiorna la durata totale."""
-        if hasattr(self, 'position_slider'):
+        if hasattr(self, "position_slider"):
             self.position_slider.setRange(0, duration)
-        if hasattr(self, 'duration_label'):
+        if hasattr(self, "duration_label"):
             # Converti millisecondi in formato MM:SS
             total_seconds = duration // 1000
             minutes = total_seconds // 60
@@ -5996,7 +6724,7 @@ Riformulazione intensa:"""
 
     def set_position(self, position):
         """Imposta la posizione dell'audio."""
-        if hasattr(self, 'media_player'):
+        if hasattr(self, "media_player"):
             self.media_player.setPosition(position)
 
     def handle_ipa_button(self):
@@ -6004,9 +6732,14 @@ Riformulazione intensa:"""
         try:
             # Crea il dialog IPA
             ipa_dialog = QDialog(self)
-            ipa_dialog.setWindowTitle("📝 Simboli IPA - Alfabeto Fonetico Internazionale")
-            ipa_dialog.setFixedSize(1200, 1000)  # Aumentato l'altezza per vedere nasalizzazione e suggerimento
-            ipa_dialog.setStyleSheet("""
+            ipa_dialog.setWindowTitle(
+                "📝 Simboli IPA - Alfabeto Fonetico Internazionale"
+            )
+            ipa_dialog.setFixedSize(
+                1200, 1000
+            )  # Aumentato l'altezza per vedere nasalizzazione e suggerimento
+            ipa_dialog.setStyleSheet(
+                """
                 QDialog {
                     background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
                         stop:0 #f8f9fa, stop:1 #e9ecef);
@@ -6107,7 +6840,8 @@ Riformulazione intensa:"""
                 QSplitter::handle:hover {
                     background-color: #5a359a;
                 }
-            """)
+            """
+            )
 
             # Layout principale con splitter
             main_layout = QVBoxLayout(ipa_dialog)
@@ -6118,7 +6852,9 @@ Riformulazione intensa:"""
             main_layout.addWidget(title)
 
             # Descrizione
-            desc = QLabel("Clicca sui simboli IPA per copiarli negli appunti. Tutto quello che copi appare anche nell'area clipboard qui sotto per un riscontro immediato.")
+            desc = QLabel(
+                "Clicca sui simboli IPA per copiarli negli appunti. Tutto quello che copi appare anche nell'area clipboard qui sotto per un riscontro immediato."
+            )
             desc.setWordWrap(True)
             main_layout.addWidget(desc)
 
@@ -6148,15 +6884,21 @@ Riformulazione intensa:"""
                 ("[a]", "casa"),
                 ("[ɔ]", "còrso"),
                 ("[o]", "còrso"),
-                ("[u]", "cùpa")
+                ("[u]", "cùpa"),
             ]
 
             for symbol, example in vocali_data:
                 # Pulsante principale del simbolo (copia negli appunti)
                 btn = QPushButton("{symbol}\n{example}")
                 btn.setObjectName("ipa_symbol")
-                btn.setToolTip("Esempio: '{example}' → trascrizione fonetica con {symbol}")
-                btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
+                btn.setToolTip(
+                    "Esempio: '{example}' → trascrizione fonetica con {symbol}"
+                )
+                btn.clicked.connect(
+                    lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(
+                        s, ipa_dialog
+                    )
+                )
                 vocali_layout.addWidget(btn)
 
             vocali_layout.addStretch()
@@ -6177,15 +6919,21 @@ Riformulazione intensa:"""
                 ("[k]", "casa"),
                 ("[g]", "gatto"),
                 ("[f]", "fame"),
-                ("[v]", "vino")
+                ("[v]", "vino"),
             ]
 
             for symbol, example in cons1_data:
                 # Pulsante principale del simbolo (copia negli appunti)
                 btn = QPushButton("{symbol}\n{example}")
                 btn.setObjectName("ipa_symbol")
-                btn.setToolTip("Esempio: '{example}' → trascrizione fonetica con {symbol}")
-                btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
+                btn.setToolTip(
+                    "Esempio: '{example}' → trascrizione fonetica con {symbol}"
+                )
+                btn.clicked.connect(
+                    lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(
+                        s, ipa_dialog
+                    )
+                )
                 cons1_layout.addWidget(btn)
 
             cons1_layout.addStretch()
@@ -6201,15 +6949,21 @@ Riformulazione intensa:"""
                 ("[m]", "mamma"),
                 ("[n]", "nono"),
                 ("[ɲ]", "gnomo"),
-                ("[l]", "luna")
+                ("[l]", "luna"),
             ]
 
             for symbol, example in cons2_data:
                 # Pulsante principale del simbolo (copia negli appunti)
                 btn = QPushButton("{symbol}\n{example}")
                 btn.setObjectName("ipa_symbol")
-                btn.setToolTip("Esempio: '{example}' → trascrizione fonetica con {symbol}")
-                btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
+                btn.setToolTip(
+                    "Esempio: '{example}' → trascrizione fonetica con {symbol}"
+                )
+                btn.clicked.connect(
+                    lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(
+                        s, ipa_dialog
+                    )
+                )
                 cons2_layout.addWidget(btn)
 
             cons2_layout.addStretch()
@@ -6217,18 +6971,20 @@ Riformulazione intensa:"""
 
             # Terza riga consonanti
             cons3_layout = QHBoxLayout()
-            cons3_data = [
-                ("[ʎ]", "gli"),
-                ("[r]", "raro"),
-                ("[ʁ]", "r francese")
-            ]
+            cons3_data = [("[ʎ]", "gli"), ("[r]", "raro"), ("[ʁ]", "r francese")]
 
             for symbol, example in cons3_data:
                 # Pulsante principale del simbolo (copia negli appunti)
                 btn = QPushButton("{symbol}\n{example}")
                 btn.setObjectName("ipa_symbol")
-                btn.setToolTip("Esempio: '{example}' → trascrizione fonetica con {symbol}")
-                btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
+                btn.setToolTip(
+                    "Esempio: '{example}' → trascrizione fonetica con {symbol}"
+                )
+                btn.clicked.connect(
+                    lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(
+                        s, ipa_dialog
+                    )
+                )
                 cons3_layout.addWidget(btn)
 
             cons3_layout.addStretch()
@@ -6246,7 +7002,7 @@ Riformulazione intensa:"""
                 ("[.]", "separatore sillabe"),
                 ("[:]", "vocale lunga"),
                 ("[̯]", "semivocale"),
-                ("[̃]", "nasalizzazione")
+                ("[̃]", "nasalizzazione"),
             ]
 
             for symbol, example in speciali_data:
@@ -6254,34 +7010,46 @@ Riformulazione intensa:"""
                 btn = QPushButton("{symbol}\n{example}")
                 btn.setObjectName("ipa_symbol")
                 if symbol == "[ˈ]":
-                    btn.setToolTip("Esempio: 'grazie' → [ˈɡrat.t͡sje] (accento primario sulla prima sillaba)")
+                    btn.setToolTip(
+                        "Esempio: 'grazie' → [ˈɡrat.t͡sje] (accento primario sulla prima sillaba)"
+                    )
                 else:
                     btn.setToolTip("Esempio pratico con {symbol}: {example}")
-                btn.clicked.connect(lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(s, ipa_dialog))
+                btn.clicked.connect(
+                    lambda checked, s=symbol: self.copy_single_ipa_symbol_with_clipboard(
+                        s, ipa_dialog
+                    )
+                )
                 speciali_layout.addWidget(btn)
 
             speciali_layout.addStretch()
             scroll_layout.addLayout(speciali_layout)
 
             # SPIEGAZIONE
-            info_label = QLabel("💡 Guida all'utilizzo:\n\n"
-                                "• Utilizza questi simboli per trascrivere correttamente la pronuncia delle parole italiane\n"
-                                "• Passa il mouse sui pulsanti per vedere esempi pratici di utilizzo\n"
-                                "• Clicca sui simboli per copiarli negli appunti\n"
-                                "• Tutto quello che copi appare automaticamente nel clipboard sottostante\n\n"
-                                "🔍 Suggerimento: Inizia con le vocali e consonanti più comuni!")
+            info_label = QLabel(
+                "💡 Guida all'utilizzo:\n\n"
+                "• Utilizza questi simboli per trascrivere correttamente la pronuncia delle parole italiane\n"
+                "• Passa il mouse sui pulsanti per vedere esempi pratici di utilizzo\n"
+                "• Clicca sui simboli per copiarli negli appunti\n"
+                "• Tutto quello che copi appare automaticamente nel clipboard sottostante\n\n"
+                "🔍 Suggerimento: Inizia con le vocali e consonanti più comuni!"
+            )
             info_label.setObjectName("section")
             info_label.setWordWrap(True)
-            info_label.setStyleSheet("font-size: 14px; color: #28a745; margin-top: 25px; margin-bottom: 15px; "
-                                     "background-color: rgba(40, 167, 69, 0.1); padding: 15px; border-radius: 8px; "
-                                     "border: 1px solid rgba(40, 167, 69, 0.3);")
+            info_label.setStyleSheet(
+                "font-size: 14px; color: #28a745; margin-top: 25px; margin-bottom: 15px; "
+                "background-color: rgba(40, 167, 69, 0.1); padding: 15px; border-radius: 8px; "
+                "border: 1px solid rgba(40, 167, 69, 0.3);"
+            )
             scroll_layout.addWidget(info_label)
 
             # Imposta lo scroll
             scroll_area.setWidget(scroll_widget)
             scroll_area.setWidgetResizable(True)
             scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-            scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            scroll_area.setHorizontalScrollBarPolicy(
+                Qt.ScrollBarPolicy.ScrollBarAsNeeded
+            )
             top_layout.addWidget(scroll_area)
 
             # Aggiungi il top_widget al splitter
@@ -6298,7 +7066,9 @@ Riformulazione intensa:"""
 
             # Area di testo per il clipboard
             self.clipboard_text = QTextEdit()
-            self.clipboard_text.setPlaceholderText("Qui appariranno tutti i simboli IPA che copi...\n\nInizia cliccando sui pulsanti sopra! 🎵")
+            self.clipboard_text.setPlaceholderText(
+                "Qui appariranno tutti i simboli IPA che copi...\n\nInizia cliccando sui pulsanti sopra! 🎵"
+            )
             self.clipboard_text.setReadOnly(False)  # Permetti modifica manuale
             bottom_layout.addWidget(self.clipboard_text)
 
@@ -6359,7 +7129,9 @@ Riformulazione intensa:"""
 
         except Exception:
             logging.error("Errore apertura dialog IPA: {e}")
-            QMessageBox.critical(self, "Errore", "Errore nell'apertura della guida IPA:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore", "Errore nell'apertura della guida IPA:\n{str(e)}"
+            )
 
     def copy_single_ipa_symbol_with_clipboard(self, symbol, dialog):
         """Copia un singolo simbolo IPA negli appunti e aggiungilo al clipboard del dialog. Se TTS è abilitato, pronuncia anche il simbolo."""
@@ -6371,7 +7143,7 @@ Riformulazione intensa:"""
 
             # Aggiungi al clipboard del dialog
             current_text = self.clipboard_text.toPlainText()
-            if current_text and not current_text.endswith(' '):
+            if current_text and not current_text.endswith(" "):
                 self.clipboard_text.setPlainText(current_text + symbol)
             else:
                 self.clipboard_text.setPlainText(current_text + symbol)
@@ -6382,7 +7154,7 @@ Riformulazione intensa:"""
             self.clipboard_text.setTextCursor(cursor)
 
             # Se TTS è abilitato, pronuncia il simbolo
-            if hasattr(self, 'tts_enabled') and self.tts_enabled:
+            if hasattr(self, "tts_enabled") and self.tts_enabled:
                 try:
                     # Converti il simbolo IPA in testo pronunciabile
                     pronunciation_text = self._ipa_to_pronunciation_text(symbol)
@@ -6391,22 +7163,34 @@ Riformulazione intensa:"""
                         # Crea e avvia il thread TTS
                         tts_thread = TTSThread(
                             text=pronunciation_text,
-                            engine_name='pyttsx3',  # Usa pyttsx3 per velocità
-                            voice_or_lang='it',     # Voce italiana
-                            speed=0.8,              # Più lento per chiarezza
-                            pitch=1.0
+                            engine_name="pyttsx3",  # Usa pyttsx3 per velocità
+                            voice_or_lang="it",  # Voce italiana
+                            speed=0.8,  # Più lento per chiarezza
+                            pitch=1.0,
                         )
 
                         # Connetti segnali
-                        tts_thread.started_reading.connect(lambda: logging.info("🔊 Pronunciando simbolo IPA: {symbol}"))
-                        tts_thread.finished_reading.connect(lambda: logging.info("✅ Pronuncia simbolo IPA completata: {symbol}"))
-                        tts_thread.error_occurred.connect(lambda err: logging.error("❌ Errore pronuncia simbolo IPA {symbol}: {err}"))
+                        tts_thread.started_reading.connect(
+                            lambda: logging.info(
+                                "🔊 Pronunciando simbolo IPA: {symbol}"
+                            )
+                        )
+                        tts_thread.finished_reading.connect(
+                            lambda: logging.info(
+                                "✅ Pronuncia simbolo IPA completata: {symbol}"
+                            )
+                        )
+                        tts_thread.error_occurred.connect(
+                            lambda err: logging.error(
+                                "❌ Errore pronuncia simbolo IPA {symbol}: {err}"
+                            )
+                        )
 
                         # Avvia la pronuncia
                         tts_thread.start()
 
                         # Salva riferimento per evitare garbage collection
-                        if not hasattr(self, '_tts_threads'):
+                        if not hasattr(self, "_tts_threads"):
                             self._tts_threads = []
                         self._tts_threads.append(tts_thread)
 
@@ -6418,13 +7202,17 @@ Riformulazione intensa:"""
 
         except Exception:
             logging.error("Errore copia simbolo IPA: {e}")
-            QMessageBox.critical(dialog, "Errore Copia", "Errore durante la copia:\n{str(e)}")
+            QMessageBox.critical(
+                dialog, "Errore Copia", "Errore durante la copia:\n{str(e)}"
+            )
 
     def clear_clipboard(self):
         """Pulisce l'area clipboard."""
         try:
             self.clipboard_text.clear()
-            self.clipboard_text.setPlaceholderText("Clipboard pulito! 🎵\n\nInizia cliccando sui pulsanti sopra!")
+            self.clipboard_text.setPlaceholderText(
+                "Clipboard pulito! 🎵\n\nInizia cliccando sui pulsanti sopra!"
+            )
         except Exception:
             logging.error("Errore pulizia clipboard: {e}")
 
@@ -6436,21 +7224,29 @@ Riformulazione intensa:"""
                 clipboard = QApplication.clipboard()
                 if clipboard:
                     clipboard.setText(content)
-                    QMessageBox.information(self, "Clipboard Copiato",
-                                            "✅ Tutto il contenuto del clipboard copiato negli appunti!\n\n"
-                                            "📝 {len(content)} caratteri copiati")
+                    QMessageBox.information(
+                        self,
+                        "Clipboard Copiato",
+                        "✅ Tutto il contenuto del clipboard copiato negli appunti!\n\n"
+                        "📝 {len(content)} caratteri copiati",
+                    )
             else:
-                QMessageBox.warning(self, "Clipboard Vuoto",
-                                    "Il clipboard è vuoto. Clicca prima sui simboli IPA per riempirlo!")
+                QMessageBox.warning(
+                    self,
+                    "Clipboard Vuoto",
+                    "Il clipboard è vuoto. Clicca prima sui simboli IPA per riempirlo!",
+                )
         except Exception:
             logging.error("Errore copia clipboard: {e}")
-            QMessageBox.critical(self, "Errore Copia", "Errore durante la copia:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore Copia", "Errore durante la copia:\n{str(e)}"
+            )
 
     def pronounce_ipa_symbol(self, symbol, dialog=None):
         """Pronuncia un simbolo IPA e lo aggiunge al clipboard del dialog."""
         try:
             # Prima copia il simbolo nel clipboard (se dialog è fornito)
-            if dialog and hasattr(self, 'clipboard_text'):
+            if dialog and hasattr(self, "clipboard_text"):
                 # Copia negli appunti di sistema
                 clipboard = QApplication.clipboard()
                 if clipboard:
@@ -6458,7 +7254,7 @@ Riformulazione intensa:"""
 
                 # Aggiungi al clipboard del dialog
                 current_text = self.clipboard_text.toPlainText()
-                if current_text and not current_text.endswith(' '):
+                if current_text and not current_text.endswith(" "):
                     self.clipboard_text.setPlainText(current_text + symbol)
                 else:
                     self.clipboard_text.setPlainText(current_text + symbol)
@@ -6469,24 +7265,33 @@ Riformulazione intensa:"""
                 self.clipboard_text.setTextCursor(cursor)
 
             # Controlla se TTS è abilitato
-            if not hasattr(self, 'tts_enabled') or not self.tts_enabled:
-                QMessageBox.information(self, "TTS Disabilitato",
-                                        "🔇 La sintesi vocale è attualmente disabilitata.\n\n"
-                                        "Clicca sul pulsante '🔇 TTS OFF' per riabilitarla.")
+            if not hasattr(self, "tts_enabled") or not self.tts_enabled:
+                QMessageBox.information(
+                    self,
+                    "TTS Disabilitato",
+                    "🔇 La sintesi vocale è attualmente disabilitata.\n\n"
+                    "Clicca sul pulsante '🔇 TTS OFF' per riabilitarla.",
+                )
                 return
 
             if not TTS_AVAILABLE or not TTSThread:
-                QMessageBox.warning(self, "TTS Non Disponibile",
-                                    "Il sistema di sintesi vocale non è disponibile.\n\n"
-                                    "Assicurati che le librerie 'pyttsx3' e 'gtts' siano installate.")
+                QMessageBox.warning(
+                    self,
+                    "TTS Non Disponibile",
+                    "Il sistema di sintesi vocale non è disponibile.\n\n"
+                    "Assicurati che le librerie 'pyttsx3' e 'gtts' siano installate.",
+                )
                 return
 
             # Converti il simbolo IPA in testo pronunciabile
             pronunciation_text = self._ipa_to_pronunciation_text(symbol)
 
             if not pronunciation_text:
-                QMessageBox.warning(self, "Simbolo Non Supportato",
-                                    "Il simbolo '{symbol}' non ha una pronuncia definita.")
+                QMessageBox.warning(
+                    self,
+                    "Simbolo Non Supportato",
+                    "Il simbolo '{symbol}' non ha una pronuncia definita.",
+                )
                 return
 
             # Crea e avvia il thread TTS
@@ -6494,37 +7299,50 @@ Riformulazione intensa:"""
             pronunciation_text = self._ipa_to_pronunciation_text(symbol)
 
             if not pronunciation_text:
-                QMessageBox.warning(self, "Simbolo Non Supportato",
-                                    "Il simbolo '{symbol}' non ha una pronuncia definita.")
+                QMessageBox.warning(
+                    self,
+                    "Simbolo Non Supportato",
+                    "Il simbolo '{symbol}' non ha una pronuncia definita.",
+                )
                 return
 
             # Crea e avvia il thread TTS
             tts_thread = TTSThread(
                 text=pronunciation_text,
-                engine_name='pyttsx3',  # Usa pyttsx3 per velocità
-                voice_or_lang='it',     # Voce italiana
-                speed=0.8,              # Più lento per chiarezza
-                pitch=1.0
+                engine_name="pyttsx3",  # Usa pyttsx3 per velocità
+                voice_or_lang="it",  # Voce italiana
+                speed=0.8,  # Più lento per chiarezza
+                pitch=1.0,
             )
 
             # Connetti segnali
-            tts_thread.started_reading.connect(lambda: logging.info("🔊 Pronunciando: {symbol}"))
-            tts_thread.finished_reading.connect(lambda: logging.info("✅ Pronuncia completata: {symbol}"))
-            tts_thread.error_occurred.connect(lambda err: logging.error("❌ Errore pronuncia {symbol}: {err}"))
+            tts_thread.started_reading.connect(
+                lambda: logging.info("🔊 Pronunciando: {symbol}")
+            )
+            tts_thread.finished_reading.connect(
+                lambda: logging.info("✅ Pronuncia completata: {symbol}")
+            )
+            tts_thread.error_occurred.connect(
+                lambda err: logging.error("❌ Errore pronuncia {symbol}: {err}")
+            )
 
             # Avvia la pronuncia
             tts_thread.start()
 
             # Salva riferimento per evitare garbage collection
-            if not hasattr(self, '_tts_threads'):
+            if not hasattr(self, "_tts_threads"):
                 self._tts_threads = []
             self._tts_threads.append(tts_thread)
 
         except Exception:
             logging.error("Errore integrato pronuncia+copia IPA {symbol}: {e}")
-            QMessageBox.critical(self, "Errore Integrato", "Errore durante copia e pronuncia:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore Integrato", "Errore durante copia e pronuncia:\n{str(e)}"
+            )
             logging.error("Errore copia simbolo IPA: {e}")
-            QMessageBox.critical(self, "Errore Copia", "Errore durante la copia:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore Copia", "Errore durante la copia:\n{str(e)}"
+            )
 
     def copy_all_ipa_symbols(self):
         """Copia tutti i simboli IPA negli appunti."""
@@ -6545,12 +7363,17 @@ ESEMPI:
             clipboard = QApplication.clipboard()
             if clipboard:
                 clipboard.setText(all_symbols.strip())
-                QMessageBox.information(self, "Guida Completa Copiata",
-                                        "✅ Tutti i simboli IPA copiati negli appunti!\n\n"
-                                        "Ora hai a disposizione la guida completa per le trascrizioni fonetiche.")
+                QMessageBox.information(
+                    self,
+                    "Guida Completa Copiata",
+                    "✅ Tutti i simboli IPA copiati negli appunti!\n\n"
+                    "Ora hai a disposizione la guida completa per le trascrizioni fonetiche.",
+                )
         except Exception:
             logging.error("Errore copia tutti i simboli IPA: {e}")
-            QMessageBox.critical(self, "Errore Copia", "Errore durante la copia:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore Copia", "Errore durante la copia:\n{str(e)}"
+            )
 
     def copy_ipa_symbols(self, content):
         """Copia il contenuto IPA negli appunti."""
@@ -6558,15 +7381,23 @@ ESEMPI:
             clipboard = QApplication.clipboard()
             if clipboard:
                 clipboard.setText(content)
-                QMessageBox.information(self, "Copia Completata",
-                                        "✅ Contenuto IPA copiato negli appunti!\n\n"
-                                        "Ora puoi incollarlo dove necessario.")
+                QMessageBox.information(
+                    self,
+                    "Copia Completata",
+                    "✅ Contenuto IPA copiato negli appunti!\n\n"
+                    "Ora puoi incollarlo dove necessario.",
+                )
             else:
-                QMessageBox.warning(self, "Errore Appunti",
-                                    "Impossibile accedere agli appunti del sistema.")
+                QMessageBox.warning(
+                    self,
+                    "Errore Appunti",
+                    "Impossibile accedere agli appunti del sistema.",
+                )
         except Exception:
             logging.error("Errore copia IPA: {e}")
-            QMessageBox.critical(self, "Errore Copia", "Errore durante la copia:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore Copia", "Errore durante la copia:\n{str(e)}"
+            )
 
     def toggle_tts(self, button):
         """Abilita/disabilita la sintesi vocale per i simboli IPA."""
@@ -6575,7 +7406,8 @@ ESEMPI:
 
             if self.tts_enabled:
                 button.setText("🔊 TTS ON")
-                button.setStyleSheet("""
+                button.setStyleSheet(
+                    """
                     QPushButton {
                         background-color: #28a745;
                         color: white;
@@ -6589,13 +7421,18 @@ ESEMPI:
                     QPushButton:hover {
                         background-color: #218838;
                     }
-                """)
-                QMessageBox.information(self, "TTS Abilitato",
-                                        "🔊 Sintesi vocale abilitata!\n\n"
-                                        "Ora puoi cliccare sui pulsanti 🔊 accanto ai simboli IPA per sentirne la pronuncia.")
+                """
+                )
+                QMessageBox.information(
+                    self,
+                    "TTS Abilitato",
+                    "🔊 Sintesi vocale abilitata!\n\n"
+                    "Ora puoi cliccare sui pulsanti 🔊 accanto ai simboli IPA per sentirne la pronuncia.",
+                )
             else:
                 button.setText("🔇 TTS OFF")
-                button.setStyleSheet("""
+                button.setStyleSheet(
+                    """
                     QPushButton {
                         background-color: #dc3545;
                         color: white;
@@ -6609,14 +7446,20 @@ ESEMPI:
                     QPushButton:hover {
                         background-color: #c82333;
                     }
-                """)
-                QMessageBox.information(self, "TTS Disabilitato",
-                                        "🔇 Sintesi vocale disabilitata!\n\n"
-                                        "I pulsanti 🔊 sono ora disattivati per risparmiare risorse.")
+                """
+                )
+                QMessageBox.information(
+                    self,
+                    "TTS Disabilitato",
+                    "🔇 Sintesi vocale disabilitata!\n\n"
+                    "I pulsanti 🔊 sono ora disattivati per risparmiare risorse.",
+                )
 
         except Exception:
             logging.error("Errore toggle TTS: {e}")
-            QMessageBox.critical(self, "Errore TTS", "Errore durante il cambio stato TTS:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore TTS", "Errore durante il cambio stato TTS:\n{str(e)}"
+            )
 
     def handle_clean_button(self):
         """Gestisce la pulizia di tutti i widget con conferma utente."""
@@ -6627,7 +7470,7 @@ ESEMPI:
             "Sei sicuro di voler cancellare tutto?\n\n"
             "Questa azione rimuoverà tutti i pensierini e il contenuto dell'area di lavoro.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No  # Default: No
+            QMessageBox.StandardButton.No,  # Default: No
         )
 
         # Se l'utente non conferma, annulla l'operazione
@@ -6641,7 +7484,11 @@ ESEMPI:
                 if item:
                     try:
                         widget = item.widget()
-                        if widget and hasattr(widget, 'deleteLater') and callable(getattr(widget, 'deleteLater', None)):
+                        if (
+                            widget
+                            and hasattr(widget, "deleteLater")
+                            and callable(getattr(widget, "deleteLater", None))
+                        ):
                             widget.deleteLater()
                     except (AttributeError, TypeError):
                         pass
@@ -6650,7 +7497,11 @@ ESEMPI:
                 if item:
                     try:
                         widget = item.widget()
-                        if widget and hasattr(widget, 'deleteLater') and callable(getattr(widget, 'deleteLater', None)):
+                        if (
+                            widget
+                            and hasattr(widget, "deleteLater")
+                            and callable(getattr(widget, "deleteLater", None))
+                        ):
                             widget.deleteLater()
                     except (AttributeError, TypeError):
                         pass
@@ -6680,10 +7531,10 @@ ESEMPI:
                 "metadata": {
                     "name": project_name,
                     "created": datetime.now().isoformat(),
-                    "version": "1.0"
+                    "version": "1.0",
                 },
                 "pensierini": [],  # Colonna 1
-                "workspace": []    # Colonna 2
+                "workspace": [],  # Colonna 2
             }
 
             # Salva pensierini dalla colonna 1
@@ -6691,50 +7542,51 @@ ESEMPI:
                 item = self.pensierini_layout.itemAt(i)
                 if item:
                     widget = item.widget()
-                    if widget and hasattr(widget, 'text_label'):
-                        text_label = getattr(widget, 'text_label', None)
-                        if text_label and hasattr(text_label, 'text'):
+                    if widget and hasattr(widget, "text_label"):
+                        text_label = getattr(widget, "text_label", None)
+                        if text_label and hasattr(text_label, "text"):
                             text = text_label.text()
                             if text.strip():
-                                project_data["pensierini"].append({
-                                    "text": text,
-                                    "order": i
-                                })
+                                project_data["pensierini"].append(
+                                    {"text": text, "order": i}
+                                )
 
             # Salva workspace dalla colonna 2
             for i in range(self.work_area_layout.count()):
                 item = self.work_area_layout.itemAt(i)
                 if item:
                     widget = item.widget()
-                    if widget and hasattr(widget, 'text_label'):
-                        text_label = getattr(widget, 'text_label', None)
-                        if text_label and hasattr(text_label, 'text'):
+                    if widget and hasattr(widget, "text_label"):
+                        text_label = getattr(widget, "text_label", None)
+                        if text_label and hasattr(text_label, "text"):
                             text = text_label.text()
                             if text.strip():
-                                project_data["workspace"].append({
-                                    "text": text,
-                                    "order": i
-                                })
+                                project_data["workspace"].append(
+                                    {"text": text, "order": i}
+                                )
 
             # Salva file
             filename = "{project_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
             filepath = os.path.join(projects_dir, filename)
 
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(project_data, f, indent=2, ensure_ascii=False)
 
             QMessageBox.information(
-                self, "Salvataggio Completato",
+                self,
+                "Salvataggio Completato",
                 "Progetto '{project_name}' salvato con successo!\n\n"
                 "File: {filename}\n"
                 "Pensierini: {len(project_data['pensierini'])}\n"
-                "Workspace: {len(project_data['workspace'])}"
+                "Workspace: {len(project_data['workspace'])}",
             )
 
             logging.info("Progetto salvato: {filepath}")
 
         except Exception:
-            QMessageBox.critical(self, "Errore Salvataggio", "Errore durante il salvataggio:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore Salvataggio", "Errore durante il salvataggio:\n{str(e)}"
+            )
             logging.error("Errore salvataggio progetto: {e}")
         finally:
             # Re-enable the button
@@ -6748,18 +7600,28 @@ ESEMPI:
             projects_dir = "Save/mia_dispenda_progetti"
             if not os.path.exists(projects_dir):
                 os.makedirs(projects_dir, exist_ok=True)
-                QMessageBox.information(self, "Nessun Progetto", "Non ci sono progetti salvati.")
+                QMessageBox.information(
+                    self, "Nessun Progetto", "Non ci sono progetti salvati."
+                )
                 return
 
             # Ottieni lista file progetti
-            project_files = [f for f in os.listdir(projects_dir) if f.endswith('.json')]
+            project_files = [f for f in os.listdir(projects_dir) if f.endswith(".json")]
 
             if not project_files:
-                QMessageBox.information(self, "Nessun Progetto", "Non ci sono progetti salvati.")
+                QMessageBox.information(
+                    self, "Nessun Progetto", "Non ci sono progetti salvati."
+                )
                 return
 
             # Crea dialog per selezione progetto
-            from PyQt6.QtWidgets import QListWidget, QVBoxLayout, QDialog, QPushButton, QHBoxLayout
+            from PyQt6.QtWidgets import (
+                QListWidget,
+                QVBoxLayout,
+                QDialog,
+                QPushButton,
+                QHBoxLayout,
+            )
 
             dialog = QDialog(self)
             dialog.setWindowTitle("Seleziona Progetto da Caricare")
@@ -6772,33 +7634,41 @@ ESEMPI:
             for filename in sorted(project_files, reverse=True):
                 try:
                     filepath = os.path.join(projects_dir, filename)
-                    with open(filepath, 'r', encoding='utf-8') as f:
+                    with open(filepath, "r", encoding="utf-8") as f:
                         data = json.load(f)
                     if data:
-                        name = data.get('metadata', {}).get('name', filename)
-                        created = data.get('metadata', {}).get('created', '')
-                        pens_count = len(data.get('pensierini', []))
-                        work_count = len(data.get('workspace', []))
+                        name = data.get("metadata", {}).get("name", filename)
+                        created = data.get("metadata", {}).get("created", "")
+                        pens_count = len(data.get("pensierini", []))
+                        work_count = len(data.get("workspace", []))
 
-                        display_text = "{name} - {pens_count} pensierini, {work_count} workspace"
+                        display_text = (
+                            "{name} - {pens_count} pensierini, {work_count} workspace"
+                        )
                         if created:
                             display_text += " ({created[:19]})"
 
                         list_widget.addItem(display_text)
                         item = list_widget.item(list_widget.count() - 1)
-                        if item and hasattr(item, 'setData'):
+                        if item and hasattr(item, "setData"):
                             item.setData(Qt.ItemDataRole.UserRole, filepath)
                     else:
                         list_widget.addItem(filename)
                         item = list_widget.item(list_widget.count() - 1)
-                        if item and hasattr(item, 'setData'):
-                            item.setData(Qt.ItemDataRole.UserRole, os.path.join(projects_dir, filename))
+                        if item and hasattr(item, "setData"):
+                            item.setData(
+                                Qt.ItemDataRole.UserRole,
+                                os.path.join(projects_dir, filename),
+                            )
 
                 except Exception:
                     list_widget.addItem(filename)
                     item = list_widget.item(list_widget.count() - 1)
-                    if item and hasattr(item, 'setData'):
-                        item.setData(Qt.ItemDataRole.UserRole, os.path.join(projects_dir, filename))
+                    if item and hasattr(item, "setData"):
+                        item.setData(
+                            Qt.ItemDataRole.UserRole,
+                            os.path.join(projects_dir, filename),
+                        )
 
             layout.addWidget(list_widget)
 
@@ -6816,9 +7686,12 @@ ESEMPI:
 
             layout.addLayout(buttons_layout)
 
-            if dialog.exec() == QDialog.DialogCode.Accepted and list_widget.currentItem():
+            if (
+                dialog.exec() == QDialog.DialogCode.Accepted
+                and list_widget.currentItem()
+            ):
                 current_item = list_widget.currentItem()
-                if current_item and hasattr(current_item, 'data'):
+                if current_item and hasattr(current_item, "data"):
                     selected_file = current_item.data(Qt.ItemDataRole.UserRole)
                 else:
                     selected_file = None
@@ -6826,31 +7699,40 @@ ESEMPI:
                 if selected_file:
                     # Conferma caricamento
                     reply = QMessageBox.question(
-                        self, "Conferma Caricamento",
+                        self,
+                        "Conferma Caricamento",
                         "Caricare questo progetto? I dati attuali verranno sostituiti.",
-                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     )
 
                     if reply == QMessageBox.StandardButton.Yes:
                         self._load_project_from_file(selected_file)
                 else:
-                    QMessageBox.warning(self, "Selezione Non Valida", "Seleziona un progetto valido da caricare.")
+                    QMessageBox.warning(
+                        self,
+                        "Selezione Non Valida",
+                        "Seleziona un progetto valido da caricare.",
+                    )
 
         except Exception:
-            QMessageBox.critical(self, "Errore Caricamento", "Errore durante il caricamento:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Errore Caricamento", "Errore durante il caricamento:\n{str(e)}"
+            )
             logging.error("Errore caricamento progetto: {e}")
 
     def _load_project_from_file(self, filepath):
         """Carica progetto da file specifico."""
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 project_data = json.load(f)
 
             if not project_data:
                 raise ValueError("File progetto vuoto o corrotto")
 
             # Imposta nome progetto
-            project_name = project_data.get('metadata', {}).get('name', 'Progetto Caricato')
+            project_name = project_data.get("metadata", {}).get(
+                "name", "Progetto Caricato"
+            )
             self.project_name_input.setText(project_name)
             # Aggiorna lo stile del campo nome progetto
             self.update_project_name_input_style()
@@ -6859,34 +7741,39 @@ ESEMPI:
             self._clear_columns()
 
             # Carica pensierini (colonna 1)
-            pensierini_data = project_data.get('pensierini', [])
+            pensierini_data = project_data.get("pensierini", [])
             for pensierino in pensierini_data:
                 if isinstance(pensierino, dict):
-                    text = pensierino.get('text', '')
+                    text = pensierino.get("text", "")
                     if text.strip() and DraggableTextWidget:
                         widget = DraggableTextWidget(text, self.settings)
                         self.pensierini_layout.addWidget(widget)
 
             # Carica workspace (colonna 2)
-            workspace_data = project_data.get('workspace', [])
+            workspace_data = project_data.get("workspace", [])
             for work_item in workspace_data:
                 if isinstance(work_item, dict):
-                    text = work_item.get('text', '')
+                    text = work_item.get("text", "")
                     if text.strip() and DraggableTextWidget:
                         widget = DraggableTextWidget(text, self.settings)
                         self.work_area_layout.addWidget(widget)
 
             QMessageBox.information(
-                self, "Caricamento Completato",
+                self,
+                "Caricamento Completato",
                 "Progetto '{project_name}' caricato con successo!\n\n"
                 "Pensierini: {len(pensierini_data)}\n"
-                "Workspace: {len(workspace_data)}"
+                "Workspace: {len(workspace_data)}",
             )
 
             logging.info("Progetto caricato: {filepath}")
 
         except Exception:
-            QMessageBox.critical(self, "Errore Caricamento", "Errore durante il caricamento del file:\n{str(e)}")
+            QMessageBox.critical(
+                self,
+                "Errore Caricamento",
+                "Errore durante il caricamento del file:\n{str(e)}",
+            )
             logging.error("Errore caricamento file progetto: {e}")
 
     def _clear_columns(self):
@@ -6897,7 +7784,11 @@ ESEMPI:
                 item = self.pensierini_layout.takeAt(0)
                 if item:
                     widget = item.widget()
-                    if widget and hasattr(widget, 'deleteLater') and callable(getattr(widget, 'deleteLater', None)):
+                    if (
+                        widget
+                        and hasattr(widget, "deleteLater")
+                        and callable(getattr(widget, "deleteLater", None))
+                    ):
                         widget.deleteLater()
 
             # Pulisci colonna 2 (workspace)
@@ -6905,7 +7796,11 @@ ESEMPI:
                 item = self.work_area_layout.takeAt(0)
                 if item:
                     widget = item.widget()
-                    if widget and hasattr(widget, 'deleteLater') and callable(getattr(widget, 'deleteLater', None)):
+                    if (
+                        widget
+                        and hasattr(widget, "deleteLater")
+                        and callable(getattr(widget, "deleteLater", None))
+                    ):
                         widget.deleteLater()
 
             logging.info("Colonne pulite per caricamento progetto")
@@ -6923,7 +7818,9 @@ ESEMPI:
             dialog = SettingsDialog(self)
             dialog.exec()
         except Exception:
-            QMessageBox.critical(self, "Errore", "Errore nell'apertura delle impostazioni: {e}")
+            QMessageBox.critical(
+                self, "Errore", "Errore nell'apertura delle impostazioni: {e}"
+            )
 
     def update_status_label(self):
         """Metodo deprecato - lo status è ora gestito dal pulsante log."""
@@ -6934,19 +7831,24 @@ ESEMPI:
         """Aggiorna le informazioni di stato nel footer con design moderno e informazioni utili."""
         try:
             from datetime import datetime
+
             current_time = datetime.now().strftime("%H:%M:%S")
 
             # Conta elementi attivi
             pensierini_count = 0
-            if hasattr(self, 'pensierini_layout') and self.pensierini_layout:
+            if hasattr(self, "pensierini_layout") and self.pensierini_layout:
                 pensierini_count = self.pensierini_layout.count()
 
             work_items_count = 0
-            if hasattr(self, 'work_area_layout') and self.work_area_layout:
+            if hasattr(self, "work_area_layout") and self.work_area_layout:
                 work_items_count = self.work_area_layout.count()
 
             # Stato del sistema
-            ai_status = "🟢" if (hasattr(self, 'ollama_bridge') and self.ollama_bridge) else "🔴"
+            ai_status = (
+                "🟢"
+                if (hasattr(self, "ollama_bridge") and self.ollama_bridge)
+                else "🔴"
+            )
             voice_status = "🟢" if SpeechRecognitionThread else "🔴"
             ocr_status = "🟢" if OCR_AVAILABLE else "🔴"
 
@@ -6955,8 +7857,6 @@ ESEMPI:
                 status_text = f"🕐 {current_time} | 📝 {pensierini_count} pensierini | 🎯 {work_items_count} elementi | {ai_status} AI | {voice_status} Voce | {ocr_status} OCR"
             else:
                 status_text = f"🕐 {current_time} | 🎨 CogniFlow pronto | Premi F1 per aiuto | {ai_status} AI | {voice_status} Voce | {ocr_status} OCR"
-
-
 
         except Exception as e:
             logging.error(f"Errore nell'aggiornamento del footer: {e}")
@@ -6974,7 +7874,7 @@ ESEMPI:
     def closeEvent(self, a0):
         """Gestisce la chiusura dell'applicazione."""
         # Ferma il timer del footer
-        if hasattr(self, 'footer_timer'):
+        if hasattr(self, "footer_timer"):
             self.footer_timer.stop()
 
         # Chiama il metodo originale
@@ -6982,64 +7882,79 @@ ESEMPI:
 
     def handle_arduino_button(self):
         """Gestisce il pulsante Risposta Arduino - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🔌 Risposta Arduino",
-                                "🤖 Funzionalità Arduino in Sviluppo\n\n"
-                                "⚙️ Questa sezione sarà dedicata a:\n"
-                                "• Programmazione Arduino interattiva\n"
-                                "• Simulazione circuiti elettronici\n"
-                                "• Controllo dispositivi IoT\n"
-                                "• Progetti maker e robotica\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🔌 Risposta Arduino",
+            "🤖 Funzionalità Arduino in Sviluppo\n\n"
+            "⚙️ Questa sezione sarà dedicata a:\n"
+            "• Programmazione Arduino interattiva\n"
+            "• Simulazione circuiti elettronici\n"
+            "• Controllo dispositivi IoT\n"
+            "• Progetti maker e robotica\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_circuit_button(self):
         """Gestisce il pulsante Circuito elettrico - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "⚡ Circuito elettrico",
-                                "🔌 Funzionalità Circuiti Elettrici in Sviluppo\n\n"
-                                "⚡ Questa sezione sarà dedicata a:\n"
-                                "• Simulazione circuiti elettrici\n"
-                                "• Analisi componenti elettronici\n"
-                                "• Progettazione schemi elettrici\n"
-                                "• Calcoli elettrici interattivi\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "⚡ Circuito elettrico",
+            "🔌 Funzionalità Circuiti Elettrici in Sviluppo\n\n"
+            "⚡ Questa sezione sarà dedicata a:\n"
+            "• Simulazione circuiti elettrici\n"
+            "• Analisi componenti elettronici\n"
+            "• Progettazione schemi elettrici\n"
+            "• Calcoli elettrici interattivi\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_graphics_tablet_button(self):
         """Gestisce il pulsante Tavoletta grafica - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🎨 Tavoletta grafica",
-                                "🖼️ Funzionalità Tavoletta Grafica in Sviluppo\n\n"
-                                "🎨 Questa sezione sarà dedicata a:\n"
-                                "• Disegno digitale interattivo\n"
-                                "• Editing immagini avanzato\n"
-                                "• Strumenti artistici digitali\n"
-                                "• Creazione grafica professionale\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🎨 Tavoletta grafica",
+            "🖼️ Funzionalità Tavoletta Grafica in Sviluppo\n\n"
+            "🎨 Questa sezione sarà dedicata a:\n"
+            "• Disegno digitale interattivo\n"
+            "• Editing immagini avanzato\n"
+            "• Strumenti artistici digitali\n"
+            "• Creazione grafica professionale\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_screen_share_button(self):
         """Gestisce il pulsante Condividi schermo - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "📺 Condividi schermo",
-                                "🎬 Funzionalità Condivisione Schermo in Sviluppo\n\n"
-                                "📺 Questa sezione sarà dedicata a:\n"
-                                "• Condivisione schermo con VLC\n"
-                                "• Streaming video in tempo reale\n"
-                                "• Registrazione sessioni di lavoro\n"
-                                "• Condivisione contenuti multimediali\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "📺 Condividi schermo",
+            "🎬 Funzionalità Condivisione Schermo in Sviluppo\n\n"
+            "📺 Questa sezione sarà dedicata a:\n"
+            "• Condivisione schermo con VLC\n"
+            "• Streaming video in tempo reale\n"
+            "• Registrazione sessioni di lavoro\n"
+            "• Condivisione contenuti multimediali\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
     def handle_collab_button(self):
         """Gestisce il pulsante Collabora Online - Funzionalità in sviluppo."""
-        QMessageBox.information(self, "🤝 Collabora Online",
-                                "🌐 Funzionalità Collaborazione Online in Sviluppo\n\n"
-                                "🤝 Questa sezione sarà dedicata a:\n"
-                                "• Collaborazione in tempo reale\n"
-                                "• Condivisione progetti online\n"
-                                "• Lavoro di squadra remoto\n"
-                                "• Sincronizzazione contenuti\n\n"
-                                "⚠️ Funzionalità attualmente in fase di implementazione")
+        QMessageBox.information(
+            self,
+            "🤝 Collabora Online",
+            "🌐 Funzionalità Collaborazione Online in Sviluppo\n\n"
+            "🤝 Questa sezione sarà dedicata a:\n"
+            "• Collaborazione in tempo reale\n"
+            "• Condivisione progetti online\n"
+            "• Lavoro di squadra remoto\n"
+            "• Sincronizzazione contenuti\n\n"
+            "⚠️ Funzionalità attualmente in fase di implementazione",
+        )
 
 
 def setup_logging():
     """Configura il sistema di logging."""
     log_config = get_config()
-    log_file = log_config.get_setting('files.log_file', 'Save/LOG/app.log')
+    log_file = log_config.get_setting("files.log_file", "Save/LOG/app.log")
 
     # Assicura che la directory dei log esista
     log_dir = os.path.dirname(log_file)
@@ -7048,11 +7963,8 @@ def setup_logging():
 
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler(sys.stdout)
-        ]
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=[logging.FileHandler(log_file), logging.StreamHandler(sys.stdout)],
     )
 
 
@@ -7064,13 +7976,16 @@ def test_imports():
         # Test import configurazione
         config = get_config()
         settings = load_settings()
-        print("✓ Sistema configurazione caricato - Tema: {settings['application']['theme']}")
+        print(
+            "✓ Sistema configurazione caricato - Tema: {settings['application']['theme']}"
+        )
 
         # Test classe MainWindow (ora integrata in questo file)
         print("✓ Classe MainWindow disponibile")
 
         # Test import widget trascinabile
         from UI.draggable_text_widget import DraggableTextWidget
+
         print("✓ Modulo widget trascinabile importato")
 
         return True
@@ -7104,7 +8019,7 @@ def main():
 
         # Crea applicazione Qt
         app = QApplication(sys.argv)
-        app.setApplicationName(settings['application']['app_name'])
+        app.setApplicationName(settings["application"]["app_name"])
         app.setOrganizationName("DSA Aircraft")
         print("QApplication created successfully")
 
@@ -7112,6 +8027,7 @@ def main():
         icon_path = "ICO-fonts-wallpaper/ICONA.ico"
         if os.path.exists(icon_path):
             from PyQt6.QtGui import QIcon
+
             app.setWindowIcon(QIcon(icon_path))
             logger.info("Icona caricata: {icon_path}")
 

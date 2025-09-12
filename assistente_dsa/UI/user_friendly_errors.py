@@ -26,7 +26,7 @@ class UserFriendlyErrorHandler:
                 "• Controlla la connessione internet\n"
                 "• Riprova tra qualche minuto\n\n"
                 "🔧 Comando per avviare: ollama serve",
-                "icon": QMessageBox.Icon.Warning
+                "icon": QMessageBox.Icon.Warning,
             },
             "timeout": {
                 "title": "⏰ Richiesta Scaduta",
@@ -36,7 +36,7 @@ class UserFriendlyErrorHandler:
                 "• Il modello AI è sovraccarico\n"
                 "• Testo troppo lungo da elaborare\n\n"
                 "🔄 Riprova con un testo più breve o più tardi.",
-                "icon": QMessageBox.Icon.Warning
+                "icon": QMessageBox.Icon.Warning,
             },
             "model not found": {
                 "title": "🧠 Modello AI Non Trovato",
@@ -46,9 +46,8 @@ class UserFriendlyErrorHandler:
                 "• Usa un modello diverso dalle impostazioni\n"
                 "• Verifica lo spazio disponibile su disco\n\n"
                 "📋 Modelli disponibili: llama2:7b, gemma:2b",
-                "icon": QMessageBox.Icon.Information
+                "icon": QMessageBox.Icon.Information,
             },
-
             # Errori riconoscimento vocale
             "No module named 'vosk'": {
                 "title": "🎤 Libreria Riconoscimento Vocale Mancante",
@@ -58,7 +57,7 @@ class UserFriendlyErrorHandler:
                 "• Digita: pip install vosk pyaudio\n"
                 "• Riavvia l'applicazione\n\n"
                 "🎵 Il riconoscimento vocale sarà disponibile dopo l'installazione.",
-                "icon": QMessageBox.Icon.Information
+                "icon": QMessageBox.Icon.Information,
             },
             "Audio device": {
                 "title": "🎙️ Microfono Non Rilevato",
@@ -69,9 +68,8 @@ class UserFriendlyErrorHandler:
                 "• Le impostazioni privacy del microfono\n"
                 "• Che il microfono sia selezionato come dispositivo predefinito\n\n"
                 "🔧 Controlla nelle impostazioni audio del sistema.",
-                "icon": QMessageBox.Icon.Warning
+                "icon": QMessageBox.Icon.Warning,
             },
-
             # Errori OCR
             "No module named 'pytesseract'": {
                 "title": "📄 Libreria OCR Mancante",
@@ -81,7 +79,7 @@ class UserFriendlyErrorHandler:
                 "• Scarica Tesseract-OCR dal sito ufficiale\n"
                 "• Aggiungi Tesseract al PATH di sistema\n\n"
                 "📖 L'OCR sarà disponibile dopo l'installazione.",
-                "icon": QMessageBox.Icon.Information
+                "icon": QMessageBox.Icon.Information,
             },
             "tesseract": {
                 "title": "⚙️ Tesseract Non Configurato",
@@ -91,9 +89,8 @@ class UserFriendlyErrorHandler:
                 "• Che sia nel PATH di sistema\n"
                 "• La versione di Tesseract (consigliata 4.1+)\n\n"
                 "🔧 Scarica da: https://github.com/UB-Mannheim/tesseract/wiki",
-                "icon": QMessageBox.Icon.Warning
+                "icon": QMessageBox.Icon.Warning,
             },
-
             # Errori file system
             "Permission denied": {
                 "title": "🔒 Permesso Negato",
@@ -104,7 +101,7 @@ class UserFriendlyErrorHandler:
                 "• Scegli una posizione diversa per salvare\n"
                 "• Controlla le impostazioni antivirus\n\n"
                 "📂 Prova a salvare in Documenti o Desktop.",
-                "icon": QMessageBox.Icon.Warning
+                "icon": QMessageBox.Icon.Warning,
             },
             "No space left": {
                 "title": "💾 Spazio Disco Esaurito",
@@ -115,7 +112,7 @@ class UserFriendlyErrorHandler:
                 "• Sposta file su un altro disco\n"
                 "• Chiudi altre applicazioni\n\n"
                 "🗂️ Controlla lo spazio disponibile nelle proprietà del disco.",
-                "icon": QMessageBox.Icon.Warning
+                "icon": QMessageBox.Icon.Warning,
             },
             "File not found": {
                 "title": "📄 File Non Trovato",
@@ -125,9 +122,8 @@ class UserFriendlyErrorHandler:
                 "• Percorso non corretto\n"
                 "• File corrotto o danneggiato\n\n"
                 "🔍 Verifica il percorso e riprova.",
-                "icon": QMessageBox.Icon.Warning
+                "icon": QMessageBox.Icon.Warning,
             },
-
             # Errori di rete
             "Network is unreachable": {
                 "title": "🌐 Rete Non Raggiungibile",
@@ -138,7 +134,7 @@ class UserFriendlyErrorHandler:
                 "• Impostazioni proxy\n"
                 "• Connessione Wi-Fi o Ethernet\n\n"
                 "🔄 Riprova dopo aver verificato la connessione.",
-                "icon": QMessageBox.Icon.Warning
+                "icon": QMessageBox.Icon.Warning,
             },
             "Connection timed out": {
                 "title": "⏱️ Connessione Scaduta",
@@ -149,9 +145,8 @@ class UserFriendlyErrorHandler:
                 "• Controlla se il servizio è temporaneamente non disponibile\n"
                 "• Usa una connessione diversa\n\n"
                 "🔄 L'operazione verrà ritentata automaticamente.",
-                "icon": QMessageBox.Icon.Warning
+                "icon": QMessageBox.Icon.Warning,
             },
-
             # Errori generici
             "MemoryError": {
                 "title": "🧠 Memoria Insufficiente",
@@ -162,15 +157,15 @@ class UserFriendlyErrorHandler:
                 "• Aumenta la RAM se possibile\n"
                 "• Riduci la dimensione dei file elaborati\n\n"
                 "💾 Libera memoria chiudendo programmi non necessari.",
-                "icon": QMessageBox.Icon.Warning
+                "icon": QMessageBox.Icon.Warning,
             },
             "KeyboardInterrupt": {
                 "title": "⏹️ Operazione Interrotta",
                 "message": "L'operazione è stata interrotta dall'utente.\n\n"
                 "Non è stato completato nulla di dannoso.\n"
                 "Puoi riavviare l'operazione quando vuoi.",
-                "icon": QMessageBox.Icon.Information
-            }
+                "icon": QMessageBox.Icon.Information,
+            },
         }
 
         # Errori di import comuni
@@ -182,10 +177,12 @@ class UserFriendlyErrorHandler:
             "vosk": "🎤 Riconoscimento Vocale",
             "pytesseract": "📄 OCR",
             "PIL": "🖼️ Elaborazione Immagini",
-            "psutil": "📊 Monitor Sistema"
+            "psutil": "📊 Monitor Sistema",
         }
 
-    def get_user_friendly_error(self, error: Exception, context: str = "") -> Dict[str, Any]:
+    def get_user_friendly_error(
+        self, error: Exception, context: str = ""
+    ) -> Dict[str, Any]:
         """
         Converte un errore tecnico in un messaggio user-friendly.
 
@@ -218,7 +215,7 @@ class UserFriendlyErrorHandler:
             f"• Verifica la connessione internet\n"
             f"• Contatta il supporto se il problema persiste\n\n"
             f"📝 Il team di sviluppo è stato informato.",
-            "icon": QMessageBox.Icon.Warning
+            "icon": QMessageBox.Icon.Warning,
         }
 
     def _handle_import_error(self, error: Exception) -> Dict[str, Any]:
@@ -241,17 +238,20 @@ class UserFriendlyErrorHandler:
                 f"• Premi Invio e attendi il completamento\n"
                 f"• Riavvia l'applicazione\n\n"
                 f"🔧 Se hai problemi, consulta la documentazione.",
-                "icon": QMessageBox.Icon.Information
+                "icon": QMessageBox.Icon.Information,
             }
 
-        return self.error_mappings.get("generic", {
-            "title": "📦 Libreria Mancante",
-            "message": f"Una libreria necessaria non è installata.\n\n"
-            f"💡 Prova a installare le dipendenze con:\n"
-            f"pip install -r requirements.txt\n\n"
-            f"📋 Errore originale: {str(error)}",
-            "icon": QMessageBox.Icon.Warning
-        })
+        return self.error_mappings.get(
+            "generic",
+            {
+                "title": "📦 Libreria Mancante",
+                "message": f"Una libreria necessaria non è installata.\n\n"
+                f"💡 Prova a installare le dipendenze con:\n"
+                f"pip install -r requirements.txt\n\n"
+                f"📋 Errore originale: {str(error)}",
+                "icon": QMessageBox.Icon.Warning,
+            },
+        )
 
     def show_error_dialog(self, parent, error: Exception, context: str = ""):
         """
@@ -274,7 +274,7 @@ class UserFriendlyErrorHandler:
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
 
         # Aggiungi pulsante "Dettagli tecnici" se disponibile
-        if hasattr(error, '__traceback__'):
+        if hasattr(error, "__traceback__"):
             msg_box.setDetailedText(f"Errore tecnico completo:\n{str(error)}")
 
         msg_box.exec()
@@ -293,30 +293,33 @@ class UserFriendlyErrorHandler:
         success_messages = {
             "ai_response": {
                 "title": "🎉 Risposta AI Ricevuta!",
-                "message": f"Eccellente! L'intelligenza artificiale ha elaborato la tua richiesta.\n\n{details}"
+                "message": f"Eccellente! L'intelligenza artificiale ha elaborato la tua richiesta.\n\n{details}",
             },
             "voice_recognition": {
                 "title": "🎤 Testo Riconosciuto!",
-                "message": f"Perfetto! Il tuo discorso è stato trascritto correttamente.\n\n{details}"
+                "message": f"Perfetto! Il tuo discorso è stato trascritto correttamente.\n\n{details}",
             },
             "ocr_complete": {
                 "title": "📄 OCR Completato!",
-                "message": "Ottimo! Il testo è stato estratto dall'immagine.\n\n{details}"
+                "message": "Ottimo! Il testo è stato estratto dall'immagine.\n\n{details}",
             },
             "file_saved": {
                 "title": "💾 File Salvato!",
-                "message": "Il tuo lavoro è stato salvato correttamente.\n\n{details}"
+                "message": "Il tuo lavoro è stato salvato correttamente.\n\n{details}",
             },
             "file_loaded": {
                 "title": "📂 File Caricato!",
-                "message": "Il progetto è stato caricato con successo.\n\n{details}"
-            }
+                "message": "Il progetto è stato caricato con successo.\n\n{details}",
+            },
         }
 
-        return success_messages.get(operation, {
-            "title": "✅ Operazione Completata!",
-            "message": "L'operazione è stata completata con successo.\n\n{details}"
-        })
+        return success_messages.get(
+            operation,
+            {
+                "title": "✅ Operazione Completata!",
+                "message": "L'operazione è stata completata con successo.\n\n{details}",
+            },
+        )
 
 
 # Istanza globale dell'error handler

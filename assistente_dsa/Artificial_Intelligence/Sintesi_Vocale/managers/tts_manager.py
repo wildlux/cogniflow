@@ -21,7 +21,7 @@ def _get_pyttsx3_voices():
     voices_info = []
     try:
         engine = pyttsx3.init()
-        voices = engine.getProperty('voices')
+        voices = engine.getProperty("voices")
 
         # Handle different types of voices objects
         if voices:
@@ -30,26 +30,38 @@ def _get_pyttsx3_voices():
                 for voice in voices:  # type: ignore
                     try:
                         voice_gender = "Sconosciuto"
-                        if hasattr(voice, 'name') and hasattr(voice, 'id'):
+                        if hasattr(voice, "name") and hasattr(voice, "id"):
                             if "male" in voice.name.lower():
                                 voice_gender = "Maschile"
                             elif "female" in voice.name.lower():
                                 voice_gender = "Femminile"
-                            voices_info.append({'name': voice.name, 'gender': voice_gender, 'id': voice.id})
+                            voices_info.append(
+                                {
+                                    "name": voice.name,
+                                    "gender": voice_gender,
+                                    "id": voice.id,
+                                }
+                            )
                     except AttributeError:
                         continue
-            elif hasattr(voices, '__iter__'):
+            elif hasattr(voices, "__iter__"):
                 # Fallback for other iterable objects
                 try:
                     for voice in voices:  # type: ignore
                         try:
                             voice_gender = "Sconosciuto"
-                            if hasattr(voice, 'name') and hasattr(voice, 'id'):
+                            if hasattr(voice, "name") and hasattr(voice, "id"):
                                 if "male" in voice.name.lower():
                                     voice_gender = "Maschile"
                                 elif "female" in voice.name.lower():
                                     voice_gender = "Femminile"
-                                voices_info.append({'name': voice.name, 'gender': voice_gender, 'id': voice.id})
+                                voices_info.append(
+                                    {
+                                        "name": voice.name,
+                                        "gender": voice_gender,
+                                        "id": voice.id,
+                                    }
+                                )
                         except AttributeError:
                             continue
                 except (TypeError, AttributeError):
@@ -57,11 +69,19 @@ def _get_pyttsx3_voices():
 
         # If no voices found, add a default one
         if not voices_info:
-            voices_info.append({'name': "Voce Sistema (Default)", 'gender': 'Sconosciuto', 'id': 'default'})
+            voices_info.append(
+                {
+                    "name": "Voce Sistema (Default)",
+                    "gender": "Sconosciuto",
+                    "id": "default",
+                }
+            )
 
     except Exception:
         logging.error("Errore nel caricamento delle voci pyttsx3: {e}")
-        voices_info.append({'name': "Zephyr (Fallback)", 'gender': 'Sconosciuto', 'id': 'fallback'})
+        voices_info.append(
+            {"name": "Zephyr (Fallback)", "gender": "Sconosciuto", "id": "fallback"}
+        )
     return voices_info
 
 
@@ -70,14 +90,14 @@ VOCI_DI_SISTEMA = _get_pyttsx3_voices()
 # Lista delle lingue supportate da gTTS (solo le più comuni)
 # Formato: {'codice_lingua': 'Nome Lingua'}
 GTTS_LANGUAGES = {
-    'it': 'Italiano',
-    'en': 'Inglese',
-    'es': 'Spagnolo',
-    'fr': 'Francese',
-    'de': 'Tedesco',
-    'ja': 'Giapponese',
-    'ko': 'Coreano',
-    'zh-cn': 'Cinese Semplificato'
+    "it": "Italiano",
+    "en": "Inglese",
+    "es": "Spagnolo",
+    "fr": "Francese",
+    "de": "Tedesco",
+    "ja": "Giapponese",
+    "ko": "Coreano",
+    "zh-cn": "Cinese Semplificato",
 }
 
 # ==============================================================================
@@ -89,11 +109,14 @@ class TTSThread(QThread):
     """
     Thread per la sintesi vocale asincrona, supporta diversi motori TTS.
     """
+
     finished_reading = pyqtSignal()
     started_reading = pyqtSignal()
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, text, engine_name='pyttsx3', voice_or_lang='it', speed=1.0, pitch=1.0):
+    def __init__(
+        self, text, engine_name="pyttsx3", voice_or_lang="it", speed=1.0, pitch=1.0
+    ):
         super().__init__()
         self.text_to_speak = text
         self.engine_name = engine_name
@@ -106,14 +129,18 @@ class TTSThread(QThread):
         """Esegue il processo di sintesi vocale in base al motore scelto."""
         self.started_reading.emit()
         try:
-            if self.engine_name == 'pyttsx3':
+            if self.engine_name == "pyttsx3":
                 self._speak_pyttsx3()
-            elif self.engine_name == 'gTTS':
+            elif self.engine_name == "gTTS":
                 self._speak_gtts()
-            elif self.engine_name == 'Piper (WIP)':
-                self.error_occurred.emit("Il sintetizzatore Piper non è ancora stato integrato.")
+            elif self.engine_name == "Piper (WIP)":
+                self.error_occurred.emit(
+                    "Il sintetizzatore Piper non è ancora stato integrato."
+                )
             else:
-                self.error_occurred.emit("Motore TTS non supportato: {self.engine_name}")
+                self.error_occurred.emit(
+                    "Motore TTS non supportato: {self.engine_name}"
+                )
         except Exception:
             logging.error("Errore nella sintesi vocale: {e}")
             self.error_occurred.emit("Errore: {str(e)}")
@@ -134,18 +161,20 @@ class TTSThread(QThread):
             self._tts_engine = engine
 
             # Imposta la velocità
-            rate = engine.getProperty('rate')
+            rate = engine.getProperty("rate")
             if rate is not None and isinstance(rate, (int, float)):
-                engine.setProperty('rate', int(rate * self.speed))
+                engine.setProperty("rate", int(rate * self.speed))
 
             # Imposta l'intonazione (pitch) - pyttsx3 non ha un metodo diretto, ma alcune voci lo supportano
             # In questo caso, il parametro pitch è solo un placeholder
 
             # Imposta la voce usando l'ID
             try:
-                engine.setProperty('voice', self.voice_or_lang)
+                engine.setProperty("voice", self.voice_or_lang)
             except Exception:
-                logging.warning("Impossibile impostare la voce '{self.voice_or_lang}': {e}. Verrà usata la voce di default.")
+                logging.warning(
+                    "Impossibile impostare la voce '{self.voice_or_lang}': {e}. Verrà usata la voce di default."
+                )
 
             engine.say(self.text_to_speak)
             engine.runAndWait()
@@ -155,14 +184,14 @@ class TTSThread(QThread):
             logging.error("Errore pyttsx3: {e}")
         finally:
             # Pulisci il riferimento dopo l'uso
-            if hasattr(self, '_tts_engine'):
+            if hasattr(self, "_tts_engine"):
                 self._tts_engine = None
 
     def _speak_gtts(self):
         """Gestisce la sintesi vocale con gTTS e riproduzione audio."""
         try:
             # Estrai il codice lingua dal testo del combobox (es. 'Italiano (it)' -> 'it')
-            lang_code = self.voice_or_lang.split('(')[-1].replace(')', '')
+            lang_code = self.voice_or_lang.split("(")[-1].replace(")", "")
 
             tts = gtts.gTTS(self.text_to_speak, lang=lang_code)
 

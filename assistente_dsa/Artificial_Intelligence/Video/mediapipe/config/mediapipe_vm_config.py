@@ -9,6 +9,7 @@ import subprocess
 import logging
 from typing import Optional, Dict, Any
 
+
 class MediaPipeVMConfig:
     """Gestisce la configurazione e l'esecuzione di MediaPipe in VM."""
 
@@ -28,13 +29,13 @@ class MediaPipeVMConfig:
             "auto_start_vm": False,
             "vm_environment": {
                 "PYTHONPATH": "/path/to/mediapipe/vm",
-                "MEDIAPIPE_SERVICE_URL": "http://localhost:8001"
-            }
+                "MEDIAPIPE_SERVICE_URL": "http://localhost:8001",
+            },
         }
 
         if os.path.exists(self.config_file):
             try:
-                with open(self.config_file, 'r', encoding='utf-8') as f:
+                with open(self.config_file, "r", encoding="utf-8") as f:
                     loaded_config = json.load(f)
                     default_config.update(loaded_config)
             except Exception as e:
@@ -45,7 +46,7 @@ class MediaPipeVMConfig:
     def save_config(self):
         """Salva la configurazione su file."""
         try:
-            with open(self.config_file, 'w', encoding='utf-8') as f:
+            with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=2, ensure_ascii=False)
             logging.info(f"Configurazione VM salvata: {self.config_file}")
         except Exception as e:
@@ -61,7 +62,9 @@ class MediaPipeVMConfig:
             logging.warning(f"Percorso VM non trovato: {vm_path}")
             return False
 
-        python_exe = os.path.join(vm_path, self.config.get("python_executable", "python3.9"))
+        python_exe = os.path.join(
+            vm_path, self.config.get("python_executable", "python3.9")
+        )
         if not os.path.exists(python_exe):
             logging.warning(f"Python VM non trovato: {python_exe}")
             return False
@@ -94,7 +97,7 @@ class MediaPipeVMConfig:
                 env=env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
             )
 
             logging.info(f"Servizio MediaPipe VM avviato (PID: {self.vm_process.pid})")
@@ -128,6 +131,7 @@ class MediaPipeVMConfig:
         """Aggiorna una configurazione specifica."""
         self.config[key] = value
         self.save_config()
+
 
 # Istanza globale per l'applicazione
 mediapipe_vm = MediaPipeVMConfig()

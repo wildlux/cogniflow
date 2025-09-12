@@ -7,8 +7,18 @@ Test script per verificare le nuove funzionalità del footer:
 
 import sys
 import os
-from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QHBoxLayout, QLineEdit, QPushButton, QLabel
+from PyQt6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+    QHBoxLayout,
+    QLineEdit,
+    QPushButton,
+    QLabel,
+)
 from PyQt6.QtCore import Qt
+
 
 class TestFooterFeatures(QMainWindow):
     def __init__(self):
@@ -28,7 +38,9 @@ class TestFooterFeatures(QMainWindow):
         # Campo pensierini (come nel footer)
         pensierini_layout = QHBoxLayout()
         self.footer_pensierini_input = QLineEdit()
-        self.footer_pensierini_input.setPlaceholderText("💭 Scrivi pensierino rapido...")
+        self.footer_pensierini_input.setPlaceholderText(
+            "💭 Scrivi pensierino rapido..."
+        )
         self.footer_pensierini_input.setMinimumWidth(200)
         self.footer_pensierini_input.setMaximumWidth(300)
         self.footer_pensierini_input.returnPressed.connect(self.send_footer_pensierino)
@@ -59,7 +71,9 @@ class TestFooterFeatures(QMainWindow):
 
         # Area di log per i test
         self.log_area = QLabel("Log dei pensierini inviati:\n")
-        self.log_area.setStyleSheet("border: 1px solid #ccc; padding: 10px; background: #f9f9f9;")
+        self.log_area.setStyleSheet(
+            "border: 1px solid #ccc; padding: 10px; background: #f9f9f9;"
+        )
         self.log_area.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.addWidget(self.log_area)
 
@@ -76,18 +90,24 @@ class TestFooterFeatures(QMainWindow):
     def show_quick_help(self):
         """Mostra guida rapida."""
         from PyQt6.QtWidgets import QMessageBox
-        QMessageBox.information(self, "Guida Rapida",
+
+        QMessageBox.information(
+            self,
+            "Guida Rapida",
             "Questa è la guida rapida!\n\n"
             "• Campo pensierini: Scrivi e premi Invio\n"
             "• Pulsante Invia: Invia il pensierino\n"
             "• Guida: Mostra questa finestra\n\n"
-            "Funzionalità implementate con successo! ✅")
+            "Funzionalità implementate con successo! ✅",
+        )
+
 
 def main():
     app = QApplication(sys.argv)
     window = TestFooterFeatures()
     window.show()
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()

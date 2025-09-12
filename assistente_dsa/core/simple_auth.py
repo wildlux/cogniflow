@@ -30,7 +30,7 @@ class SimpleAuthManager:
         # Carica utenti
         if os.path.exists(self.users_file):
             try:
-                with open(self.users_file, 'r', encoding='utf-8') as f:
+                with open(self.users_file, "r", encoding="utf-8") as f:
                     self.users = json.load(f)
             except:
                 self.users = {}
@@ -40,7 +40,7 @@ class SimpleAuthManager:
         # Carica gruppi
         if os.path.exists(self.groups_file):
             try:
-                with open(self.groups_file, 'r', encoding='utf-8') as f:
+                with open(self.groups_file, "r", encoding="utf-8") as f:
                     self.groups = json.load(f)
             except:
                 self.groups = {}
@@ -56,10 +56,10 @@ class SimpleAuthManager:
     def _save_data(self):
         """Salva dati su file"""
         try:
-            with open(self.users_file, 'w', encoding='utf-8') as f:
+            with open(self.users_file, "w", encoding="utf-8") as f:
                 json.dump(self.users, f, indent=2, ensure_ascii=False)
 
-            with open(self.groups_file, 'w', encoding='utf-8') as f:
+            with open(self.groups_file, "w", encoding="utf-8") as f:
                 json.dump(self.groups, f, indent=2, ensure_ascii=False)
         except Exception as e:
             print(f"Errore salvataggio dati autenticazione: {e}")
@@ -76,8 +76,8 @@ class SimpleAuthManager:
                     "ai_access": True,
                     "file_management": True,
                     "network_access": True,
-                    "debug_tools": True
-                }
+                    "debug_tools": True,
+                },
             },
             "Teacher": {
                 "description": "Insegnante",
@@ -88,8 +88,8 @@ class SimpleAuthManager:
                     "ai_access": True,
                     "file_management": True,
                     "network_access": True,
-                    "debug_tools": False
-                }
+                    "debug_tools": False,
+                },
             },
             "Student": {
                 "description": "Studente",
@@ -100,8 +100,8 @@ class SimpleAuthManager:
                     "ai_access": True,
                     "file_management": True,
                     "network_access": False,
-                    "debug_tools": False
-                }
+                    "debug_tools": False,
+                },
             },
             "Guest": {
                 "description": "Accesso ospite",
@@ -112,9 +112,9 @@ class SimpleAuthManager:
                     "ai_access": False,
                     "file_management": False,
                     "network_access": False,
-                    "debug_tools": False
-                }
-            }
+                    "debug_tools": False,
+                },
+            },
         }
 
         for group_name, group_data in default_groups.items():
@@ -136,7 +136,7 @@ class SimpleAuthManager:
                 "created_at": datetime.now().isoformat(),
                 "last_login": None,
                 "login_attempts": 0,
-                "locked_until": None
+                "locked_until": None,
             }
             self.users["admin"] = admin_user
             self._save_data()
@@ -182,7 +182,14 @@ class SimpleAuthManager:
 
         return self.groups[group_name].get("permissions", {})
 
-    def create_user(self, username: str, password: str, full_name: str, email: str, group: str = "Student") -> bool:
+    def create_user(
+        self,
+        username: str,
+        password: str,
+        full_name: str,
+        email: str,
+        group: str = "Student",
+    ) -> bool:
         """Crea un nuovo utente"""
         if username in self.users:
             return False
@@ -200,7 +207,7 @@ class SimpleAuthManager:
             "created_at": datetime.now().isoformat(),
             "last_login": None,
             "login_attempts": 0,
-            "locked_until": None
+            "locked_until": None,
         }
 
         self.users[username] = new_user

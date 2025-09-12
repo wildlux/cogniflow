@@ -1,5 +1,6 @@
 try:
     import mediapipe as mp
+
     MEDIAPIPE_AVAILABLE = True
     print("MediaPipe loaded successfully")
 except ImportError as e:
@@ -15,6 +16,7 @@ from typing import Dict, List, Optional, Any
 
 logger = logging.getLogger(__name__)
 
+
 class MediaPipeProcessor:
     def __init__(self):
         """Initialize MediaPipe processors"""
@@ -24,7 +26,7 @@ class MediaPipeProcessor:
             self.hands = None
             logger.warning("MediaPipe not available - using OpenCV fallback")
             return
-        
+
         if MEDIAPIPE_AVAILABLE:
             try:
                 self.mp_pose = mp.solutions.pose
@@ -38,7 +40,7 @@ class MediaPipeProcessor:
                     model_complexity=1,
                     smooth_landmarks=True,
                     min_detection_confidence=0.5,
-                    min_tracking_confidence=0.5
+                    min_tracking_confidence=0.5,
                 )
 
                 # Initialize hands detector
@@ -47,7 +49,7 @@ class MediaPipeProcessor:
                     max_num_hands=2,
                     model_complexity=1,
                     min_detection_confidence=0.5,
-                    min_tracking_confidence=0.5
+                    min_tracking_confidence=0.5,
                 )
 
                 self.available = True
@@ -81,7 +83,7 @@ class MediaPipeProcessor:
                 "error": "MediaPipe not available",
                 "landmarks": [],
                 "bbox": None,
-                "confidence": 0.0
+                "confidence": 0.0,
             }
 
         try:
@@ -95,7 +97,7 @@ class MediaPipeProcessor:
                 "detected": results.pose_landmarks is not None,
                 "landmarks": [],
                 "bbox": None,
-                "confidence": 0.0
+                "confidence": 0.0,
             }
 
             if results.pose_landmarks:
@@ -104,12 +106,14 @@ class MediaPipeProcessor:
                 landmarks = []
 
                 for landmark in results.pose_landmarks.landmark:
-                    landmarks.append({
-                        "x": landmark.x,
-                        "y": landmark.y,
-                        "z": landmark.z,
-                        "visibility": landmark.visibility
-                    })
+                    landmarks.append(
+                        {
+                            "x": landmark.x,
+                            "y": landmark.y,
+                            "z": landmark.z,
+                            "visibility": landmark.visibility,
+                        }
+                    )
 
                 pose_data["landmarks"] = landmarks
 
@@ -127,7 +131,7 @@ class MediaPipeProcessor:
                         "x": int(min_x * width),
                         "y": int(min_y * height),
                         "width": int((max_x - min_x) * width),
-                        "height": int((max_y - min_y) * height)
+                        "height": int((max_y - min_y) * height),
                     }
 
                 # Calculate average confidence
@@ -143,7 +147,7 @@ class MediaPipeProcessor:
                 "error": str(e),
                 "landmarks": [],
                 "bbox": None,
-                "confidence": 0.0
+                "confidence": 0.0,
             }
 
     def process_hands(self, frame: np.ndarray) -> Dict[str, Any]:
@@ -153,7 +157,7 @@ class MediaPipeProcessor:
                 "detected": False,
                 "error": "MediaPipe not available",
                 "hands": [],
-                "hand_count": 0
+                "hand_count": 0,
             }
 
         try:
@@ -166,7 +170,7 @@ class MediaPipeProcessor:
             hands_data = {
                 "detected": results.multi_hand_landmarks is not None,
                 "hands": [],
-                "hand_count": 0
+                "hand_count": 0,
             }
 
             if results.multi_hand_landmarks:
@@ -178,17 +182,15 @@ class MediaPipeProcessor:
                         "index": hand_idx,
                         "landmarks": [],
                         "bbox": None,
-                        "handedness": "unknown"
+                        "handedness": "unknown",
                     }
 
                     # Extract landmarks
                     landmarks = []
                     for landmark in hand_landmarks.landmark:
-                        landmarks.append({
-                            "x": landmark.x,
-                            "y": landmark.y,
-                            "z": landmark.z
-                        })
+                        landmarks.append(
+                            {"x": landmark.x, "y": landmark.y, "z": landmark.z}
+                        )
 
                     hand_data["landmarks"] = landmarks
 
@@ -206,13 +208,15 @@ class MediaPipeProcessor:
                             "x": int(min_x * width),
                             "y": int(min_y * height),
                             "width": int((max_x - min_x) * width),
-                            "height": int((max_y - min_y) * height)
+                            "height": int((max_y - min_y) * height),
                         }
 
                     # Determine handedness if available
                     if results.multi_handedness:
                         handedness = results.multi_handedness[hand_idx]
-                        hand_data["handedness"] = handedness.classification[0].label.lower()
+                        hand_data["handedness"] = handedness.classification[
+                            0
+                        ].label.lower()
 
                     hands.append(hand_data)
 
@@ -223,12 +227,7 @@ class MediaPipeProcessor:
 
         except Exception as e:
             logger.error(f"Hand processing error: {e}")
-            return {
-                "detected": False,
-                "error": str(e),
-                "hands": [],
-                "hand_count": 0
-            }
+            return {"detected": False, "error": str(e), "hands": [], "hand_count": 0}
 
     def process_combined(self, frame: np.ndarray) -> Dict[str, Any]:
         """Process both pose and hands detection"""
@@ -238,5 +237,5 @@ class MediaPipeProcessor:
         return {
             "pose": pose_result,
             "hands": hands_result,
-            "timestamp": self.get_timestamp()
+            "timestamp": self.get_timestamp(),
         }

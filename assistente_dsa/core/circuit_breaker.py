@@ -15,14 +15,16 @@ logger = logging.getLogger(__name__)
 
 
 class CircuitBreakerState(Enum):
-    """ Stati del Circuit Breaker """
-    CLOSED = "CLOSED"       # Stato normale, richieste passano attraverso
-    OPEN = "OPEN"          # Circuito aperto, richieste bloccate
+    """Stati del Circuit Breaker"""
+
+    CLOSED = "CLOSED"  # Stato normale, richieste passano attraverso
+    OPEN = "OPEN"  # Circuito aperto, richieste bloccate
     HALF_OPEN = "HALF_OPEN"  # Test di recovery, permette alcune richieste
 
 
 class CircuitBreakerError(Exception):
     """Eccezione lanciata quando il circuit breaker è aperto."""
+
     pass
 
 
@@ -36,12 +38,14 @@ class CircuitBreaker:
     - HALF_OPEN: Test di recovery, permette poche richieste
     """
 
-    def __init__(self,
-                 failure_threshold: int = 5,
-                 recovery_timeout: int = 60,
-                 expected_exception=Exception,
-                 success_threshold: int = 3,
-                 timeout: float = 10.0):
+    def __init__(
+        self,
+        failure_threshold: int = 5,
+        recovery_timeout: int = 60,
+        expected_exception=Exception,
+        success_threshold: int = 3,
+        timeout: float = 10.0,
+    ):
         """
         Inizializza il Circuit Breaker.
 
@@ -73,7 +77,7 @@ class CircuitBreaker:
             "successful_requests": 0,
             "failed_requests": 0,
             "rejected_requests": 0,
-            "state_changes": []
+            "state_changes": [],
         }
 
     def call(self, func: Callable, *args, **kwargs) -> Any:
@@ -209,13 +213,17 @@ class CircuitBreaker:
             self.success_count = 0
 
         # Log del cambio di stato
-        self.metrics["state_changes"].append({
-            "timestamp": datetime.now(),
-            "from_state": old_state.value,
-            "to_state": new_state.value
-        })
+        self.metrics["state_changes"].append(
+            {
+                "timestamp": datetime.now(),
+                "from_state": old_state.value,
+                "to_state": new_state.value,
+            }
+        )
 
-        logger.info("Circuit Breaker state changed: {old_state.value} -> {new_state.value}")
+        logger.info(
+            "Circuit Breaker state changed: {old_state.value} -> {new_state.value}"
+        )
 
     def get_state(self) -> CircuitBreakerState:
         """Restituisce lo stato corrente."""
@@ -241,24 +249,24 @@ class CircuitBreaker:
 
 # Circuit Breaker specifici per i servizi
 ai_circuit_breaker = CircuitBreaker(
-    failure_threshold=3,      # Apri dopo 3 failure
-    recovery_timeout=30,      # Prova recovery dopo 30 secondi
-    timeout=15.0,            # Timeout di 15 secondi per le richieste AI
-    success_threshold=2       # Richiedi 2 successi per chiudere
+    failure_threshold=3,  # Apri dopo 3 failure
+    recovery_timeout=30,  # Prova recovery dopo 30 secondi
+    timeout=15.0,  # Timeout di 15 secondi per le richieste AI
+    success_threshold=2,  # Richiedi 2 successi per chiudere
 )
 
 tts_circuit_breaker = CircuitBreaker(
-    failure_threshold=5,      # Più tollerante per TTS
-    recovery_timeout=60,      # Recovery più lento
+    failure_threshold=5,  # Più tollerante per TTS
+    recovery_timeout=60,  # Recovery più lento
     timeout=10.0,
-    success_threshold=3
+    success_threshold=3,
 )
 
 network_circuit_breaker = CircuitBreaker(
-    failure_threshold=10,     # Molto tollerante per rete
-    recovery_timeout=120,     # Recovery lento
+    failure_threshold=10,  # Molto tollerante per rete
+    recovery_timeout=120,  # Recovery lento
     timeout=5.0,
-    success_threshold=5
+    success_threshold=5,
 )
 
 

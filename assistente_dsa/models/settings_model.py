@@ -31,36 +31,33 @@ class SettingsModel:
                 "app_name": "CogniFlow",
                 "theme": "Chiaro",
                 "interface_language": "Italiano",
-                "version": "1.0.0"
+                "version": "1.0.0",
             },
             "ui": {
                 "window_width": 1200,
                 "window_height": 800,
-                "tools_panel_visible": True
+                "tools_panel_visible": True,
             },
             "fonts": {
                 "main_font_family": "Arial",
                 "main_font_size": 12,
-                "pensierini_font_size": 10
+                "pensierini_font_size": 10,
             },
             "colors": {
                 "button_text_colors": {"general": "#000000"},
                 "button_border_colors": {"general": "#000000"},
-                "button_background_colors": {"general": "#FFFFFF"}
+                "button_background_colors": {"general": "#FFFFFF"},
             },
             "ai": {
                 "selected_ai_model": "gemma:2b",
-                "ollama_url": "http://localhost:11434"
+                "ollama_url": "http://localhost:11434",
             },
-            "tts": {
-                "tts_language": "it-IT",
-                "tts_engine": "pyttsx3"
-            }
+            "tts": {"tts_language": "it-IT", "tts_engine": "pyttsx3"},
         }
 
     def get(self, key: str, default: Any = None) -> Any:
         """Ottiene un'impostazione usando la notazione con punti"""
-        keys = key.split('.')
+        keys = key.split(".")
         value = self._settings
 
         try:
@@ -72,7 +69,7 @@ class SettingsModel:
 
     def set(self, key: str, value: Any):
         """Imposta un'impostazione usando la notazione con punti"""
-        keys = key.split('.')
+        keys = key.split(".")
         settings = self._settings
 
         # Naviga fino all'ultimo livello

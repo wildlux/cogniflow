@@ -5,14 +5,25 @@ Test script to verify time display without dashes
 
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QLabel, QPushButton
+from PyQt6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+    QLabel,
+    QPushButton,
+)
 from PyQt6.QtCore import Qt
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 class TestTimeDisplay(QMainWindow):
     """Test window to verify time display without dashes"""
@@ -57,8 +68,12 @@ class TestTimeDisplay(QMainWindow):
         status_text = "Sistema attivo"
 
         # Simulate the logic from main application
-        if hasattr(self, 'unified_time_label'):
-            current_time = self.unified_time_label.text().split(' ')[1] if len(self.unified_time_label.text().split(' ')) > 1 else ""
+        if hasattr(self, "unified_time_label"):
+            current_time = (
+                self.unified_time_label.text().split(" ")[1]
+                if len(self.unified_time_label.text().split(" ")) > 1
+                else ""
+            )
             if current_time:
                 self.unified_time_label.setText(f"⌚️ {current_time} | {status_text}")
             else:
@@ -69,18 +84,24 @@ class TestTimeDisplay(QMainWindow):
     def test_time_update(self):
         """Test time update with actual time"""
         from datetime import datetime
+
         now = datetime.now()
         time_str = now.strftime("%H:%M")
 
         # Simulate time update
-        if hasattr(self, 'unified_time_label'):
-            current_time = self.unified_time_label.text().split(' ')[1] if len(self.unified_time_label.text().split(' ')) > 1 else ""
+        if hasattr(self, "unified_time_label"):
+            current_time = (
+                self.unified_time_label.text().split(" ")[1]
+                if len(self.unified_time_label.text().split(" ")) > 1
+                else ""
+            )
             if current_time:
                 self.unified_time_label.setText(f"⌚️ {time_str} | Sistema attivo")
             else:
                 self.unified_time_label.setText(f"⌚️ {time_str} | Sistema attivo")
 
         self.status_label.setText(f"Time update test completed: {time_str}")
+
 
 def main():
     """Main test function"""
@@ -95,6 +116,7 @@ def main():
 
     # Run the application
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()

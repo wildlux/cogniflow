@@ -24,3 +24,7 @@ mypy>=1.5.0
 
 # Optional but recommended
 typing-extensions>=4.7.0
+
+# Optional: MediaPipe services (richiede sistema specifico)
+# flask>=2.0.0
+# mediapipe>=0.10.0  # Nota: potrebbe richiedere installazione manuale

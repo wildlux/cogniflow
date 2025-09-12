@@ -104,11 +104,11 @@ class CogniFlowController(QObject):
         """Invia una richiesta all'AI"""
         try:
             if model is None:
-                model = self.settings.get('ai.selected_ai_model', 'gemma:2b')
+                model = self.settings.get("ai.selected_ai_model", "gemma:2b")
 
             # Ensure model is not None
             if model is None:
-                model = 'gemma:2b'
+                model = "gemma:2b"
 
             self.ai_active = True
             return self.ai_service.send_request(prompt, model)
@@ -253,11 +253,13 @@ class CogniFlowController(QObject):
             "ai_active": self.ai_active,
             "speech_active": self.speech_recognition_active,
             "tts_active": self.tts_active,
-            "current_project": self.current_project.name if self.current_project.name else None,
+            "current_project": (
+                self.current_project.name if self.current_project.name else None
+            ),
             "services_status": {
                 "ai": self.ai_service.is_available(),
                 "speech": self.speech_service.is_available(),
                 "tts": self.tts_service.is_available(),
-                "ocr": self.ocr_service.is_available()
-            }
+                "ocr": self.ocr_service.is_available(),
+            },
         }

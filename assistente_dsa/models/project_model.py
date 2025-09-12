@@ -25,18 +25,19 @@ class ProjectModel:
             "data": self.data,
             "created_at": self.created_at.isoformat(),
             "last_modified": self.last_modified.isoformat(),
-            "version": self.version
+            "version": self.version,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ProjectModel':
+    def from_dict(cls, data: Dict[str, Any]) -> "ProjectModel":
         """Crea un progetto da un dizionario"""
-        project = cls(
-            name=data.get("name", ""),
-            data=data.get("data", {})
+        project = cls(name=data.get("name", ""), data=data.get("data", {}))
+        project.created_at = datetime.fromisoformat(
+            data.get("created_at", datetime.now().isoformat())
         )
-        project.created_at = datetime.fromisoformat(data.get("created_at", datetime.now().isoformat()))
-        project.last_modified = datetime.fromisoformat(data.get("last_modified", datetime.now().isoformat()))
+        project.last_modified = datetime.fromisoformat(
+            data.get("last_modified", datetime.now().isoformat())
+        )
         project.version = data.get("version", "1.0")
         return project
 

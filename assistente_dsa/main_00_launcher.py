@@ -19,8 +19,20 @@ opencv_available = False
 
 # GUI imports
 try:
-    from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QLabel, QMessageBox, QLineEdit, QFormLayout, QDialog
+    from PyQt6.QtWidgets import (
+        QApplication,
+        QMainWindow,
+        QWidget,
+        QVBoxLayout,
+        QPushButton,
+        QLabel,
+        QMessageBox,
+        QLineEdit,
+        QFormLayout,
+        QDialog,
+    )
     from PyQt6.QtCore import Qt
+
     pyqt_available = True
 except ImportError:
     pyqt_available = False
@@ -28,15 +40,29 @@ except ImportError:
 
 if TYPE_CHECKING:
     from core.performance_monitor import PerformanceMonitor  # noqa: F811
-    from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QLabel, QMessageBox, QLineEdit, QFormLayout, QDialog  # noqa: F811
+    from PyQt6.QtWidgets import (
+        QApplication,
+        QMainWindow,
+        QWidget,
+        QVBoxLayout,
+        QPushButton,
+        QLabel,
+        QMessageBox,
+        QLineEdit,
+        QFormLayout,
+        QDialog,
+    )  # noqa: F811
     from PyQt6.QtCore import Qt  # noqa: F811
 
 # Type definitions for performance monitoring
 SnapshotType = dict[str, object]
 SystemMetricsType = dict[str, object]
 
+
 # Funzione di validazione input sicura
-def _get_validated_input(prompt: str, min_length: int = 1, max_length: int = 100, hide_input: bool = False) -> str:
+def _get_validated_input(
+    prompt: str, min_length: int = 1, max_length: int = 100, hide_input: bool = False
+) -> str:
     """Ottiene input validato dall'utente con limiti di sicurezza."""
     import getpass
 
@@ -57,8 +83,11 @@ def _get_validated_input(prompt: str, min_length: int = 1, max_length: int = 100
 
             # Validazione caratteri sicuri (solo alfanumerici, spazi, trattini, underscore)
             import re
-            if not re.match(r'^[a-zA-Z0-9\s\-_]+$', value):
-                print("❌ Caratteri non validi. Usa solo lettere, numeri, spazi, trattini e underscore")
+
+            if not re.match(r"^[a-zA-Z0-9\s\-_]+$", value):
+                print(
+                    "❌ Caratteri non validi. Usa solo lettere, numeri, spazi, trattini e underscore"
+                )
                 continue
 
             return value
@@ -70,26 +99,29 @@ def _get_validated_input(prompt: str, min_length: int = 1, max_length: int = 100
             print(f"❌ Errore input: {e}")
             continue
 
+
 # Funzione per sanitizzare comandi subprocess
 def _sanitize_command(cmd):
     """Sanitizza comandi per prevenire command injection."""
     import shlex
+
     if isinstance(cmd, str):
         # Dividi il comando in parti e sanitizza ciascuna
         parts = shlex.split(cmd)
-        return ' '.join(shlex.quote(part) for part in parts)
+        return " ".join(shlex.quote(part) for part in parts)
     elif isinstance(cmd, list):
         # Se è già una lista, sanitizza ciascun elemento
         return [shlex.quote(str(part)) for part in cmd]
     else:
         raise ValueError("Comando deve essere stringa o lista")
 
+
 # Sistema di crittografia semplice per dati sensibili
 class SimpleEncryptor:
     """Sistema di crittografia semplice per proteggere dati sensibili."""
 
     def __init__(self, key: str = "DSA_APP_ENCRYPTION_KEY_2024"):
-        self.key = key.encode()[:32].ljust(32, b'\0')  # Assicura 32 byte per AES
+        self.key = key.encode()[:32].ljust(32, b"\0")  # Assicura 32 byte per AES
 
     def encrypt(self, data: str) -> str:
         """Critta una stringa."""
@@ -128,8 +160,10 @@ class SimpleEncryptor:
             # Se la decrittazione fallisce, restituisci i dati originali
             return encrypted_data
 
+
 # Istanza globale dell'encryptor
 encryptor = SimpleEncryptor()
+
 
 # Funzione per validare path sicuri
 def _validate_safe_path(base_path: str, requested_path: str) -> str:
@@ -145,6 +179,7 @@ def _validate_safe_path(base_path: str, requested_path: str) -> str:
         raise ValueError("Path traversal attempt detected")
 
     return full_path
+
 
 # Sistema di rate limiting semplice
 class SimpleRateLimiter:
@@ -177,6 +212,7 @@ class SimpleRateLimiter:
             self.attempts[key] = []
         self.attempts[key].append(now)
 
+
 # Istanza globale del rate limiter
 rate_limiter = SimpleRateLimiter()
 
@@ -190,12 +226,21 @@ print("🔄 L'applicazione funzionerà con funzionalità di sicurezza base")
 def log_security_event(event_type: str, details: str, severity: str = "INFO"):
     """Log eventi di sicurezza senza esporre dettagli sensibili."""
     # Non stampare dettagli che potrebbero contenere informazioni sensibili
-    safe_details = "DETAILS_PROTECTED" if any(keyword in details.lower() for keyword in ['password', 'hash', 'key', 'token']) else details
+    safe_details = (
+        "DETAILS_PROTECTED"
+        if any(
+            keyword in details.lower()
+            for keyword in ["password", "hash", "key", "token"]
+        )
+        else details
+    )
     print(f"[SECURITY {severity}] {event_type}: {safe_details}")
 
     # Log sicuro su file
     try:
-        log_entry = f"{datetime.now().isoformat()} [{severity}] {event_type}: {safe_details}\n"
+        log_entry = (
+            f"{datetime.now().isoformat()} [{severity}] {event_type}: {safe_details}\n"
+        )
         with open(os.path.join(os.path.dirname(__file__), "security.log"), "a") as f:
             f.write(log_entry)
     except:
@@ -208,12 +253,17 @@ def get_health_status():
     # health_monitor = None  # Not currently used
 
 
-def conditional_decorator(decorator_func: "Callable[[str], Callable[[Callable[..., object]], Callable[..., object]]] | None", name: str) -> "Callable[[Callable[..., object]], Callable[..., object]]":
+def conditional_decorator(
+    decorator_func: "Callable[[str], Callable[[Callable[..., object]], Callable[..., object]]] | None",
+    name: str,
+) -> "Callable[[Callable[..., object]], Callable[..., object]]":
     """Apply decorator conditionally."""
+
     def decorator(func: Callable[..., object]) -> Callable[..., object]:
         if decorator_func:
             return decorator_func(name)(func)  # type: ignore
         return func
+
     return decorator
 
 
@@ -221,7 +271,9 @@ def conditional_decorator(decorator_func: "Callable[[str], Callable[[Callable[..
 performance_thread = None
 stop_monitoring = False
 performance_monitor: "PerformanceMonitor | None" = None
-measure_function_time: "Callable[[str], Callable[[Callable[..., object]], Callable[..., object]]] | None" = None
+measure_function_time: (
+    "Callable[[str], Callable[[Callable[..., object]], Callable[..., object]]] | None"
+) = None
 
 # Import del sistema di configurazione centralizzato
 # Add parent directory to path for module imports
@@ -232,13 +284,21 @@ if parent_dir not in sys.path:
 # Import del performance monitor
 try:
     import importlib.util
-    perf_path = os.path.join(os.path.dirname(__file__), "core", "performance_monitor.py")
+
+    perf_path = os.path.join(
+        os.path.dirname(__file__), "core", "performance_monitor.py"
+    )
     spec = importlib.util.spec_from_file_location("performance_monitor", perf_path)
     if spec and spec.loader:
         perf_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(perf_module)
-        performance_monitor = cast('PerformanceMonitor', perf_module.performance_monitor)
-        measure_function_time = cast("Callable[[str], Callable[[Callable[..., object]], Callable[..., object]]] | None", perf_module.measure_function_time)
+        performance_monitor = cast(
+            "PerformanceMonitor", perf_module.performance_monitor
+        )
+        measure_function_time = cast(
+            "Callable[[str], Callable[[Callable[..., object]], Callable[..., object]]] | None",
+            perf_module.measure_function_time,
+        )
         performance_available = True
         print("✅ Performance monitor loaded")
     else:
@@ -253,7 +313,7 @@ try:
     from assistente_dsa.main_03_configurazione_e_opzioni import (
         load_settings,
         get_setting,
-        set_setting
+        set_setting,
     )
 except ImportError as e:
     print(f"❌ ERROR: Could not import configuration module: {e}")
@@ -263,6 +323,7 @@ except ImportError as e:
 # Sistema di autenticazione semplificato integrato
 import hashlib
 from datetime import datetime
+
 
 class SimpleAuthManager:
     def __init__(self):
@@ -274,7 +335,7 @@ class SimpleAuthManager:
     def _load_users(self):
         if os.path.exists(self.users_file):
             try:
-                with open(self.users_file, 'r', encoding='utf-8') as f:
+                with open(self.users_file, "r", encoding="utf-8") as f:
                     encrypted_data = f.read()
 
                 # Prova a decrittografare, se fallisce assume che non sia crittografato
@@ -297,7 +358,9 @@ class SimpleAuthManager:
         # Rimossa password hardcoded - ora richiede setup sicuro
         print("⚠️  ATTENZIONE: Nessun utente amministratore trovato!")
         print("🔧 Eseguire setup sicuro iniziale per creare amministratore")
-        print("💡 Comando suggerito: python -c \"from assistente_dsa.core.simple_auth import SimpleAuthManager; auth = SimpleAuthManager(); auth.setup_secure_admin()\"")
+        print(
+            '💡 Comando suggerito: python -c "from assistente_dsa.core.simple_auth import SimpleAuthManager; auth = SimpleAuthManager(); auth.setup_secure_admin()"'
+        )
 
         # Crea utente placeholder disabilitato
         admin_user = {
@@ -308,7 +371,7 @@ class SimpleAuthManager:
             "is_active": False,  # Disabilitato fino al setup sicuro
             "created_at": datetime.now().isoformat(),
             "last_login": None,
-            "requires_setup": True
+            "requires_setup": True,
         }
         self.users["admin"] = admin_user
         self._save_users()
@@ -319,13 +382,13 @@ class SimpleAuthManager:
             users_json = json.dumps(self.users, indent=2, ensure_ascii=False)
             encrypted_data = encryptor.encrypt(users_json)
 
-            with open(self.users_file, 'w', encoding='utf-8') as f:
+            with open(self.users_file, "w", encoding="utf-8") as f:
                 f.write(encrypted_data)
         except Exception as e:
             print(f"Errore salvataggio utenti: {type(e).__name__}")
             # Fallback: salva senza crittografia se la crittografia fallisce
             try:
-                with open(self.users_file, 'w', encoding='utf-8') as f:
+                with open(self.users_file, "w", encoding="utf-8") as f:
                     json.dump(self.users, f, indent=2, ensure_ascii=False)
             except Exception as e2:
                 print(f"Errore salvataggio fallback: {type(e2).__name__}")
@@ -333,15 +396,20 @@ class SimpleAuthManager:
     def _hash_password_secure(self, password: str) -> str:
         """Hash sicuro con salt usando PBKDF2"""
         import secrets
+
         salt = secrets.token_hex(16)  # 32 caratteri hex = 16 bytes
-        key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
+        key = hashlib.pbkdf2_hmac(
+            "sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000
+        )
         return f"{salt}${key.hex()}"
 
     def _verify_password_secure(self, password: str, hash: str) -> bool:
         """Verifica password con hash sicuro"""
         try:
-            salt, key = hash.split('$', 1)
-            new_key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
+            salt, key = hash.split("$", 1)
+            new_key = hashlib.pbkdf2_hmac(
+                "sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000
+            )
             return new_key.hex() == key
         except:
             return False
@@ -408,7 +476,7 @@ class SimpleAuthManager:
             "is_active": True,
             "created_at": datetime.now().isoformat(),
             "last_login": None,
-            "requires_setup": False
+            "requires_setup": False,
         }
 
         self.users[username] = admin_user
@@ -423,18 +491,37 @@ class SimpleAuthManager:
         group = user.get("group", "Guest")
         # Permessi semplificati
         permissions = {
-            "Administrator": {"system_access": True, "user_management": True, "ai_access": True},
-            "Teacher": {"system_access": True, "user_management": False, "ai_access": True},
-            "Student": {"system_access": True, "user_management": False, "ai_access": True},
-            "Guest": {"system_access": True, "user_management": False, "ai_access": False}
+            "Administrator": {
+                "system_access": True,
+                "user_management": True,
+                "ai_access": True,
+            },
+            "Teacher": {
+                "system_access": True,
+                "user_management": False,
+                "ai_access": True,
+            },
+            "Student": {
+                "system_access": True,
+                "user_management": False,
+                "ai_access": True,
+            },
+            "Guest": {
+                "system_access": True,
+                "user_management": False,
+                "ai_access": False,
+            },
         }
         return permissions.get(group, {"system_access": False})
+
 
 AUTH_AVAILABLE = True
 auth_manager = SimpleAuthManager()
 
+
 def get_auth_manager():
     return auth_manager
+
 
 print("✅ Authentication system loaded")
 
@@ -453,7 +540,10 @@ def start_performance_monitoring():
             try:
                 snapshot_count += 1
                 if performance_monitor:
-                    _snapshot: SnapshotType = cast(SnapshotType, performance_monitor.take_snapshot(f"periodic_{snapshot_count}"))  # noqa: F841
+                    _snapshot: SnapshotType = cast(
+                        SnapshotType,
+                        performance_monitor.take_snapshot(f"periodic_{snapshot_count}"),
+                    )  # noqa: F841
                 time.sleep(30)  # Take snapshot every 30 seconds
             except Exception as e:
                 print(f"Performance monitoring error: {e}")
@@ -495,7 +585,9 @@ def perform_security_checks():
 
     # Take initial performance snapshot
     if performance_available and performance_monitor:
-        _security_start_snapshot: SnapshotType = cast(SnapshotType, performance_monitor.take_snapshot("security_checks_start"))  # noqa: F841
+        _security_start_snapshot: SnapshotType = cast(
+            SnapshotType, performance_monitor.take_snapshot("security_checks_start")
+        )  # noqa: F841
 
     # Check Python version
     python_version_ok = sys.version_info >= (3, 8)
@@ -520,7 +612,7 @@ def perform_security_checks():
     # Check write permissions in current directory
     try:
         test_file = os.path.join(os.getcwd(), ".test_write")
-        with open(test_file, 'w') as f:
+        with open(test_file, "w") as f:
             _ = f.write("test")
         os.remove(test_file)
         log_security_event("PERMISSION_CHECK", "Write permissions verified", "INFO")
@@ -532,43 +624,59 @@ def perform_security_checks():
 
     # Check required directories exist (sequential for better error handling)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    required_dirs = ['Save', 'Screenshot', 'assistente_dsa']
+    required_dirs = ["Save", "Screenshot", "assistente_dsa"]
     required_paths = [os.path.join(project_root, d) for d in required_dirs]
     for dir_path in required_paths:
         dir_name, exists = check_directory(dir_path)
         if not exists:
-            log_security_event("DIRECTORY_CHECK", f"Directory '{dir_name}' missing", "WARNING")
+            log_security_event(
+                "DIRECTORY_CHECK", f"Directory '{dir_name}' missing", "WARNING"
+            )
             print(f"⚠️  WARNING: Required directory '{dir_name}' not found")
         else:
-            log_security_event("DIRECTORY_CHECK", f"Directory '{dir_name}' exists", "INFO")
+            log_security_event(
+                "DIRECTORY_CHECK", f"Directory '{dir_name}' exists", "INFO"
+            )
             print(f"✅ Directory '{dir_name}' exists")
 
     # Check required Python packages (sequential for better error handling)
-    required_packages = ['PyQt6', 'subprocess', 'os', 'sys', 'cv2', 'numpy']
+    required_packages = ["PyQt6", "subprocess", "os", "sys", "cv2", "numpy"]
     missing_packages: list[str] = []
     for package in required_packages:
         try:
             available = check_package(package)[1]
             if available:
-                log_security_event("PACKAGE_CHECK", f"Package '{package}' available", "INFO")
+                log_security_event(
+                    "PACKAGE_CHECK", f"Package '{package}' available", "INFO"
+                )
                 print(f"✅ Package '{package}' available")
             else:
                 missing_packages.append(package)
-                log_security_event("PACKAGE_CHECK", f"Package '{package}' missing", "WARNING")
+                log_security_event(
+                    "PACKAGE_CHECK", f"Package '{package}' missing", "WARNING"
+                )
                 print(f"❌ Package '{package}' missing")
         except Exception as e:
             missing_packages.append(package)
-            log_security_event("PACKAGE_CHECK", f"Package '{package}' check failed: {e}", "WARNING")
+            log_security_event(
+                "PACKAGE_CHECK", f"Package '{package}' check failed: {e}", "WARNING"
+            )
             print(f"⚠️  Package '{package}' check failed: {e}")
 
     if missing_packages:
-        log_security_event("PACKAGE_CHECK", f"Missing packages: {', '.join(missing_packages)}", "WARNING")
+        log_security_event(
+            "PACKAGE_CHECK",
+            f"Missing packages: {', '.join(missing_packages)}",
+            "WARNING",
+        )
         print(f"⚠️  WARNING: Missing packages: {', '.join(missing_packages)}")
         print("Please install missing packages using: pip install <package>")
 
     # Take snapshot after security checks
     if performance_available and performance_monitor:
-        _security_complete_snapshot: SnapshotType = cast(SnapshotType, performance_monitor.take_snapshot("security_checks_complete"))  # noqa: F841
+        _security_complete_snapshot: SnapshotType = cast(
+            SnapshotType, performance_monitor.take_snapshot("security_checks_complete")
+        )  # noqa: F841
 
     return True
     python_version_ok = sys.version_info >= (3, 8)
@@ -593,7 +701,7 @@ def perform_security_checks():
     # Check write permissions in current directory
     try:
         test_file = os.path.join(os.getcwd(), ".test_write")
-        with open(test_file, 'w') as f:
+        with open(test_file, "w") as f:
             _ = f.write("test")
         os.remove(test_file)
         log_security_event("PERMISSION_CHECK", "Write permissions verified", "INFO")
@@ -605,43 +713,59 @@ def perform_security_checks():
 
     # Check required directories exist (sequential for better error handling)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    required_dirs = ['Save', 'Screenshot', 'assistente_dsa']
+    required_dirs = ["Save", "Screenshot", "assistente_dsa"]
     required_paths = [os.path.join(project_root, d) for d in required_dirs]
     for dir_path in required_paths:
         dir_name, exists = check_directory(dir_path)
         if not exists:
-            log_security_event("DIRECTORY_CHECK", f"Directory '{dir_name}' missing", "WARNING")
+            log_security_event(
+                "DIRECTORY_CHECK", f"Directory '{dir_name}' missing", "WARNING"
+            )
             print(f"⚠️  WARNING: Required directory '{dir_name}' not found")
         else:
-            log_security_event("DIRECTORY_CHECK", f"Directory '{dir_name}' exists", "INFO")
+            log_security_event(
+                "DIRECTORY_CHECK", f"Directory '{dir_name}' exists", "INFO"
+            )
             print(f"✅ Directory '{dir_name}' exists")
 
     # Check required Python packages (sequential for better error handling)
-    required_packages = ['PyQt6', 'subprocess', 'os', 'sys', 'cv2', 'numpy']
+    required_packages = ["PyQt6", "subprocess", "os", "sys", "cv2", "numpy"]
     missing_packages: list[str] = []
     for package in required_packages:
         try:
             available = check_package(package)[1]
             if available:
-                log_security_event("PACKAGE_CHECK", f"Package '{package}' available", "INFO")
+                log_security_event(
+                    "PACKAGE_CHECK", f"Package '{package}' available", "INFO"
+                )
                 print(f"✅ Package '{package}' available")
             else:
                 missing_packages.append(package)
-                log_security_event("PACKAGE_CHECK", f"Package '{package}' missing", "WARNING")
+                log_security_event(
+                    "PACKAGE_CHECK", f"Package '{package}' missing", "WARNING"
+                )
                 print(f"❌ Package '{package}' missing")
         except Exception as e:
             missing_packages.append(package)
-            log_security_event("PACKAGE_CHECK", f"Package '{package}' check failed: {e}", "WARNING")
+            log_security_event(
+                "PACKAGE_CHECK", f"Package '{package}' check failed: {e}", "WARNING"
+            )
             print(f"⚠️  Package '{package}' check failed: {e}")
 
     if missing_packages:
-        log_security_event("PACKAGE_CHECK", f"Missing packages: {', '.join(missing_packages)}", "WARNING")
+        log_security_event(
+            "PACKAGE_CHECK",
+            f"Missing packages: {', '.join(missing_packages)}",
+            "WARNING",
+        )
         print(f"⚠️  WARNING: Missing packages: {', '.join(missing_packages)}")
         print("Please install missing packages using: pip install <package>")
 
     # Take snapshot after security checks
     if performance_available and performance_monitor:
-        _security_complete_snapshot: SnapshotType = cast(SnapshotType, performance_monitor.take_snapshot("security_checks_complete"))  # noqa: F841
+        _security_complete_snapshot: SnapshotType = cast(
+            SnapshotType, performance_monitor.take_snapshot("security_checks_complete")
+        )  # noqa: F841
 
     return True
 
@@ -653,22 +777,27 @@ def test_imports():
 
     # Take snapshot before import tests
     if performance_available and performance_monitor:
-        _import_start_snapshot: SnapshotType = cast(SnapshotType, performance_monitor.take_snapshot("import_tests_start"))  # noqa: F841
+        _import_start_snapshot: SnapshotType = cast(
+            SnapshotType, performance_monitor.take_snapshot("import_tests_start")
+        )  # noqa: F841
 
     try:
         # Test import configurazione centralizzata
 
         # Ottieni dimensioni finestra dalle impostazioni centralizzate
-        window_width = cast(int, get_setting('ui.window_width', 1200))
-        window_height = cast(int, get_setting('ui.window_height', 800))
+        window_width = cast(int, get_setting("ui.window_width", 1200))
+        window_height = cast(int, get_setting("ui.window_height", 800))
 
-        print(f"Centralized settings loaded - Window size: {window_width}x{window_height}")
+        print(
+            f"Centralized settings loaded - Window size: {window_width}x{window_height}"
+        )
         print(f"Application theme: {get_setting('application.theme', 'Chiaro')}")
 
         # Test degli import critici
         try:
             # Test import del modulo principale
             import main_01_Aircraft
+
             print("✅ Main module (main_01_Aircraft) imported successfully")
 
         except ImportError as e:
@@ -677,7 +806,9 @@ def test_imports():
 
         # Take snapshot after import tests
         if performance_available and performance_monitor:
-            _import_complete_snapshot: SnapshotType = cast(SnapshotType, performance_monitor.take_snapshot("import_tests_complete"))  # noqa: F841
+            _import_complete_snapshot: SnapshotType = cast(
+                SnapshotType, performance_monitor.take_snapshot("import_tests_complete")
+            )  # noqa: F841
 
         return True
 
@@ -693,27 +824,45 @@ def select_theme():
 
     # Use default themes since settings file doesn't have them
     default_themes = [
-        {"name": "Professionale", "icon": "💼", "description": "Per professionisti e studenti universitari"},
-        {"name": "Studente", "icon": "🎒", "description": "Per ragazzi che vanno a scuola"},
+        {
+            "name": "Professionale",
+            "icon": "💼",
+            "description": "Per professionisti e studenti universitari",
+        },
+        {
+            "name": "Studente",
+            "icon": "🎒",
+            "description": "Per ragazzi che vanno a scuola",
+        },
         {"name": "Chimico", "icon": "🥽", "description": "Per chimici o subacquei"},
-        {"name": "Donna", "icon": "👝", "description": "Per donne che hanno tutto in borsa"},
-        {"name": "Artigiano", "icon": "🧰", "description": "Per artigiani, cassetta degli attrezzi"},
+        {
+            "name": "Donna",
+            "icon": "👝",
+            "description": "Per donne che hanno tutto in borsa",
+        },
+        {
+            "name": "Artigiano",
+            "icon": "🧰",
+            "description": "Per artigiani, cassetta degli attrezzi",
+        },
         {"name": "Specchio", "icon": "🪞", "description": "Tema specchio"},
         {"name": "Magico", "icon": "🪄", "description": "Tema magico"},
         {"name": "Pensieri", "icon": "💭", "description": "Tema pensieri"},
         {"name": "Nuvola", "icon": "🗯", "description": "Tema nuvola"},
         {"name": "Audio", "icon": "🔊", "description": "Tema audio"},
-        {"name": "Chat", "icon": "💬", "description": "Tema chat"}
+        {"name": "Chat", "icon": "💬", "description": "Tema chat"},
     ]
 
-    themes = get_setting('themes.available', default_themes)  # pyright: ignore[reportAny]
+    themes = get_setting(
+        "themes.available", default_themes
+    )  # pyright: ignore[reportAny]
     if not themes:
         print("Nessun tema disponibile")
         return
 
     # Automatically select the first theme (Professionale)
-    selected_theme = cast(str, themes[0]['name'])
-    _ = set_setting('themes.selected', selected_theme)
+    selected_theme = cast(str, themes[0]["name"])
+    _ = set_setting("themes.selected", selected_theme)
     print(f"✅ Tema selezionato automaticamente: {selected_theme}")
     print("ℹ️  Nota: Menu di selezione temi disabilitato temporaneamente per stabilità")
 
@@ -732,7 +881,9 @@ class LoginDialog(QDialog):  # type: ignore[misc]
 
         # Title
         title_label = QLabel("🔐 DSA Assistant Login")  # type: ignore
-        title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #333; margin-bottom: 20px;")
+        title_label.setStyleSheet(
+            "font-size: 18px; font-weight: bold; color: #333; margin-bottom: 20px;"
+        )
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # type: ignore
         layout.addWidget(title_label)
 
@@ -752,7 +903,8 @@ class LoginDialog(QDialog):  # type: ignore[misc]
 
         # Login button
         self.login_button: QPushButton = QPushButton("Login")  # type: ignore
-        self.login_button.setStyleSheet("""
+        self.login_button.setStyleSheet(
+            """
             QPushButton {
                 background-color: #4CAF50;
                 color: white;
@@ -766,8 +918,11 @@ class LoginDialog(QDialog):  # type: ignore[misc]
             QPushButton:hover {
                 background-color: #45a049;
             }
-        """)
-        _ = self.login_button.clicked.connect(self.attempt_login)  # pyright: ignore[reportUnknownMemberType]
+        """
+        )
+        _ = self.login_button.clicked.connect(
+            self.attempt_login
+        )  # pyright: ignore[reportUnknownMemberType]
         layout.addWidget(self.login_button)
 
         # Status label
@@ -777,8 +932,12 @@ class LoginDialog(QDialog):  # type: ignore[misc]
         layout.addWidget(self.status_label)
 
         # Connect Enter key to login
-        _ = self.username_input.returnPressed.connect(self.attempt_login)  # pyright: ignore[reportUnknownMemberType]
-        _ = self.password_input.returnPressed.connect(self.attempt_login)  # pyright: ignore[reportUnknownMemberType]
+        _ = self.username_input.returnPressed.connect(
+            self.attempt_login
+        )  # pyright: ignore[reportUnknownMemberType]
+        _ = self.password_input.returnPressed.connect(
+            self.attempt_login
+        )  # pyright: ignore[reportUnknownMemberType]
 
     def attempt_login(self):
         """Attempt to login with provided credentials."""
@@ -810,7 +969,9 @@ class LauncherMainWindow(QMainWindow):  # type: ignore[misc]
 
         # Title
         title_label = QLabel("🚀 DSA Assistant Launcher")  # type: ignore
-        title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #333; margin: 20px;")
+        title_label.setStyleSheet(
+            "font-size: 24px; font-weight: bold; color: #333; margin: 20px;"
+        )
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # type: ignore
         layout.addWidget(title_label)
 
@@ -823,7 +984,8 @@ class LauncherMainWindow(QMainWindow):  # type: ignore[misc]
 
         # Launch Aircraft button
         self.launch_button: QPushButton = QPushButton("✈️ Launch Aircraft")  # type: ignore
-        self.launch_button.setStyleSheet("""
+        self.launch_button.setStyleSheet(
+            """
             QPushButton {
                 background-color: #4CAF50;
                 color: white;
@@ -840,8 +1002,11 @@ class LauncherMainWindow(QMainWindow):  # type: ignore[misc]
             QPushButton:pressed {
                 background-color: #3e8e41;
             }
-        """)
-        _ = self.launch_button.clicked.connect(self.launch_aircraft)  # pyright: ignore[reportUnknownMemberType]
+        """
+        )
+        _ = self.launch_button.clicked.connect(
+            self.launch_aircraft
+        )  # pyright: ignore[reportUnknownMemberType]
         layout.addWidget(self.launch_button)
 
         layout.addStretch()
@@ -883,12 +1048,15 @@ def open_launcher_gui():
         app = QApplication(sys.argv)  # type: ignore
 
     # Check if bypass login is enabled
-    bypass_login = cast(bool, get_setting('startup.bypass_login', False))
+    bypass_login = cast(bool, get_setting("startup.bypass_login", False))
 
     if bypass_login:
-        print("🔓 Bypass login abilitato - Avvio diretto dell'applicazione principale...")
+        print(
+            "🔓 Bypass login abilitato - Avvio diretto dell'applicazione principale..."
+        )
         # Skip login and go directly to main application
         import subprocess
+
         current_dir = os.path.dirname(os.path.abspath(__file__))
         aircraft_script = os.path.join(current_dir, "main_01_Aircraft.py")
 
@@ -901,11 +1069,17 @@ def open_launcher_gui():
                 _ = subprocess.Popen(sanitized_cmd, cwd=current_dir)
                 print("✅ Applicazione principale avviata con successo")
             except Exception as e:
-                print("❌ Errore avvio applicazione principale: Controlla i log per dettagli")
+                print(
+                    "❌ Errore avvio applicazione principale: Controlla i log per dettagli"
+                )
                 # Log dell'errore senza esporre dettagli sensibili
                 try:
-                    with open(os.path.join(os.path.dirname(__file__), "error.log"), "a") as f:
-                        f.write(f"{datetime.now()}: Errore avvio app - {type(e).__name__}\n")
+                    with open(
+                        os.path.join(os.path.dirname(__file__), "error.log"), "a"
+                    ) as f:
+                        f.write(
+                            f"{datetime.now()}: Errore avvio app - {type(e).__name__}\n"
+                        )
                 except:
                     pass  # Se non riusciamo a scrivere il log, continuiamo comunque
         else:
@@ -932,7 +1106,9 @@ def run_app():
     """Run the application by calling main_01_Aircraft.py"""
     # Take initial snapshot
     if performance_available and performance_monitor:
-        _app_startup_snapshot: SnapshotType = cast(SnapshotType, performance_monitor.take_snapshot("app_startup"))  # noqa: F841
+        _app_startup_snapshot: SnapshotType = cast(
+            SnapshotType, performance_monitor.take_snapshot("app_startup")
+        )  # noqa: F841
 
     if not perform_security_checks():
         print("❌ Cannot start application due to security check failures")
@@ -955,12 +1131,23 @@ def run_app():
         # Verifica che le impostazioni siano accessibili globalmente
         settings = load_settings()
 
-        selected_theme_name = cast(str, get_setting('themes.selected', 'Professionale'))
-        themes = cast(list, get_setting('themes.available', []))  # pyright: ignore[reportMissingTypeArgument,reportUnknownVariableType]
-        selected_theme_icon = next((cast(str, t['icon']) for t in themes if cast(str, t['name']) == selected_theme_name), '🎨')  # pyright: ignore[reportUnknownVariableType]
+        selected_theme_name = cast(str, get_setting("themes.selected", "Professionale"))
+        themes = cast(
+            list, get_setting("themes.available", [])
+        )  # pyright: ignore[reportMissingTypeArgument,reportUnknownVariableType]
+        selected_theme_icon = next(
+            (
+                cast(str, t["icon"])
+                for t in themes
+                if cast(str, t["name"]) == selected_theme_name
+            ),
+            "🎨",
+        )  # pyright: ignore[reportUnknownVariableType]
 
         print(f"✅ Global settings loaded - Theme: {settings['application']['theme']}")
-        print(f"✅ UI Size: {settings['ui']['window_width']}x{settings['ui']['window_height']}")
+        print(
+            f"✅ UI Size: {settings['ui']['window_width']}x{settings['ui']['window_height']}"
+        )
         print(f"✅ Selected Theme: {selected_theme_icon} {selected_theme_name}")
         print("🔐 Proceeding to authentication...")
 
@@ -968,19 +1155,29 @@ def run_app():
         print("🎨 Theme selection skipped for debugging")
 
         # Sistema di autenticazione
-        bypass_login = cast(bool, get_setting('startup.bypass_login', True))  # Temporaneamente abilitato per test
+        bypass_login = cast(
+            bool, get_setting("startup.bypass_login", True)
+        )  # Temporaneamente abilitato per test
         print(f"🔐 Bypass login setting: {bypass_login}")
 
         if bypass_login:
             print("\n🔓 Bypass login abilitato - Accesso come admin...")
-            current_user = {"username": "admin", "full_name": "Administrator", "group": "Administrator"}
+            current_user = {
+                "username": "admin",
+                "full_name": "Administrator",
+                "group": "Administrator",
+            }
         else:
             # Richiedi autenticazione
             print("\n🔐 Autenticazione richiesta...")
             if AUTH_AVAILABLE and auth_manager:
                 # Input validato e sicuro
-                username = _get_validated_input("Username: ", min_length=1, max_length=50)
-                password = _get_validated_input("Password: ", min_length=1, max_length=100, hide_input=True)
+                username = _get_validated_input(
+                    "Username: ", min_length=1, max_length=50
+                )
+                password = _get_validated_input(
+                    "Password: ", min_length=1, max_length=100, hide_input=True
+                )
 
                 current_user = auth_manager.authenticate(username, password)
                 if not current_user:
@@ -990,12 +1187,16 @@ def run_app():
                 print(f"✅ Benvenuto, {current_user['full_name']}!")
             else:
                 print("⚠️ Sistema autenticazione non disponibile - accesso come guest")
-                current_user = {"username": "guest", "full_name": "Guest User", "group": "Guest"}
+                current_user = {
+                    "username": "guest",
+                    "full_name": "Guest User",
+                    "group": "Guest",
+                }
 
         # Verifica permessi per accesso al sistema
         if AUTH_AVAILABLE and auth_manager:
-            permissions = auth_manager.get_user_permissions(current_user['username'])
-            if not permissions.get('system_access', False):
+            permissions = auth_manager.get_user_permissions(current_user["username"])
+            if not permissions.get("system_access", False):
                 print("❌ Accesso al sistema negato")
                 return
         else:
@@ -1006,6 +1207,7 @@ def run_app():
         # Avvia l'applicazione principale
         print("\n🚀 Avvio applicazione principale...")
         import subprocess
+
         current_dir = os.path.dirname(os.path.abspath(__file__))
         aircraft_script = os.path.join(current_dir, "main_01_Aircraft.py")
 
@@ -1018,10 +1220,10 @@ def run_app():
 
         # Passa informazioni utente come variabili d'ambiente
         env = os.environ.copy()
-        env['DSA_USERNAME'] = current_user['username']
-        env['DSA_FULL_NAME'] = current_user['full_name']
-        env['DSA_GROUP'] = current_user.get('group', 'Guest')
-        env['DSA_PERMISSIONS'] = json.dumps(permissions)
+        env["DSA_USERNAME"] = current_user["username"]
+        env["DSA_FULL_NAME"] = current_user["full_name"]
+        env["DSA_GROUP"] = current_user.get("group", "Guest")
+        env["DSA_PERMISSIONS"] = json.dumps(permissions)
 
         try:
             result = subprocess.run(
@@ -1030,7 +1232,7 @@ def run_app():
                 timeout=300,  # 5 minutes timeout
                 capture_output=True,
                 text=True,
-                env=env
+                env=env,
             )
             if result.returncode != 0:
                 print(f"❌ Aircraft exited with error code: {result.returncode}")
@@ -1049,14 +1251,22 @@ def run_app():
 
     # Performance monitoring finalization
     if performance_available and performance_monitor:
-        _app_shutdown_snapshot: SnapshotType = cast(SnapshotType, performance_monitor.take_snapshot("app_shutdown"))  # noqa: F841
+        _app_shutdown_snapshot: SnapshotType = cast(
+            SnapshotType, performance_monitor.take_snapshot("app_shutdown")
+        )  # noqa: F841
 
         # Generate and display performance report
         report = performance_monitor.get_performance_report()  # type: ignore
         print("\n📊 Performance Report:")
-        current_metrics: SystemMetricsType = cast(SystemMetricsType, report['current_metrics'])
-        print(f"   CPU Usage: {cast(float, current_metrics.get('cpu_percent', 'N/A'))}%")
-        print(f"   Memory Usage: {cast(float, current_metrics.get('memory_percent', 'N/A'))}%")
+        current_metrics: SystemMetricsType = cast(
+            SystemMetricsType, report["current_metrics"]
+        )
+        print(
+            f"   CPU Usage: {cast(float, current_metrics.get('cpu_percent', 'N/A'))}%"
+        )
+        print(
+            f"   Memory Usage: {cast(float, current_metrics.get('memory_percent', 'N/A'))}%"
+        )
         print(f"   Threads: {cast(int, current_metrics.get('num_threads', 'N/A'))}")
 
         # Check for performance issues

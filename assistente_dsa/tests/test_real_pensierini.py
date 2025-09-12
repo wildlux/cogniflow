@@ -5,9 +5,19 @@ Test script to verify the real pensierini creation from footer functionality
 
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QLineEdit, QPushButton, QLabel, QScrollArea
+from PyQt6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+    QLineEdit,
+    QPushButton,
+    QLabel,
+    QScrollArea,
+)
 from PyQt6.QtCore import Qt
 import logging
 
@@ -18,6 +28,7 @@ SettingsManager = None
 
 try:
     from UI.draggable_text_widget import DraggableTextWidget
+
     DRAGGABLE_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: Could not import DraggableTextWidget: {e}")
@@ -25,20 +36,29 @@ except ImportError as e:
 try:
     import sys
     import os
-    sys.path.append(os.path.join(os.path.dirname(__file__), 'Save', 'SETUP_TOOLS_&_Data'))
+
+    sys.path.append(
+        os.path.join(os.path.dirname(__file__), "Save", "SETUP_TOOLS_&_Data")
+    )
     from settings_manager import SettingsManager
 except ImportError as e:
     print(f"Warning: Could not import SettingsManager: {e}")
+
     # Create a mock settings manager
     class MockSettingsManager:
         def get_setting(self, key, default=None):
             return default
+
         def set_setting(self, key, value):
             pass
+
     SettingsManager = MockSettingsManager
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 class TestRealPensierini(QMainWindow):
     """Test window to verify real pensierini footer functionality"""
@@ -63,7 +83,9 @@ class TestRealPensierini(QMainWindow):
         footer_layout = QVBoxLayout(footer_group)
 
         self.footer_pensierini_input = QLineEdit()
-        self.footer_pensierini_input.setPlaceholderText("💭 Scrivi pensierino rapido...")
+        self.footer_pensierini_input.setPlaceholderText(
+            "💭 Scrivi pensierino rapido..."
+        )
         footer_layout.addWidget(QLabel("Footer Pensierini Input:"))
         footer_layout.addWidget(self.footer_pensierini_input)
 
@@ -113,7 +135,9 @@ class TestRealPensierini(QMainWindow):
             text = self.footer_pensierini_input.text().strip()
 
             if not text:
-                self.status_label.setText("❌ Campo vuoto! Scrivi qualcosa prima di inviare.")
+                self.status_label.setText(
+                    "❌ Campo vuoto! Scrivi qualcosa prima di inviare."
+                )
                 return
 
             # Try to create real DraggableTextWidget
@@ -129,19 +153,24 @@ class TestRealPensierini(QMainWindow):
                     self.footer_pensierini_input.clear()
 
                     # Update status
-                    self.status_label.setText(f"✅ Pensierino creato con successo! Totale: {self.pensierini_count}")
+                    self.status_label.setText(
+                        f"✅ Pensierino creato con successo! Totale: {self.pensierini_count}"
+                    )
 
                     # Log success
                     logging.info(f"💭 Pensierino inviato: {text[:50]}...")
 
                 except Exception as e:
-                    self.status_label.setText(f"❌ Errore creazione DraggableTextWidget: {str(e)}")
+                    self.status_label.setText(
+                        f"❌ Errore creazione DraggableTextWidget: {str(e)}"
+                    )
                     logging.error(f"Error creating DraggableTextWidget: {e}")
 
                     # Fallback: create a simple label
                     fallback_label = QLabel(f"💭 {text}")
                     fallback_label.setWordWrap(True)
-                    fallback_label.setStyleSheet("""
+                    fallback_label.setStyleSheet(
+                        """
                         QLabel {
                             background-color: #f0f0f0;
                             border: 1px solid #ccc;
@@ -149,17 +178,21 @@ class TestRealPensierini(QMainWindow):
                             padding: 8px;
                             margin: 2px;
                         }
-                    """)
+                    """
+                    )
                     self.pensierini_layout.addWidget(fallback_label)
                     self.pensierini_count += 1
                     self.footer_pensierini_input.clear()
-                    self.status_label.setText(f"✅ Pensierino creato (fallback)! Totale: {self.pensierini_count}")
+                    self.status_label.setText(
+                        f"✅ Pensierino creato (fallback)! Totale: {self.pensierini_count}"
+                    )
 
             else:
                 # Fallback if DraggableTextWidget not available
                 fallback_label = QLabel(f"💭 {text}")
                 fallback_label.setWordWrap(True)
-                fallback_label.setStyleSheet("""
+                fallback_label.setStyleSheet(
+                    """
                     QLabel {
                         background-color: #f0f0f0;
                         border: 1px solid #ccc;
@@ -167,17 +200,21 @@ class TestRealPensierini(QMainWindow):
                         padding: 8px;
                         margin: 2px;
                     }
-                """)
+                """
+                )
                 self.pensierini_layout.addWidget(fallback_label)
                 self.pensierini_count += 1
                 self.footer_pensierini_input.clear()
-                self.status_label.setText(f"✅ Pensierino creato (fallback)! Totale: {self.pensierini_count}")
+                self.status_label.setText(
+                    f"✅ Pensierino creato (fallback)! Totale: {self.pensierini_count}"
+                )
                 logging.info(f"💭 Pensierino inviato (fallback): {text[:50]}...")
 
         except Exception as e:
             error_msg = f"❌ Errore durante l'invio del pensierino: {str(e)}"
             self.status_label.setText(error_msg)
             logging.error(f"Error in send_footer_pensierino: {e}")
+
 
 def main():
     """Main test function"""
@@ -192,6 +229,7 @@ def main():
 
     # Run the application
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()

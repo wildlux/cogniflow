@@ -5,15 +5,18 @@ Test script to verify separator removal
 
 import os
 
+
 def check_separators():
     """Check that horizontal separators are removed and vertical ones remain"""
-    qml_file = "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/main_interface.qml"
+    qml_file = (
+        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/main_interface.qml"
+    )
 
     if not os.path.exists(qml_file):
         print("❌ QML file not found")
         return False
 
-    with open(qml_file, 'r', encoding='utf-8') as f:
+    with open(qml_file, "r", encoding="utf-8") as f:
         content = f.read()
 
     print("🔍 Checking separators...")
@@ -34,11 +37,14 @@ def check_separators():
 
     return menu_separator_count == 0 and tool_separator_count == 2
 
+
 def show_menu_structure():
     """Show the current menu structure without separators"""
-    qml_file = "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/main_interface.qml"
+    qml_file = (
+        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/main_interface.qml"
+    )
 
-    with open(qml_file, 'r', encoding='utf-8') as f:
+    with open(qml_file, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
     print("\n📋 Current Menu Structure:")
@@ -47,20 +53,21 @@ def show_menu_structure():
     current_menu = ""
 
     for i, line in enumerate(lines, 1):
-        if 'Menu {' in line and 'title:' in line:
+        if "Menu {" in line and "title:" in line:
             in_menu = True
-            menu_title = line.strip().split('title:')[1].strip().strip('"')
+            menu_title = line.strip().split("title:")[1].strip().strip('"')
             current_menu = menu_title
             print(f"\n🔸 {current_menu}:")
-        elif 'MenuItem {' in line and in_menu:
+        elif "MenuItem {" in line and in_menu:
             # Find the text of the menu item
-            for j in range(i, min(i+5, len(lines))):
-                if 'text:' in lines[j]:
-                    text = lines[j].strip().split('text:')[1].strip().strip('"')
+            for j in range(i, min(i + 5, len(lines))):
+                if "text:" in lines[j]:
+                    text = lines[j].strip().split("text:")[1].strip().strip('"')
                     print(f"   • {text}")
                     break
-        elif '}' in line and in_menu and current_menu:
+        elif "}" in line and in_menu and current_menu:
             in_menu = False
+
 
 def main():
     print("🧪 Testing Separator Removal")
@@ -82,6 +89,7 @@ def main():
     else:
         print("⚠️ Some separator issues found")
         return 1
+
 
 if __name__ == "__main__":
     exit(main())

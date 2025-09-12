@@ -10,11 +10,14 @@ from PyQt6.QtCore import QObject, pyqtSignal, QThread, pyqtSlot
 from PyQt6.QtGui import QPixmap
 
 # Aggiungi il percorso per importare i moduli
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+)
 
 # Import VideoThread
 try:
     from ...visual_background import VideoThread
+
     VIDEO_THREAD_AVAILABLE = True
 except ImportError:
     VideoThread = None
@@ -79,7 +82,9 @@ class MediaPipeBridge(QObject):
                 self.video_thread.hand_detection_enabled = self.detection_enabled
                 self.video_thread.face_detection_enabled = self.detection_enabled
 
-        status = "Rilevamento attivo" if self.detection_enabled else "Rilevamento disattivo"
+        status = (
+            "Rilevamento attivo" if self.detection_enabled else "Rilevamento disattivo"
+        )
         self.statusChanged.emit(status)
 
     @pyqtSlot(str)
@@ -123,14 +128,28 @@ class MediaPipeBridge(QObject):
             self.video_thread.hand_position_signal.connect(self._onHandPositionChanged)
             self.video_thread.gesture_detected_signal.connect(self._onGestureDetected)
             self.video_thread.human_detected_signal.connect(self._onHumanDetected)
-            self.video_thread.human_position_signal.connect(self._onHumanPositionChanged)
+            self.video_thread.human_position_signal.connect(
+                self._onHumanPositionChanged
+            )
 
             # Configure detection settings
             self.video_thread.use_mediapipe_service = True
-            self.video_thread.human_detection_enabled = self.detection_enabled and self.selected_detection in ["Pose", "Holistic"]
-            self.video_thread.hand_detection_enabled = self.detection_enabled and self.selected_detection in ["Hands", "Holistic"]
-            self.video_thread.gesture_recognition_enabled = self.detection_enabled and self.selected_detection in ["Hands", "Holistic"]
-            self.video_thread.face_detection_enabled = self.detection_enabled and self.selected_detection in ["Face", "Holistic"]
+            self.video_thread.human_detection_enabled = (
+                self.detection_enabled
+                and self.selected_detection in ["Pose", "Holistic"]
+            )
+            self.video_thread.hand_detection_enabled = (
+                self.detection_enabled
+                and self.selected_detection in ["Hands", "Holistic"]
+            )
+            self.video_thread.gesture_recognition_enabled = (
+                self.detection_enabled
+                and self.selected_detection in ["Hands", "Holistic"]
+            )
+            self.video_thread.face_detection_enabled = (
+                self.detection_enabled
+                and self.selected_detection in ["Face", "Holistic"]
+            )
 
             self.video_thread.start()
             self.webcam_enabled = True

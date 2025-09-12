@@ -9,6 +9,7 @@ import os
 # Aggiungi il percorso del progetto al PYTHONPATH
 sys.path.insert(0, os.path.dirname(__file__))
 
+
 def test_imports():
     """Test degli import dei moduli refactored"""
     print("🔍 Test degli import...")
@@ -17,6 +18,7 @@ def test_imports():
         # Test modelli
         from models.project_model import ProjectModel
         from models.settings_model import SettingsModel
+
         print("✅ Modelli importati correttamente")
 
         # Test servizi
@@ -26,14 +28,17 @@ def test_imports():
         from services.ocr_service import OCRService
         from services.media_service import MediaService
         from services.project_service import ProjectService
+
         print("✅ Servizi importati correttamente")
 
         # Test controller
         from controllers.cogniflow_controller import CogniFlowController
+
         print("✅ Controller importato correttamente")
 
         # Test UI refactored
         from UI.main_window_refactored import MainWindowRefactored, UIManager
+
         print("✅ UI refactored importata correttamente")
 
         return True
@@ -44,6 +49,7 @@ def test_imports():
     except Exception as e:
         print(f"❌ Errore generico: {e}")
         return False
+
 
 def test_models():
     """Test dei modelli"""
@@ -71,6 +77,7 @@ def test_models():
         print(f"❌ Errore test modelli: {e}")
         return False
 
+
 def test_services():
     """Test dei servizi"""
     print("\n🔍 Test dei servizi...")
@@ -81,14 +88,14 @@ def test_services():
 
         # Test AI Service
         ai_service = AIService()
-        assert hasattr(ai_service, 'send_request')
-        assert hasattr(ai_service, 'is_available')
+        assert hasattr(ai_service, "send_request")
+        assert hasattr(ai_service, "is_available")
         print("✅ AIService inizializzato correttamente")
 
         # Test Project Service
         project_service = ProjectService()
-        assert hasattr(project_service, 'save_project')
-        assert hasattr(project_service, 'load_project')
+        assert hasattr(project_service, "save_project")
+        assert hasattr(project_service, "load_project")
         print("✅ ProjectService inizializzato correttamente")
 
         return True
@@ -96,6 +103,7 @@ def test_services():
     except Exception as e:
         print(f"❌ Errore test servizi: {e}")
         return False
+
 
 def test_controller():
     """Test del controller"""
@@ -105,15 +113,15 @@ def test_controller():
         from controllers.cogniflow_controller import CogniFlowController
 
         controller = CogniFlowController()
-        assert hasattr(controller, 'send_ai_request')
-        assert hasattr(controller, 'save_project')
-        assert hasattr(controller, 'get_status_info')
+        assert hasattr(controller, "send_ai_request")
+        assert hasattr(controller, "save_project")
+        assert hasattr(controller, "get_status_info")
         print("✅ Controller inizializzato correttamente")
 
         # Test metodi del controller
         status = controller.get_status_info()
         assert isinstance(status, dict)
-        assert 'services_status' in status
+        assert "services_status" in status
         print("✅ Metodi del controller funzionano correttamente")
 
         return True
@@ -121,6 +129,7 @@ def test_controller():
     except Exception as e:
         print(f"❌ Errore test controller: {e}")
         return False
+
 
 def test_ui_manager():
     """Test dell'UI Manager"""
@@ -144,6 +153,7 @@ def test_ui_manager():
     except Exception as e:
         print(f"❌ Errore test UI Manager: {e}")
         return False
+
 
 def main():
     """Funzione principale di test"""
@@ -182,6 +192,7 @@ def main():
     else:
         print("⚠️ Alcuni test sono falliti. Verifica gli errori sopra.")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

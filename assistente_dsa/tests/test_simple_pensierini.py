@@ -5,14 +5,27 @@ Simple test script to verify pensierini creation from footer functionality
 
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QLineEdit, QPushButton, QLabel, QScrollArea
+from PyQt6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+    QLineEdit,
+    QPushButton,
+    QLabel,
+    QScrollArea,
+)
 from PyQt6.QtCore import Qt
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 class TestSimplePensierini(QMainWindow):
     """Simple test window to verify pensierini footer functionality"""
@@ -34,7 +47,9 @@ class TestSimplePensierini(QMainWindow):
         footer_layout = QVBoxLayout(footer_group)
 
         self.footer_pensierini_input = QLineEdit()
-        self.footer_pensierini_input.setPlaceholderText("💭 Scrivi pensierino rapido...")
+        self.footer_pensierini_input.setPlaceholderText(
+            "💭 Scrivi pensierino rapido..."
+        )
         footer_layout.addWidget(QLabel("Footer Pensierini Input:"))
         footer_layout.addWidget(self.footer_pensierini_input)
 
@@ -84,13 +99,16 @@ class TestSimplePensierini(QMainWindow):
             text = self.footer_pensierini_input.text().strip()
 
             if not text:
-                self.status_label.setText("❌ Campo vuoto! Scrivi qualcosa prima di inviare.")
+                self.status_label.setText(
+                    "❌ Campo vuoto! Scrivi qualcosa prima di inviare."
+                )
                 return
 
             # Create a simple pensierino widget (simulating DraggableTextWidget)
             pensierino_label = QLabel(f"💭 {text}")
             pensierino_label.setWordWrap(True)
-            pensierino_label.setStyleSheet("""
+            pensierino_label.setStyleSheet(
+                """
                 QLabel {
                     background-color: #e8f4f8;
                     border: 2px solid #4a90e2;
@@ -99,7 +117,8 @@ class TestSimplePensierini(QMainWindow):
                     margin: 5px;
                     font-size: 12px;
                 }
-            """)
+            """
+            )
 
             # Add to pensierini layout
             self.pensierini_layout.addWidget(pensierino_label)
@@ -109,7 +128,9 @@ class TestSimplePensierini(QMainWindow):
             self.footer_pensierini_input.clear()
 
             # Update status
-            self.status_label.setText(f"✅ Pensierino creato con successo! Totale: {self.pensierini_count}")
+            self.status_label.setText(
+                f"✅ Pensierino creato con successo! Totale: {self.pensierini_count}"
+            )
 
             # Log success
             logging.info(f"💭 Pensierino inviato: {text[:50]}...")
@@ -118,6 +139,7 @@ class TestSimplePensierini(QMainWindow):
             error_msg = f"❌ Errore durante l'invio del pensierino: {str(e)}"
             self.status_label.setText(error_msg)
             logging.error(f"Error in send_footer_pensierino: {e}")
+
 
 def main():
     """Main test function"""
@@ -132,6 +154,7 @@ def main():
 
     # Run the application
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()

@@ -12,14 +12,16 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="MediaPipe Detection Service", version="1.0.0")
 processor = MediaPipeProcessor()
 
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
         "service": "MediaPipe Detection",
-        "mediapipe_available": processor.is_available()
+        "mediapipe_available": processor.is_available(),
     }
+
 
 @app.post("/detect_pose")
 async def detect_pose(file: UploadFile = File(...)):
@@ -39,6 +41,7 @@ async def detect_pose(file: UploadFile = File(...)):
         logger.error(f"Pose detection error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/detect_hands")
 async def detect_hands(file: UploadFile = File(...)):
     """Detect hands in uploaded image"""
@@ -57,6 +60,7 @@ async def detect_hands(file: UploadFile = File(...)):
         logger.error(f"Hand detection error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/detect_combined")
 async def detect_combined(file: UploadFile = File(...)):
     """Detect both pose and hands in uploaded image"""
@@ -74,7 +78,7 @@ async def detect_combined(file: UploadFile = File(...)):
         combined_result = {
             "pose": pose_result,
             "hands": hands_result,
-            "timestamp": processor.get_timestamp()
+            "timestamp": processor.get_timestamp(),
         }
 
         return JSONResponse(content=combined_result)
@@ -82,6 +86,7 @@ async def detect_combined(file: UploadFile = File(...)):
     except Exception as e:
         logger.error(f"Combined detection error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)

@@ -25,9 +25,9 @@ class MediaService(QObject):
         self.logger = logging.getLogger(__name__)
 
         # Tipi di file supportati
-        self.supported_audio = ['.mp3', '.wav', '.flac', '.aac', '.ogg']
-        self.supported_video = ['.mp4', '.avi', '.mkv', '.mov', '.wmv']
-        self.supported_images = ['.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.gif']
+        self.supported_audio = [".mp3", ".wav", ".flac", ".aac", ".ogg"]
+        self.supported_video = [".mp4", ".avi", ".mkv", ".mov", ".wmv"]
+        self.supported_images = [".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".gif"]
 
         self.logger.info("Media Service inizializzato")
 
@@ -83,7 +83,7 @@ class MediaService(QObject):
         return {
             "audio": self.supported_audio,
             "video": self.supported_video,
-            "images": self.supported_images
+            "images": self.supported_images,
         }
 
     def is_supported_file(self, file_path: str) -> bool:

@@ -7,9 +7,12 @@ import os
 import sys
 import subprocess
 
+
 def test_qml_syntax():
     """Test QML syntax using qmlscene or qmllint if available"""
-    qml_file = "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/main_interface.qml"
+    qml_file = (
+        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/main_interface.qml"
+    )
 
     if not os.path.exists(qml_file):
         print(f"❌ QML file not found: {qml_file}")
@@ -19,8 +22,9 @@ def test_qml_syntax():
 
     # Try qmllint first (more reliable for syntax checking)
     try:
-        result = subprocess.run(['qmllint', qml_file],
-                              capture_output=True, text=True, timeout=10)
+        result = subprocess.run(
+            ["qmllint", qml_file], capture_output=True, text=True, timeout=10
+        )
         if result.returncode == 0:
             print("✅ QML syntax is valid (qmllint)")
             return True
@@ -34,8 +38,9 @@ def test_qml_syntax():
 
     # Fallback to qmlscene
     try:
-        result = subprocess.run(['qmlscene', '--quit', qml_file],
-                              capture_output=True, text=True, timeout=5)
+        result = subprocess.run(
+            ["qmlscene", "--quit", qml_file], capture_output=True, text=True, timeout=5
+        )
         if result.returncode == 0:
             print("✅ QML syntax is valid (qmlscene)")
             return True
@@ -49,6 +54,7 @@ def test_qml_syntax():
         print("📝 Manual verification needed")
         return True
 
+
 def check_file_structure():
     """Check that all required files exist"""
     required_files = [
@@ -61,7 +67,7 @@ def check_file_structure():
         "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/js/ui_functions.js",
         "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/js/ai_functions.js",
         "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/js/log_functions.js",
-        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/js/pensierini_functions.js"
+        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/js/pensierini_functions.js",
     ]
 
     print("🔍 Checking file structure...")
@@ -75,6 +81,7 @@ def check_file_structure():
             all_exist = False
 
     return all_exist
+
 
 def main():
     print("🚀 Testing Refactored QML Interface")
@@ -99,6 +106,7 @@ def main():
     else:
         print("⚠️ Some issues found during testing")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

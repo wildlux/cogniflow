@@ -12,7 +12,11 @@ from PyQt6.QtQml import QQmlApplicationEngine
 # Aggiungi il percorso per importare i moduli
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from Artificial_Intelligence.Ollama.ollama_manager import OllamaManager, OllamaThread, OllamaModelsThread
+from Artificial_Intelligence.Ollama.ollama_manager import (
+    OllamaManager,
+    OllamaThread,
+    OllamaModelsThread,
+)
 
 
 class OllamaBridge(QObject):
@@ -65,18 +69,24 @@ class OllamaBridge(QObject):
     @pyqtSlot(str, str)
     def sendPrompt(self, prompt, model="gemma:2b"):
         """Invia un prompt a Ollama"""
-        print("🔍 Bridge: sendPrompt chiamato con prompt '{prompt[:50]}...' e modello '{model}'")
+        print(
+            "🔍 Bridge: sendPrompt chiamato con prompt '{prompt[:50]}...' e modello '{model}'"
+        )
 
         if not self.checkConnection():
             print("🔍 Bridge: Ollama non connesso")
-            self.errorOccurred.emit("Ollama non è in esecuzione. Avvia il servizio prima.")
+            self.errorOccurred.emit(
+                "Ollama non è in esecuzione. Avvia il servizio prima."
+            )
             return
 
         print("🔍 Bridge: Invio richiesta a Ollama...")
         self.statusChanged.emit("Invio richiesta...")
 
         thread = OllamaThread(prompt, model)
-        thread.ollama_response.connect(lambda response: self._onResponseReceived(prompt, response))
+        thread.ollama_response.connect(
+            lambda response: self._onResponseReceived(prompt, response)
+        )
         thread.ollama_error.connect(self._onError)
         thread.finished.connect(lambda: print("🔍 Bridge: Thread Ollama completato"))
         thread.start()
@@ -97,6 +107,7 @@ class OllamaBridge(QObject):
 
     def setup_logging_bridge(self):
         """Configura il bridge per catturare i messaggi di log dal sistema Python"""
+
         # Crea un handler personalizzato che invia i log al QML
         class QMLLogHandler(logging.Handler):
             def __init__(self, bridge):
@@ -115,7 +126,9 @@ class OllamaBridge(QObject):
         qml_handler.setLevel(logging.WARNING)
 
         # Configura il formatter
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         qml_handler.setFormatter(formatter)
 
         # Aggiungi l'handler al logger root

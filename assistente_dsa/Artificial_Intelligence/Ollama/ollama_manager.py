@@ -35,7 +35,7 @@ class OllamaManager:
         log_file = os.path.join(self.logs_dir, "ollama_manager.log")
         handler = logging.FileHandler(log_file)
         formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         handler.setFormatter(formatter)
 
@@ -67,7 +67,7 @@ class OllamaManager:
                 ["ollama", "serve"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                start_new_session=True
+                start_new_session=True,
             )
 
             # Attendi che si avvii
@@ -110,14 +110,16 @@ class OllamaManager:
                 ["ollama", "pull", model_name],
                 capture_output=True,
                 text=True,
-                timeout=300  # 5 minuti di timeout
+                timeout=300,  # 5 minuti di timeout
             )
 
             if result.returncode == 0:
                 self.logger.info(f"Modello {model_name} scaricato con successo")
                 return True
             else:
-                self.logger.error(f"Errore nel download di {model_name}: {result.stderr}")
+                self.logger.error(
+                    f"Errore nel download di {model_name}: {result.stderr}"
+                )
                 return False
 
         except subprocess.TimeoutExpired:
@@ -134,7 +136,7 @@ class OllamaManager:
             "llama2:7b": "Modello di linguaggio generale",
             "codellama:7b": "Modello specializzato in codice",
             "mistral:7b": "Modello efficiente e performante",
-            "phi:3b": "Modello leggero e veloce"
+            "phi:3b": "Modello leggero e veloce",
         }
 
         results = {}
@@ -151,23 +153,21 @@ class OllamaManager:
 
         return results
 
-    def generate_text(self, prompt: str, model: str = "gemma:2b",
-                      options: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    def generate_text(
+        self,
+        prompt: str,
+        model: str = "gemma:2b",
+        options: Optional[Dict[str, Any]] = None,
+    ) -> Optional[str]:
         """Genera testo usando un modello specifico."""
         try:
-            payload = {
-                "model": model,
-                "prompt": prompt,
-                "stream": False
-            }
+            payload = {"model": model, "prompt": prompt, "stream": False}
 
             if options:
                 payload["options"] = options
 
             response = requests.post(
-                f"{self.base_url}/api/generate",
-                json=payload,
-                timeout=60
+                f"{self.base_url}/api/generate", json=payload, timeout=60
             )
 
             if response.status_code == 200:
@@ -184,9 +184,11 @@ class OllamaManager:
     def save_model_config(self, model_name: str, config: Dict[str, Any]) -> bool:
         """Salva la configurazione di un modello."""
         try:
-            config_file = os.path.join(self.configs_dir, f"{model_name.replace(':', '_')}.json")
+            config_file = os.path.join(
+                self.configs_dir, f"{model_name.replace(':', '_')}.json"
+            )
 
-            with open(config_file, 'w', encoding='utf-8') as f:
+            with open(config_file, "w", encoding="utf-8") as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
 
             self.logger.info(f"Configurazione salvata per {model_name}")
@@ -199,10 +201,12 @@ class OllamaManager:
     def load_model_config(self, model_name: str) -> Optional[Dict[str, Any]]:
         """Carica la configurazione di un modello."""
         try:
-            config_file = os.path.join(self.configs_dir, f"{model_name.replace(':', '_')}.json")
+            config_file = os.path.join(
+                self.configs_dir, f"{model_name.replace(':', '_')}.json"
+            )
 
             if os.path.exists(config_file):
-                with open(config_file, 'r', encoding='utf-8') as f:
+                with open(config_file, "r", encoding="utf-8") as f:
                     return json.load(f)
             return None
 
@@ -216,7 +220,7 @@ class OllamaManager:
             "running": self.check_ollama_running(),
             "models": [],
             "version": None,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
         try:
@@ -249,6 +253,7 @@ def get_ollama_models():
     """Funzione di compatibilità per ottenere i modelli."""
     return ollama_manager.get_available_models()
 
+
 # ==============================================================================
 # Classi Thread per PyQt6 (aggiunte per compatibilità)
 # ==============================================================================
@@ -258,6 +263,7 @@ class OllamaModelsThread(QThread):
     """
     Thread per recuperare la lista dei modelli Ollama disponibili.
     """
+
     models_list = pyqtSignal(list)
     error_occurred = pyqtSignal(str)
 
@@ -267,16 +273,20 @@ class OllamaModelsThread(QThread):
             response = requests.get("http://localhost:11434/api/tags")
             response.raise_for_status()  # Lancia un'eccezione per risposte HTTP non riuscite
             data = response.json()
-            models = [m['name'] for m in data.get('models', [])]
+            models = [m["name"] for m in data.get("models", [])]
 
             if not models:
-                self.error_occurred.emit("Nessun modello Ollama trovato. Assicurati di averne scaricato almeno uno con 'ollama pull <nome_modello>'.")
+                self.error_occurred.emit(
+                    "Nessun modello Ollama trovato. Assicurati di averne scaricato almeno uno con 'ollama pull <nome_modello>'."
+                )
                 return
 
             logging.info(f"Modelli Ollama trovati: {models}")
             self.models_list.emit(models)
         except requests.exceptions.ConnectionError:
-            self.error_occurred.emit("Errore di connessione a Ollama. Assicurati che il servizio sia in esecuzione.")
+            self.error_occurred.emit(
+                "Errore di connessione a Ollama. Assicurati che il servizio sia in esecuzione."
+            )
         except requests.exceptions.RequestException as e:
             self.error_occurred.emit(f"Errore nella richiesta a Ollama: {e}")
         except json.JSONDecodeError:
@@ -287,6 +297,7 @@ class OllamaThread(QThread):
     """
     Thread per inviare una richiesta a Ollama e ricevere la risposta.
     """
+
     ollama_response = pyqtSignal(str)
     ollama_error = pyqtSignal(str)
 
@@ -303,13 +314,13 @@ class OllamaThread(QThread):
             data = {
                 "model": self.model,
                 "prompt": self.prompt,
-                "stream": False  # Semplifichiamo disabilitando lo streaming
+                "stream": False,  # Semplifichiamo disabilitando lo streaming
             }
 
             response = requests.post(
                 "http://localhost:11434/api/generate",
                 headers=headers,
-                data=json.dumps(data)
+                data=json.dumps(data),
             )
             response.raise_for_status()
 
@@ -317,7 +328,7 @@ class OllamaThread(QThread):
             # Se lo streaming è disabilitato, avremo un solo oggetto.
             data = response.json()
 
-            full_response = data.get('response', '')
+            full_response = data.get("response", "")
 
             if full_response:
                 logging.info("Risposta da Ollama ricevuta con successo.")
@@ -326,11 +337,15 @@ class OllamaThread(QThread):
                 self.ollama_error.emit("Nessuna risposta valida da Ollama.")
 
         except requests.exceptions.ConnectionError:
-            self.ollama_error.emit("Errore di connessione. Assicurati che il servizio Ollama sia attivo.")
+            self.ollama_error.emit(
+                "Errore di connessione. Assicurati che il servizio Ollama sia attivo."
+            )
         except requests.exceptions.RequestException as e:
             self.ollama_error.emit(f"Errore nella richiesta Ollama: {e}")
         except json.JSONDecodeError:
-            self.ollama_error.emit("Risposta non valida da Ollama. Assicurati che il server sia configurato correttamente.")
+            self.ollama_error.emit(
+                "Risposta non valida da Ollama. Assicurati che il server sia configurato correttamente."
+            )
 
 
 if __name__ == "__main__":

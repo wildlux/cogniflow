@@ -2,6 +2,7 @@
 # SAFE QT WRAPPER - GESTIONE SICURA DELLE OPERAZIONI QT
 # ===========================================
 
+
 class SafeQtWrapper:
     """
     Wrapper sicuro per operazioni Qt che potrebbero fallire.

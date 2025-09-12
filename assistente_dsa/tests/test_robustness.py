@@ -17,22 +17,27 @@ class TestRobustness:
     def setup_method(self):
         """Setup per ogni test."""
         import tempfile
+
         self.temp_dir = tempfile.mkdtemp()
         self.config = ConfigManager(self.temp_dir)
 
     def teardown_method(self):
         """Cleanup dopo ogni test."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_network_timeout_handling(self):
         """Test gestione timeout di rete."""
         # Simula timeout di connessione Ollama
-        with patch('Artificial_Intelligence.Ollama.ollama_manager.OllamaManager.check_ollama_running') as mock_check:
+        with patch(
+            "Artificial_Intelligence.Ollama.ollama_manager.OllamaManager.check_ollama_running"
+        ) as mock_check:
             mock_check.return_value = False
 
             # Il sistema dovrebbe gestire graceful il timeout
             from Artificial_Intelligence.Ollama.ollama_bridge import OllamaBridge
+
             bridge = OllamaBridge()
 
             # Questo dovrebbe fallire graceful senza crashare
@@ -48,19 +53,19 @@ class TestRobustness:
         corrupted_data = '{"incomplete": "json"'
         settings_file = os.path.join(self.temp_dir, "settings.json")
 
-        with open(settings_file, 'w') as f:
+        with open(settings_file, "w") as f:
             f.write(corrupted_data)
 
         # Il sistema dovrebbe recuperare con impostazioni di default
         settings = self.config.load_settings()
         assert isinstance(settings, dict)
-        assert 'application' in settings  # Dovrebbe avere le impostazioni di default
+        assert "application" in settings  # Dovrebbe avere le impostazioni di default
 
     def test_disk_space_exhaustion(self):
         """Test comportamento con spazio disco esaurito."""
         import os
 
-        with patch('builtins.open') as mock_open:
+        with patch("builtins.open") as mock_open:
             # Simula errore di spazio disco esaurito
             mock_open.side_effect = OSError("No space left on device")
 
@@ -109,11 +114,14 @@ class TestRobustness:
         """Test failure di dipendenze esterne."""
         # Simula fallimento di servizi esterni (Ollama, TTS, etc.)
 
-        with patch('Artificial_Intelligence.Ollama.ollama_manager.OllamaManager') as mock_ollama:
+        with patch(
+            "Artificial_Intelligence.Ollama.ollama_manager.OllamaManager"
+        ) as mock_ollama:
             mock_ollama.return_value = None
 
             # L'applicazione dovrebbe continuare a funzionare
             from Artificial_Intelligence.Ollama.ollama_bridge import OllamaBridge
+
             bridge = OllamaBridge()
 
             # Questi dovrebbero fallire graceful
@@ -163,8 +171,9 @@ class TestRobustness:
         memory_increase = memory_after - memory_before
         max_allowed_increase = 10 * 1024 * 1024  # 10MB
 
-        assert memory_increase < max_allowed_increase, \
-            "Aumento memoria eccessivo: {memory_increase} bytes"
+        assert (
+            memory_increase < max_allowed_increase
+        ), "Aumento memoria eccessivo: {memory_increase} bytes"
 
     def test_path_traversal_protection(self):
         """Test protezione contro path traversal attacks."""
@@ -173,7 +182,7 @@ class TestRobustness:
             "../../../etc/passwd",
             "..\\..\\..\\windows\\system32\\config\\sam",
             "application/../../../root/settings",
-            "application/..\\..\\..\\etc\\shadow"
+            "application/..\\..\\..\\etc\\shadow",
         ]
 
         for path in malicious_paths:
@@ -211,13 +220,13 @@ class TestRobustness:
         # Crea un file molto grande
         large_content = "x" * (10 * 1024 * 1024)  # 10MB
 
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:
             f.write('{"test": "' + large_content + '"}')
             large_file = f.name
 
         try:
             # Test caricamento file grande
-            with patch('builtins.open', side_effect=OSError("File too large")):
+            with patch("builtins.open", side_effect=OSError("File too large")):
                 result = self.config.import_settings(large_file)
                 assert result is False
 
@@ -234,10 +243,13 @@ class TestRobustness:
         try:
             import sys
             import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+            sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
             from assistente_dsa.core.circuit_breaker import CircuitBreaker
 
-            cb = CircuitBreaker(failure_threshold=3, recovery_timeout=1, success_threshold=1)
+            cb = CircuitBreaker(
+                failure_threshold=3, recovery_timeout=1, success_threshold=1
+            )
 
             # Test stato iniziale
             assert cb.get_state().value == "CLOSED"
@@ -245,7 +257,9 @@ class TestRobustness:
             # Simula failure
             for _ in range(3):
                 try:
-                    cb.call(lambda: next((_ for _ in ()).throw(RuntimeError("Test error"))))
+                    cb.call(
+                        lambda: next((_ for _ in ()).throw(RuntimeError("Test error")))
+                    )
                 except RuntimeError:
                     pass
 
@@ -269,7 +283,8 @@ class TestRobustness:
         try:
             import sys
             import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+            sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
             from assistente_dsa.core.health_monitor import HealthMonitor
 
             monitor = HealthMonitor()
@@ -304,7 +319,8 @@ class TestRobustness:
         try:
             import sys
             import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+            sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
             from core.security_monitor import SecurityMonitor
             import threading
 
@@ -317,7 +333,7 @@ class TestRobustness:
                         monitor.log_security_event(
                             "test_event_{worker_id}",
                             {"worker": worker_id, "iteration": i},
-                            "INFO"
+                            "INFO",
                         )
                 except Exception:
                     errors.append("Worker {worker_id}: {e}")
@@ -345,13 +361,13 @@ class TestRobustness:
         """Test robustezza del sistema di font fallback."""
         # Questo test richiederebbe setup GUI, per ora testiamo la logica
         safe_fonts = [
-            'NonExistentFont123',
-            'AnotherFakeFont456',
-            'Segoe UI',  # Questo dovrebbe esistere
+            "NonExistentFont123",
+            "AnotherFakeFont456",
+            "Segoe UI",  # Questo dovrebbe esistere
         ]
 
         # Simula ricerca font
-        available_fonts = ['Segoe UI', 'Arial', 'Helvetica']
+        available_fonts = ["Segoe UI", "Arial", "Helvetica"]
 
         selected_font = None
         for font_name in safe_fonts:
@@ -359,16 +375,19 @@ class TestRobustness:
                 selected_font = font_name
                 break
 
-        assert selected_font == 'Segoe UI', "Font fallback non funziona correttamente"
+        assert selected_font == "Segoe UI", "Font fallback non funziona correttamente"
 
     def test_ai_timeout_handling(self):
         """Test gestione timeout richieste AI."""
         # Simula timeout in richiesta AI
-        with patch('Artificial_Intelligence.Ollama.ollama_bridge.OllamaBridge.sendPrompt') as mock_send:
+        with patch(
+            "Artificial_Intelligence.Ollama.ollama_bridge.OllamaBridge.sendPrompt"
+        ) as mock_send:
             mock_send.side_effect = TimeoutError("AI request timeout")
 
             # L'applicazione dovrebbe gestire il timeout graceful
             from Artificial_Intelligence.Ollama.ollama_bridge import OllamaBridge
+
             bridge = OllamaBridge()
 
             # Questo dovrebbe fallire senza crashare

@@ -5,15 +5,18 @@ Test script to verify menu renaming
 
 import os
 
+
 def check_menu_names():
     """Check that menu names have been updated correctly"""
-    qml_file = "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/main_interface.qml"
+    qml_file = (
+        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/main_interface.qml"
+    )
 
     if not os.path.exists(qml_file):
         print("❌ QML file not found")
         return False
 
-    with open(qml_file, 'r', encoding='utf-8') as f:
+    with open(qml_file, "r", encoding="utf-8") as f:
         content = f.read()
 
     # Check for new menu names
@@ -21,7 +24,7 @@ def check_menu_names():
         'title: "📝 Documenti"',
         'title: "🎯 Operazioni"',
         'title: "⚙️ Configurazione"',
-        'title: "📚 Guida"'
+        'title: "📚 Guida"',
     ]
 
     # Check for old menu names (should not exist)
@@ -29,7 +32,7 @@ def check_menu_names():
         'title: "📁 File"',
         'title: "⚙️ Strumenti"',
         'title: "🔧 Opzioni"',
-        'title: "❓ Aiuto"'
+        'title: "❓ Aiuto"',
     ]
 
     print("🔍 Checking menu names...")
@@ -53,12 +56,13 @@ def check_menu_names():
 
     return all_new_present and no_old_present
 
+
 def check_log_references():
     """Check that log messages reference the new menu name"""
     files_to_check = [
         "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/main_interface.qml",
         "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/components/LogPanel.qml",
-        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/js/log_functions.js"
+        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/js/log_functions.js",
     ]
 
     print("\n🔍 Checking log message references...")
@@ -66,24 +70,25 @@ def check_log_references():
     all_updated = True
     for file_path in files_to_check:
         if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             filename = os.path.basename(file_path)
 
             # Check for new reference
-            if 'menu Operazioni' in content:
+            if "menu Operazioni" in content:
                 print(f"✅ {filename}: Found 'menu Operazioni'")
             else:
                 print(f"❌ {filename}: Missing 'menu Operazioni'")
                 all_updated = False
 
             # Check for old reference (should not exist)
-            if 'menu Strumenti' in content:
+            if "menu Strumenti" in content:
                 print(f"❌ {filename}: Still has 'menu Strumenti'")
                 all_updated = False
 
     return all_updated
+
 
 def main():
     print("🧪 Testing Menu Renaming")
@@ -107,6 +112,7 @@ def main():
     else:
         print("⚠️ Some menu renaming issues found")
         return 1
+
 
 if __name__ == "__main__":
     exit(main())

@@ -27,18 +27,19 @@ class TextReadingHandlers:
 
         self.main_window.is_reading = True
 
-
-        selected_voice = self.main_window.settings.get('tts_voice', 'it-IT')
+        selected_voice = self.main_window.settings.get("tts_voice", "it-IT")
         # Gestisci la voce in modo sicuro
-        if selected_voice == 'Zephyr':
-            selected_voice = 'it-IT'  # Fallback a una voce valida
+        if selected_voice == "Zephyr":
+            selected_voice = "it-IT"  # Fallback a una voce valida
 
         # Usa direttamente la voce selezionata senza mapping complesso
         # Il sistema TTS dovrebbe gestire direttamente i codici lingua
         # Se non funziona, usa una voce di fallback
-        if selected_voice not in ['it-IT', 'en-US', 'en-GB', 'es-ES', 'fr-FR', 'de-DE']:
-            selected_voice = 'it-IT'  # Fallback sicuro
-        self.main_window.tts_thread = TTSThread(self.main_window.text_label.text(), selected_voice)
+        if selected_voice not in ["it-IT", "en-US", "en-GB", "es-ES", "fr-FR", "de-DE"]:
+            selected_voice = "it-IT"  # Fallback sicuro
+        self.main_window.tts_thread = TTSThread(
+            self.main_window.text_label.text(), selected_voice
+        )
         self.main_window.tts_thread.started_reading.connect(self.on_reading_started)
         self.main_window.tts_thread.finished_reading.connect(self.on_reading_finished)
         self.main_window.tts_thread.error_occurred.connect(self.on_reading_error)

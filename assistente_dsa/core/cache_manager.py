@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from collections import OrderedDict
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -62,7 +63,11 @@ class CacheEntry:
             "access_count": self.access_count,
             "last_access": datetime.fromtimestamp(self.last_access),
             "age_seconds": self.get_age(),
-            "size_bytes": len(json.dumps(self.value, default=str).encode()) if self.value and self._is_json_serializable(self.value) else 0
+            "size_bytes": (
+                len(json.dumps(self.value, default=str).encode())
+                if self.value and self._is_json_serializable(self.value)
+                else 0
+            ),
         }
 
 
@@ -152,7 +157,7 @@ class LRUCache:
                 "hits": self.hits,
                 "misses": self.misses,
                 "hit_rate": hit_rate,
-                "utilization_percent": (total_entries / self.max_size) * 100
+                "utilization_percent": (total_entries / self.max_size) * 100,
             }
 
     def get_all_entries(self) -> Dict[str, Dict[str, Any]]:
@@ -184,12 +189,12 @@ class PersistentCache:
         cache_file = self._get_cache_file_path(key)
         if os.path.exists(cache_file):
             try:
-                with open(cache_file, 'r') as f:
+                with open(cache_file, "r") as f:
                     data = json.load(f)
-                    entry = CacheEntry(data['key'], data['value'], data['ttl'])
-                    entry.timestamp = data['timestamp']
-                    entry.access_count = data['access_count']
-                    entry.last_access = data['last_access']
+                    entry = CacheEntry(data["key"], data["value"], data["ttl"])
+                    entry.timestamp = data["timestamp"]
+                    entry.access_count = data["access_count"]
+                    entry.last_access = data["last_access"]
 
                 if not entry.is_expired():
                     # Rimetti in memoria
@@ -199,7 +204,9 @@ class PersistentCache:
                     # File scaduto, rimuovilo
                     os.remove(cache_file)
             except (json.JSONDecodeError, KeyError, TypeError) as e:
-                logger.warning("Error loading cache file {cache_file} (possibly old pickle format): {e}")
+                logger.warning(
+                    "Error loading cache file {cache_file} (possibly old pickle format): {e}"
+                )
                 # Rimuovi file corrotto o vecchio formato
                 try:
                     os.remove(cache_file)
@@ -225,14 +232,14 @@ class PersistentCache:
         try:
             entry = CacheEntry(key, value, ttl or 300)
             data = {
-                'key': entry.key,
-                'value': entry.value,
-                'timestamp': entry.timestamp,
-                'ttl': entry.ttl,
-                'access_count': entry.access_count,
-                'last_access': entry.last_access
+                "key": entry.key,
+                "value": entry.value,
+                "timestamp": entry.timestamp,
+                "ttl": entry.ttl,
+                "access_count": entry.access_count,
+                "last_access": entry.last_access,
             }
-            with open(cache_file, 'w') as f:
+            with open(cache_file, "w") as f:
                 json.dump(data, f, default=str)
         except (TypeError, ValueError) as e:
             logger.warning("Cannot serialize value for cache file {cache_file}: {e}")
@@ -264,7 +271,7 @@ class PersistentCache:
         # Svuota disco
         try:
             for filename in os.listdir(self.cache_dir):
-                if filename.endswith('.cache'):
+                if filename.endswith(".cache"):
                     os.remove(os.path.join(self.cache_dir, filename))
         except Exception:
             logger.warning("Error clearing disk cache: {e}")
@@ -274,15 +281,15 @@ class PersistentCache:
         cleaned = 0
         try:
             for filename in os.listdir(self.cache_dir):
-                if filename.endswith('.cache'):
+                if filename.endswith(".cache"):
                     filepath = os.path.join(self.cache_dir, filename)
                     try:
-                        with open(filepath, 'r') as f:
+                        with open(filepath, "r") as f:
                             data = json.load(f)
-                            entry = CacheEntry(data['key'], data['value'], data['ttl'])
-                            entry.timestamp = data['timestamp']
-                            entry.access_count = data['access_count']
-                            entry.last_access = data['last_access']
+                            entry = CacheEntry(data["key"], data["value"], data["ttl"])
+                            entry.timestamp = data["timestamp"]
+                            entry.access_count = data["access_count"]
+                            entry.last_access = data["last_access"]
 
                         if entry.is_expired():
                             os.remove(filepath)
@@ -317,7 +324,7 @@ class PersistentCache:
         disk_size = 0
         try:
             for filename in os.listdir(self.cache_dir):
-                if filename.endswith('.cache'):
+                if filename.endswith(".cache"):
                     disk_files += 1
                     filepath = os.path.join(self.cache_dir, filename)
                     disk_size += os.path.getsize(filepath)
@@ -328,7 +335,7 @@ class PersistentCache:
             **memory_stats,
             "disk_files": disk_files,
             "disk_size_bytes": disk_size,
-            "disk_size_mb": disk_size / (1024 * 1024)
+            "disk_size_mb": disk_size / (1024 * 1024),
         }
 
 
@@ -349,13 +356,17 @@ class CacheManager:
         self.caches["settings"] = LRUCache(max_size=500, default_ttl=3600)  # 1 ora
 
         # Cache per risultati AI (TTL medio)
-        self.caches["ai_results"] = LRUCache(max_size=200, default_ttl=1800)  # 30 minuti
+        self.caches["ai_results"] = LRUCache(
+            max_size=200, default_ttl=1800
+        )  # 30 minuti
 
         # Cache per modelli caricati (TTL lungo)
         self.caches["models"] = LRUCache(max_size=50, default_ttl=7200)  # 2 ore
 
         # Cache per risultati TTS (TTL breve)
-        self.caches["tts_results"] = LRUCache(max_size=100, default_ttl=600)  # 10 minuti
+        self.caches["tts_results"] = LRUCache(
+            max_size=100, default_ttl=600
+        )  # 10 minuti
 
     def get_cache(self, cache_name: str) -> LRUCache:
         """Ottiene una cache specifica."""
@@ -418,6 +429,7 @@ class CacheManager:
 
     def start_cleanup_thread(self, interval: int = 3600):
         """Avvia un thread per la pulizia periodica delle cache."""
+
         def cleanup_worker():
             while True:
                 time.sleep(interval)
@@ -425,7 +437,9 @@ class CacheManager:
                     cleaned = self.cleanup_all_caches()
                     total_cleaned = sum(cleaned.values())
                     if total_cleaned > 0:
-                        logger.info("Cache cleanup: removed {total_cleaned} expired entries")
+                        logger.info(
+                            "Cache cleanup: removed {total_cleaned} expired entries"
+                        )
                 except Exception:
                     logger.error("Error during cache cleanup: {e}")
 
@@ -451,14 +465,11 @@ def cached(ttl: int = 300, cache_name: str = "default"):
         ttl: Time To Live in secondi
         cache_name: Nome della cache da usare
     """
+
     def decorator(func: Callable) -> Callable:
         def wrapper(*args, **kwargs):
             # Crea chiave cache basata su funzione e argomenti
-            key_data = {
-                "func": func.__name__,
-                "args": args,
-                "kwargs": kwargs
-            }
+            key_data = {"func": func.__name__, "args": args, "kwargs": kwargs}
             key = hashlib.md5(str(key_data).encode()).hexdigest()
 
             # Prova a ottenere dalla cache
@@ -473,4 +484,5 @@ def cached(ttl: int = 300, cache_name: str = "default"):
             return result
 
         return wrapper
+
     return decorator

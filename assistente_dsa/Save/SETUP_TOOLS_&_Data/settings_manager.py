@@ -83,8 +83,15 @@ class SettingsManager:
         "save_button_color": "#28a745",
         "load_button_color": "#ffc107",
         "add_pensierino_button_color": "#17a2b8",
-        "settings_file": os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "Save", "SETUP_TOOLS_&_Data", "settings.json"),
-        "log_file": "Save/LOG/app.log"
+        "settings_file": os.path.join(
+            os.path.dirname(
+                os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            ),
+            "Save",
+            "SETUP_TOOLS_&_Data",
+            "settings.json",
+        ),
+        "log_file": "Save/LOG/app.log",
     }
 
     def __init__(self):
@@ -95,11 +102,18 @@ class SettingsManager:
     def _load_settings(self) -> None:
         """Carica le impostazioni dal file JSON."""
         # Usa il percorso assoluto del file settings principale
-        self._settings_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "Save", "SETUP_TOOLS_&_Data", "settings.json")
+        self._settings_file = os.path.join(
+            os.path.dirname(
+                os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            ),
+            "Save",
+            "SETUP_TOOLS_&_Data",
+            "settings.json",
+        )
 
         try:
             if os.path.exists(self._settings_file):
-                with open(self._settings_file, 'r', encoding='utf-8') as f:
+                with open(self._settings_file, "r", encoding="utf-8") as f:
                     loaded_settings = json.load(f)
                 # Unisci le impostazioni caricate con quelle di default
                 self._settings = {**self.DEFAULT_SETTINGS, **loaded_settings}
@@ -125,7 +139,7 @@ class SettingsManager:
 
         try:
             os.makedirs(os.path.dirname(self._settings_file), exist_ok=True)
-            with open(self._settings_file, 'w', encoding='utf-8') as f:
+            with open(self._settings_file, "w", encoding="utf-8") as f:
                 json.dump(self._settings, f, indent=4, ensure_ascii=False)
             print("✓ Impostazioni salvate in: {self._settings_file}")
         except Exception:
@@ -157,51 +171,58 @@ class SettingsManager:
     # Proprietà specifiche per accesso diretto
     @property
     def window_width(self) -> int:
-        return self.get('window_width', 1200)
+        return self.get("window_width", 1200)
 
     @property
     def window_height(self) -> int:
-        return self.get('window_height', 800)
+        return self.get("window_height", 800)
 
     @property
     def config_dialog_width(self) -> int:
-        return self.get('config_dialog_width', 1000)
+        return self.get("config_dialog_width", 1000)
 
     @property
     def config_dialog_height(self) -> int:
-        return self.get('config_dialog_height', 700)
+        return self.get("config_dialog_height", 700)
 
     @property
     def widget_min_height(self) -> int:
-        return self.get('widget_min_height', 60)
+        return self.get("widget_min_height", 60)
 
     @property
     def default_font_size(self) -> int:
-        return self.get('default_font_size', 12)
+        return self.get("default_font_size", 12)
 
     @property
     def default_pensierini_font_size(self) -> int:
-        return self.get('default_pensierini_font_size', 10)
+        return self.get("default_pensierini_font_size", 10)
 
     @property
     def main_font_weight(self) -> str:
-        return self.get('main_font_weight', 'Normale')
+        return self.get("main_font_weight", "Normale")
 
     @property
     def pensierini_font_weight(self) -> str:
-        return self.get('pensierini_font_weight', 'Normale')
+        return self.get("pensierini_font_weight", "Normale")
 
     @property
     def app_name(self) -> str:
-        return self.get('app_name', 'CogniFlow')
+        return self.get("app_name", "CogniFlow")
 
     @property
     def settings_file(self) -> str:
-        return self._settings_file or os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "Save", "SETUP_TOOLS_&_Data", "settings.json")
+        return self._settings_file or os.path.join(
+            os.path.dirname(
+                os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            ),
+            "Save",
+            "SETUP_TOOLS_&_Data",
+            "settings.json",
+        )
 
     @property
     def log_file(self) -> str:
-        return self.get('log_file', "Save/LOG/app.log")
+        return self.get("log_file", "Save/LOG/app.log")
 
 
 # Istanza globale del gestore impostazioni

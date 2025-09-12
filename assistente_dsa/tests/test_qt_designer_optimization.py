@@ -7,6 +7,7 @@ import os
 import sys
 import json
 
+
 def check_qml_files():
     """Check that all QML files exist and are properly structured"""
     qml_files = [
@@ -15,7 +16,7 @@ def check_qml_files():
         "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/components/ControlPanel.qml",
         "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/components/AIResultsPanel.qml",
         "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/components/WorkspacePensierini.qml",
-        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/components/LogPanel.qml"
+        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/components/LogPanel.qml",
     ]
 
     print("🔍 Checking QML files...")
@@ -30,9 +31,12 @@ def check_qml_files():
 
     return all_exist
 
+
 def check_resource_file():
     """Check that the resource file exists"""
-    resource_file = "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/resources.qrc"
+    resource_file = (
+        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/resources.qrc"
+    )
 
     print("🔍 Checking resource file...")
     if os.path.exists(resource_file):
@@ -42,6 +46,7 @@ def check_resource_file():
         print("❌ Missing: resources.qrc")
         return False
 
+
 def check_designer_properties():
     """Check that components have designer-friendly properties"""
     print("🔍 Checking designer properties...")
@@ -49,9 +54,9 @@ def check_designer_properties():
     # Check ThemeManager
     theme_file = "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/components/ThemeManager.qml"
     if os.path.exists(theme_file):
-        with open(theme_file, 'r', encoding='utf-8') as f:
+        with open(theme_file, "r", encoding="utf-8") as f:
             content = f.read()
-            if 'currentTheme:' in content and 'themes:' in content:
+            if "currentTheme:" in content and "themes:" in content:
                 print("✅ ThemeManager has designer properties")
             else:
                 print("❌ ThemeManager missing designer properties")
@@ -59,9 +64,15 @@ def check_designer_properties():
     # Check ControlPanel
     control_file = "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/components/ControlPanel.qml"
     if os.path.exists(control_file):
-        with open(control_file, 'r', encoding='utf-8') as f:
+        with open(control_file, "r", encoding="utf-8") as f:
             content = f.read()
-            designer_props = ['contentMargins:', 'spacing:', 'showTTSPanel:', 'showThemePanel:', 'showAIPanel:']
+            designer_props = [
+                "contentMargins:",
+                "spacing:",
+                "showTTSPanel:",
+                "showThemePanel:",
+                "showAIPanel:",
+            ]
             found_props = [prop for prop in designer_props if prop in content]
             if len(found_props) >= 3:
                 print("✅ ControlPanel has designer properties")
@@ -71,14 +82,15 @@ def check_designer_properties():
     # Check AIResultsPanel
     ai_file = "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/components/AIResultsPanel.qml"
     if os.path.exists(ai_file):
-        with open(ai_file, 'r', encoding='utf-8') as f:
+        with open(ai_file, "r", encoding="utf-8") as f:
             content = f.read()
-            if 'itemHeight:' in content and 'maxPreviewLength:' in content:
+            if "itemHeight:" in content and "maxPreviewLength:" in content:
                 print("✅ AIResultsPanel has designer properties")
             else:
                 print("❌ AIResultsPanel missing designer properties")
 
     return True
+
 
 def check_states_and_transitions():
     """Check that components have states and transitions"""
@@ -88,26 +100,27 @@ def check_states_and_transitions():
         "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/components/ControlPanel.qml",
         "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/components/LogPanel.qml",
         "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/components/AIResultsPanel.qml",
-        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/components/WorkspacePensierini.qml"
+        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/components/WorkspacePensierini.qml",
     ]
 
     for file_path in files_to_check:
         if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
                 filename = os.path.basename(file_path)
-                if 'states:' in content:
+                if "states:" in content:
                     print(f"✅ {filename} has states")
-                if 'transitions:' in content:
+                if "transitions:" in content:
                     print(f"✅ {filename} has transitions")
 
     return True
+
 
 def check_documentation():
     """Check that documentation files exist"""
     doc_files = [
         "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/README_QT_DESIGNER.md",
-        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/README_REFACTORING.md"
+        "/home/wildlux/Scrivania/Python/CogniFLow/assistente_dsa/UI/README_REFACTORING.md",
     ]
 
     print("🔍 Checking documentation...")
@@ -122,6 +135,7 @@ def check_documentation():
 
     return all_exist
 
+
 def main():
     print("🚀 Testing Qt Design Studio Optimizations")
     print("=" * 50)
@@ -132,7 +146,7 @@ def main():
         ("Resource File", check_resource_file()),
         ("Designer Properties", check_designer_properties()),
         ("States and Transitions", check_states_and_transitions()),
-        ("Documentation", check_documentation())
+        ("Documentation", check_documentation()),
     ]
 
     print("\n" + "=" * 50)
@@ -159,6 +173,7 @@ def main():
     else:
         print("⚠️ Some optimizations may be incomplete")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -5,14 +5,27 @@ Test script to verify footer buttons functionality
 
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QHBoxLayout, QLineEdit, QPushButton, QLabel
+from PyQt6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+    QHBoxLayout,
+    QLineEdit,
+    QPushButton,
+    QLabel,
+)
 from PyQt6.QtCore import Qt
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 class TestFooterButtons:
     """Test class to verify footer buttons functionality"""
@@ -35,7 +48,9 @@ class TestFooterButtons:
 
         # Footer input field
         self.footer_pensierini_input = QLineEdit()
-        self.footer_pensierini_input.setPlaceholderText("💭 Scrivi pensierino rapido...")
+        self.footer_pensierini_input.setPlaceholderText(
+            "💭 Scrivi pensierino rapido..."
+        )
         self.footer_pensierini_input.setMinimumWidth(200)
         pensierini_footer_layout.addWidget(self.footer_pensierini_input)
 
@@ -84,6 +99,7 @@ class TestFooterButtons:
         self.test_counter = 0
         self.status_label.setText("✅ All cleared (simulation)")
 
+
 def main():
     """Main test function"""
     app = QApplication(sys.argv)
@@ -97,6 +113,7 @@ def main():
 
     # Run the application
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()

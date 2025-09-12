@@ -10,6 +10,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 # Import del bridge Ollama esistente
 try:
     from Artificial_Intelligence.Ollama.ollama_bridge import OllamaBridge
+
     OLLAMA_AVAILABLE = True
 except ImportError as e:
     logging.warning(f"Impossibile importare OllamaBridge: {e}")
@@ -73,7 +74,9 @@ class AIService(QObject):
 
             # Invia la richiesta
             self.ollama_bridge.sendPrompt(prompt, model)
-            self.logger.info(f"Richiesta AI inviata: {prompt[:50]}... (modello: {model})")
+            self.logger.info(
+                f"Richiesta AI inviata: {prompt[:50]}... (modello: {model})"
+            )
             return True
 
         except Exception as e:

@@ -14,10 +14,12 @@ from PyQt6.QtGui import QImage, QPixmap
 # Add the current directory to the path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+
 def test_video_thread_imports():
     """Test if VideoThread can be imported and instantiated."""
     try:
         from Artificial_Intelligence.Video.visual_background import VideoThread
+
         print("✓ VideoThread import successful")
 
         # Test instantiation
@@ -25,9 +27,9 @@ def test_video_thread_imports():
         print("✓ VideoThread instantiation successful")
 
         # Test basic attributes
-        assert hasattr(video_thread, 'hand_detection_enabled')
-        assert hasattr(video_thread, 'gesture_recognition_enabled')
-        assert hasattr(video_thread, 'face_detection_enabled')
+        assert hasattr(video_thread, "hand_detection_enabled")
+        assert hasattr(video_thread, "gesture_recognition_enabled")
+        assert hasattr(video_thread, "face_detection_enabled")
         print("✓ VideoThread attributes verified")
 
         return True
@@ -35,15 +37,18 @@ def test_video_thread_imports():
         print(f"❌ VideoThread test failed: {e}")
         return False
 
+
 def test_webcam_test_window_imports():
     """Test if WebcamTestWindow can be imported."""
     try:
         from main_01_Aircraft import WebcamTestWindow
+
         print("✓ WebcamTestWindow import successful")
         return True
     except Exception as e:
         print(f"❌ WebcamTestWindow import failed: {e}")
         return False
+
 
 def test_opencv_functionality():
     """Test basic OpenCV functionality for gesture recognition."""
@@ -71,6 +76,7 @@ def test_opencv_functionality():
         print(f"❌ OpenCV functionality test failed: {e}")
         return False
 
+
 def test_coordinate_mapping():
     """Test coordinate mapping functions."""
     try:
@@ -87,11 +93,13 @@ def test_coordinate_mapping():
         ui_x = int(webcam_x * scale_x)
         ui_y = int(webcam_y * scale_y)
 
-        print(f"✓ Coordinate mapping: webcam({webcam_x},{webcam_y}) -> ui({ui_x},{ui_y})")
+        print(
+            f"✓ Coordinate mapping: webcam({webcam_x},{webcam_y}) -> ui({ui_x},{ui_y})"
+        )
 
         # Verify the mapping is correct
-        expected_ui_x = int(320 * (400/640))  # Should be 200
-        expected_ui_y = int(240 * (300/480))  # Should be 150
+        expected_ui_x = int(320 * (400 / 640))  # Should be 200
+        expected_ui_y = int(240 * (300 / 480))  # Should be 150
 
         assert ui_x == expected_ui_x, f"X mapping incorrect: {ui_x} != {expected_ui_x}"
         assert ui_y == expected_ui_y, f"Y mapping incorrect: {ui_y} != {expected_ui_y}"
@@ -102,12 +110,15 @@ def test_coordinate_mapping():
         print(f"❌ Coordinate mapping test failed: {e}")
         return False
 
+
 def test_gesture_detection_logic():
     """Test the gesture detection logic with mock data."""
     try:
         # Mock contour data for testing
         # Create a simple rectangular contour (closed hand)
-        contour = np.array([[[100, 100]], [[200, 100]], [[200, 200]], [[100, 200]]], dtype=np.int32)
+        contour = np.array(
+            [[[100, 100]], [[200, 100]], [[200, 200]], [[100, 200]]], dtype=np.int32
+        )
 
         # Test basic contour analysis
         area = cv2.contourArea(contour)
@@ -145,6 +156,7 @@ def test_gesture_detection_logic():
         print(f"❌ Gesture detection logic test failed: {e}")
         return False
 
+
 def main():
     """Run all tests for the webcam gesture control system."""
     print("🧪 Testing Webcam Test Window with Gesture Control")
@@ -181,6 +193,7 @@ def main():
     else:
         print("⚠️  Some tests failed. Please check the implementation.")
         return False
+
 
 if __name__ == "__main__":
     success = main()
