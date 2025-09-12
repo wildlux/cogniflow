@@ -10,6 +10,7 @@ import threading
 import time
 import json
 import hashlib
+import importlib
 from datetime import datetime
 from typing import cast, Callable, TYPE_CHECKING
 
@@ -695,7 +696,7 @@ def test_imports():
         # Test degli import critici
         try:
             # Test import del modulo principale
-            import assistente_dsa.main_01_Aircraft
+            _ = importlib.import_module('.main_01_Aircraft', package=__name__)
             print("✅ Main module (main_01_Aircraft) imported successfully")
 
         except ImportError as e:
@@ -1184,7 +1185,7 @@ def run_app():
 
 def main():
     """Main entry point for the application."""
-    run_app()
+    _ = run_app()
 
 
 if __name__ == "__main__":
