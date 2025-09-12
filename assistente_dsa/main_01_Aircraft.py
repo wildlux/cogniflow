@@ -28,7 +28,7 @@ except ImportError:
     logging.warning("Sistema TTS non disponibile - funzionalità di pronuncia IPA limitata")
 
 # Import del sistema di configurazione
-from main_03_configurazione_e_opzioni import get_config, load_settings
+from .main_03_configurazione_e_opzioni import get_config, load_settings
 
 try:
     from UI.draggable_text_widget import DraggableTextWidget
@@ -2668,7 +2668,7 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(100, lambda: self.log_ui_metrics("AFTER_TOGGLE"))
 
         # Salva le impostazioni
-        from main_03_configurazione_e_opzioni import save_settings
+        from .main_03_configurazione_e_opzioni import save_settings
         save_settings(self.settings)
 
     def set_safe_font(self):
@@ -5850,7 +5850,7 @@ Riformulazione intensa:"""
     def show_log_content(self):
         """Mostra il contenuto del log nei dettagli."""
         try:
-            from main_03_configurazione_e_opzioni import get_config
+            from .main_03_configurazione_e_opzioni import get_config
             import os
             from datetime import datetime
 
@@ -5918,7 +5918,7 @@ Riformulazione intensa:"""
                                          QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 
             if reply == QMessageBox.StandardButton.Yes:
-                from main_03_configurazione_e_opzioni import get_config
+                from .main_03_configurazione_e_opzioni import get_config
                 log_config = get_config()
                 log_file = log_config.get_setting('files.log_file', 'Save/LOG/app.log')
 

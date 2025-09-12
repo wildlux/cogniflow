@@ -19,9 +19,10 @@ class DetectionHandlers:
             if detection_system == 'opencv':
                 # Inizializza OpenCV per il rilevamento
                 try:
-                    from Video.opencv.opencv_recognizer import OpenCVRecognizer
-                    self.main_window.hand_detector = OpenCVRecognizer()
-                    self.main_window.face_detector = OpenCVRecognizer()  # Usa la stessa classe per entrambi
+                    # Use the VideoThread class which has OpenCV functionality
+                    from .visual_background import VideoThread
+                    self.main_window.hand_detector = VideoThread()
+                    self.main_window.face_detector = VideoThread()  # Usa la stessa classe per entrambi
                     logging.info("Sistema di rilevamento OpenCV inizializzato")
                 except ImportError:
                     logging.warning("OpenCV detector non disponibile, rilevamento disabilitato")
@@ -34,15 +35,12 @@ class DetectionHandlers:
                     # TODO: Create MediaPipeHandDetector class
                     # from .mediapipe.detector.mediapipe_detector import MediaPipeHandDetector
                     raise ImportError("MediaPipe detector not yet implemented")
-                    self.main_window.hand_detector = MediaPipeHandDetector()
-                    self.main_window.face_detector = None  # MediaPipe non ha rilevamento facciale in questo file
-                    logging.info("Sistema di rilevamento MediaPipe inizializzato")
                 except ImportError:
                     logging.warning("MediaPipe detector non disponibile, uso OpenCV come fallback")
                     try:
-                        from Video.opencv.opencv_recognizer import OpenCVRecognizer
-                        self.main_window.hand_detector = OpenCVRecognizer()
-                        self.main_window.face_detector = OpenCVRecognizer()
+                        from .visual_background import VideoThread
+                        self.main_window.hand_detector = VideoThread()
+                        self.main_window.face_detector = VideoThread()
                         logging.info("Sistema di rilevamento OpenCV inizializzato (fallback)")
                     except ImportError:
                         logging.warning("Nessun sistema di rilevamento disponibile")
@@ -51,9 +49,9 @@ class DetectionHandlers:
             else:
                 logging.warning("Sistema di rilevamento '{detection_system}' non riconosciuto, uso OpenCV")
                 try:
-                    from Video.opencv.opencv_recognizer import OpenCVRecognizer
-                    self.main_window.hand_detector = OpenCVRecognizer()
-                    self.main_window.face_detector = OpenCVRecognizer()
+                    from .visual_background import VideoThread
+                    self.main_window.hand_detector = VideoThread()
+                    self.main_window.face_detector = VideoThread()
                     logging.info("Sistema di rilevamento OpenCV inizializzato")
                 except ImportError:
                     logging.warning("OpenCV detector non disponibile, rilevamento disabilitato")
