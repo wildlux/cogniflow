@@ -6,7 +6,12 @@ Test completi per vulnerabilità di sicurezza
 
 import pytest
 import tempfile
+import sys
+import os
 from unittest.mock import patch, MagicMock
+
+# Add parent directory to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from main_03_configurazione_e_opzioni import ConfigManager
 
 

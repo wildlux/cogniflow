@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
 )
 
 # Import delle componenti necessarie
-sys.path.append(os.path.dirname(__file__))
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from UI.draggable_text_widget import DraggableTextWidget
 from main_03_configurazione_e_opzioni import get_config, load_settings
 

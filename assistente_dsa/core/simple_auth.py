@@ -15,7 +15,9 @@ class SimpleAuthManager:
 
     def __init__(self):
         # Crea directory per i dati se non esiste
-        self.data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "AUTH")
+        # Path corretto: dalla root del progetto
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        self.data_dir = os.path.join(project_root, "Save", "AUTH")
         os.makedirs(self.data_dir, exist_ok=True)
 
         self.users_file = os.path.join(self.data_dir, "users.json")

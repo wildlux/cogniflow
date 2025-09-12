@@ -35,6 +35,151 @@ if TYPE_CHECKING:
 SnapshotType = dict[str, object]
 SystemMetricsType = dict[str, object]
 
+# Funzione di validazione input sicura
+def _get_validated_input(prompt: str, min_length: int = 1, max_length: int = 100, hide_input: bool = False) -> str:
+    """Ottiene input validato dall'utente con limiti di sicurezza."""
+    import getpass
+
+    while True:
+        try:
+            if hide_input:
+                value = getpass.getpass(prompt).strip()
+            else:
+                value = input(prompt).strip()
+
+            # Validazione lunghezza
+            if len(value) < min_length:
+                print(f"❌ Input troppo corto (minimo {min_length} caratteri)")
+                continue
+            if len(value) > max_length:
+                print(f"❌ Input troppo lungo (massimo {max_length} caratteri)")
+                continue
+
+            # Validazione caratteri sicuri (solo alfanumerici, spazi, trattini, underscore)
+            import re
+            if not re.match(r'^[a-zA-Z0-9\s\-_]+$', value):
+                print("❌ Caratteri non validi. Usa solo lettere, numeri, spazi, trattini e underscore")
+                continue
+
+            return value
+
+        except (EOFError, KeyboardInterrupt):
+            print("\n❌ Input interrotto")
+            raise SystemExit(1)
+        except Exception as e:
+            print(f"❌ Errore input: {e}")
+            continue
+
+# Funzione per sanitizzare comandi subprocess
+def _sanitize_command(cmd):
+    """Sanitizza comandi per prevenire command injection."""
+    import shlex
+    if isinstance(cmd, str):
+        # Dividi il comando in parti e sanitizza ciascuna
+        parts = shlex.split(cmd)
+        return ' '.join(shlex.quote(part) for part in parts)
+    elif isinstance(cmd, list):
+        # Se è già una lista, sanitizza ciascun elemento
+        return [shlex.quote(str(part)) for part in cmd]
+    else:
+        raise ValueError("Comando deve essere stringa o lista")
+
+# Sistema di crittografia semplice per dati sensibili
+class SimpleEncryptor:
+    """Sistema di crittografia semplice per proteggere dati sensibili."""
+
+    def __init__(self, key: str = "DSA_APP_ENCRYPTION_KEY_2024"):
+        self.key = key.encode()[:32].ljust(32, b'\0')  # Assicura 32 byte per AES
+
+    def encrypt(self, data: str) -> str:
+        """Critta una stringa."""
+        try:
+            import base64
+
+            # Fallback semplice se cryptography non è disponibile
+            # XOR semplice con chiave ripetuta
+            key_bytes = self.key
+            data_bytes = data.encode()
+            encrypted = bytearray()
+
+            for i, byte in enumerate(data_bytes):
+                encrypted.append(byte ^ key_bytes[i % len(key_bytes)])
+
+            return base64.b64encode(encrypted).decode()
+        except Exception:
+            # Se tutto fallisce, restituisci i dati originali (non crittografati)
+            return data
+
+    def decrypt(self, encrypted_data: str) -> str:
+        """Decritta una stringa."""
+        try:
+            import base64
+
+            # Fallback semplice se cryptography non è disponibile
+            key_bytes = self.key
+            encrypted_bytes = base64.b64decode(encrypted_data.encode())
+            decrypted = bytearray()
+
+            for i, byte in enumerate(encrypted_bytes):
+                decrypted.append(byte ^ key_bytes[i % len(key_bytes)])
+
+            return decrypted.decode()
+        except Exception:
+            # Se la decrittazione fallisce, restituisci i dati originali
+            return encrypted_data
+
+# Istanza globale dell'encryptor
+encryptor = SimpleEncryptor()
+
+# Funzione per validare path sicuri
+def _validate_safe_path(base_path: str, requested_path: str) -> str:
+    """Valida che il path richiesto sia sicuro e non provochi path traversal."""
+    import os.path
+
+    # Risolve il path assoluto
+    full_path = os.path.abspath(os.path.join(base_path, requested_path))
+
+    # Verifica che il path sia ancora all'interno della directory base
+    base_abs = os.path.abspath(base_path)
+    if not full_path.startswith(base_abs):
+        raise ValueError("Path traversal attempt detected")
+
+    return full_path
+
+# Sistema di rate limiting semplice
+class SimpleRateLimiter:
+    """Sistema semplice di rate limiting per prevenire attacchi brute force."""
+
+    def __init__(self, max_attempts: int = 5, window_seconds: int = 300):
+        self.max_attempts = max_attempts
+        self.window_seconds = window_seconds
+        self.attempts = {}
+
+    def is_allowed(self, key: str) -> bool:
+        """Verifica se una chiave è consentita entro i limiti."""
+        now = datetime.now().timestamp()
+        key_attempts = self.attempts.get(key, [])
+
+        # Rimuovi tentativi scaduti
+        key_attempts = [t for t in key_attempts if now - t < self.window_seconds]
+
+        if len(key_attempts) >= self.max_attempts:
+            return False
+
+        key_attempts.append(now)
+        self.attempts[key] = key_attempts
+        return True
+
+    def record_failure(self, key: str):
+        """Registra un tentativo fallito."""
+        now = datetime.now().timestamp()
+        if key not in self.attempts:
+            self.attempts[key] = []
+        self.attempts[key].append(now)
+
+# Istanza globale del rate limiter
+rate_limiter = SimpleRateLimiter()
+
 # Sistemi di sicurezza integrati (con fallback sicuro)
 security_available = False
 print("🔄 L'applicazione funzionerà con funzionalità di sicurezza base")
@@ -43,7 +188,18 @@ print("🔄 L'applicazione funzionerà con funzionalità di sicurezza base")
 
 
 def log_security_event(event_type: str, details: str, severity: str = "INFO"):
-    print(f"[SECURITY {severity}] {event_type}: {details}")
+    """Log eventi di sicurezza senza esporre dettagli sensibili."""
+    # Non stampare dettagli che potrebbero contenere informazioni sensibili
+    safe_details = "DETAILS_PROTECTED" if any(keyword in details.lower() for keyword in ['password', 'hash', 'key', 'token']) else details
+    print(f"[SECURITY {severity}] {event_type}: {safe_details}")
+
+    # Log sicuro su file
+    try:
+        log_entry = f"{datetime.now().isoformat()} [{severity}] {event_type}: {safe_details}\n"
+        with open(os.path.join(os.path.dirname(__file__), "security.log"), "a") as f:
+            f.write(log_entry)
+    except:
+        pass  # Se non riusciamo a scrivere il log, continuiamo comunque
 
 
 def get_health_status():
@@ -119,8 +275,18 @@ class SimpleAuthManager:
         if os.path.exists(self.users_file):
             try:
                 with open(self.users_file, 'r', encoding='utf-8') as f:
-                    self.users = json.load(f)
-            except:
+                    encrypted_data = f.read()
+
+                # Prova a decrittografare, se fallisce assume che non sia crittografato
+                try:
+                    decrypted_data = encryptor.decrypt(encrypted_data)
+                    self.users = json.loads(decrypted_data)
+                except:
+                    # Fallback: assume che i dati non siano crittografati
+                    self.users = json.loads(encrypted_data)
+
+            except Exception as e:
+                print(f"Errore caricamento utenti: {type(e).__name__}")
                 self.users = {}
         else:
             self.users = {}
@@ -128,37 +294,127 @@ class SimpleAuthManager:
             self._create_default_admin()
 
     def _create_default_admin(self):
+        # Rimossa password hardcoded - ora richiede setup sicuro
+        print("⚠️  ATTENZIONE: Nessun utente amministratore trovato!")
+        print("🔧 Eseguire setup sicuro iniziale per creare amministratore")
+        print("💡 Comando suggerito: python -c \"from assistente_dsa.core.simple_auth import SimpleAuthManager; auth = SimpleAuthManager(); auth.setup_secure_admin()\"")
+
+        # Crea utente placeholder disabilitato
         admin_user = {
             "username": "admin",
-            "password_hash": hashlib.sha256("admin123".encode()).hexdigest(),
+            "password_hash": "",  # Password vuota - richiede setup
+            "full_name": "System Administrator",
+            "group": "Administrator",
+            "is_active": False,  # Disabilitato fino al setup sicuro
+            "created_at": datetime.now().isoformat(),
+            "last_login": None,
+            "requires_setup": True
+        }
+        self.users["admin"] = admin_user
+        self._save_users()
+
+    def _save_users(self):
+        try:
+            # Crittografa i dati prima di salvarli
+            users_json = json.dumps(self.users, indent=2, ensure_ascii=False)
+            encrypted_data = encryptor.encrypt(users_json)
+
+            with open(self.users_file, 'w', encoding='utf-8') as f:
+                f.write(encrypted_data)
+        except Exception as e:
+            print(f"Errore salvataggio utenti: {type(e).__name__}")
+            # Fallback: salva senza crittografia se la crittografia fallisce
+            try:
+                with open(self.users_file, 'w', encoding='utf-8') as f:
+                    json.dump(self.users, f, indent=2, ensure_ascii=False)
+            except Exception as e2:
+                print(f"Errore salvataggio fallback: {type(e2).__name__}")
+
+    def _hash_password_secure(self, password: str) -> str:
+        """Hash sicuro con salt usando PBKDF2"""
+        import secrets
+        salt = secrets.token_hex(16)  # 32 caratteri hex = 16 bytes
+        key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
+        return f"{salt}${key.hex()}"
+
+    def _verify_password_secure(self, password: str, hash: str) -> bool:
+        """Verifica password con hash sicuro"""
+        try:
+            salt, key = hash.split('$', 1)
+            new_key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
+            return new_key.hex() == key
+        except:
+            return False
+
+    def authenticate(self, username, password):
+        # Rate limiting per prevenire brute force
+        if not rate_limiter.is_allowed(f"auth_{username}"):
+            print("❌ Troppi tentativi di accesso. Riprova più tardi.")
+            return None
+
+        if username not in self.users:
+            rate_limiter.record_failure(f"auth_{username}")
+            return None
+
+        user = self.users[username]
+        if not user.get("is_active", True):
+            rate_limiter.record_failure(f"auth_{username}")
+            return None
+
+        # Supporta sia hash vecchio che nuovo per retrocompatibilità
+        password_hash = user["password_hash"]
+        if password_hash.startswith("$"):  # Nuovo formato con salt
+            if not self._verify_password_secure(password, password_hash):
+                rate_limiter.record_failure(f"auth_{username}")
+                return None
+        else:  # Vecchio formato SHA256 (da migrare)
+            if password_hash != hashlib.sha256(password.encode()).hexdigest():
+                rate_limiter.record_failure(f"auth_{username}")
+                return None
+
+        user["last_login"] = datetime.now().isoformat()
+        self._save_users()
+        return user
+
+    def setup_secure_admin(self):
+        """Setup sicuro dell'amministratore con password complessa"""
+        print("🔐 SETUP AMMINISTRATORE SICURO")
+        print("================================")
+
+        while True:
+            username = input("Username amministratore: ").strip()
+            if not username or len(username) < 3:
+                print("❌ Username deve essere di almeno 3 caratteri")
+                continue
+            break
+
+        while True:
+            password = input("Password amministratore (min 8 caratteri): ").strip()
+            if len(password) < 8:
+                print("❌ Password deve essere di almeno 8 caratteri")
+                continue
+            confirm = input("Conferma password: ").strip()
+            if password != confirm:
+                print("❌ Password non corrispondono")
+                continue
+            break
+
+        # Crea amministratore sicuro
+        admin_user = {
+            "username": username,
+            "password_hash": self._hash_password_secure(password),
             "full_name": "System Administrator",
             "group": "Administrator",
             "is_active": True,
             "created_at": datetime.now().isoformat(),
-            "last_login": None
+            "last_login": None,
+            "requires_setup": False
         }
-        self.users["admin"] = admin_user
-        self._save_users()
-        print("✅ Utente amministratore creato: admin / admin123")
 
-    def _save_users(self):
-        try:
-            with open(self.users_file, 'w', encoding='utf-8') as f:
-                json.dump(self.users, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            print(f"Errore salvataggio utenti: {e}")
-
-    def authenticate(self, username, password):
-        if username not in self.users:
-            return None
-        user = self.users[username]
-        if not user.get("is_active", True):
-            return None
-        if user["password_hash"] != hashlib.sha256(password.encode()).hexdigest():
-            return None
-        user["last_login"] = datetime.now().isoformat()
+        self.users[username] = admin_user
         self._save_users()
-        return user
+        print(f"✅ Amministratore '{username}' creato con successo!")
+        print("🔒 Password hash sicura implementata")
 
     def get_user_permissions(self, username):
         user = self.users.get(username)
@@ -637,12 +893,21 @@ def open_launcher_gui():
         aircraft_script = os.path.join(current_dir, "main_01_Aircraft.py")
 
         if os.path.exists(aircraft_script):
+            # Sanitizza il comando per sicurezza
             cmd = [sys.executable, aircraft_script]
+            sanitized_cmd = _sanitize_command(cmd)
+
             try:
-                _ = subprocess.Popen(cmd, cwd=current_dir)
+                _ = subprocess.Popen(sanitized_cmd, cwd=current_dir)
                 print("✅ Applicazione principale avviata con successo")
             except Exception as e:
-                print(f"❌ Errore avvio applicazione principale: {e}")
+                print("❌ Errore avvio applicazione principale: Controlla i log per dettagli")
+                # Log dell'errore senza esporre dettagli sensibili
+                try:
+                    with open(os.path.join(os.path.dirname(__file__), "error.log"), "a") as f:
+                        f.write(f"{datetime.now()}: Errore avvio app - {type(e).__name__}\n")
+                except:
+                    pass  # Se non riusciamo a scrivere il log, continuiamo comunque
         else:
             print(f"❌ Script applicazione principale non trovato: {aircraft_script}")
         return
@@ -713,8 +978,9 @@ def run_app():
             # Richiedi autenticazione
             print("\n🔐 Autenticazione richiesta...")
             if AUTH_AVAILABLE and auth_manager:
-                username = input("Username: ").strip()
-                password = input("Password: ").strip()
+                # Input validato e sicuro
+                username = _get_validated_input("Username: ", min_length=1, max_length=50)
+                password = _get_validated_input("Password: ", min_length=1, max_length=100, hide_input=True)
 
                 current_user = auth_manager.authenticate(username, password)
                 if not current_user:

@@ -14,15 +14,15 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-class TestFooterButtons(QMainWindow):
-    """Test window to verify footer buttons functionality"""
+class TestFooterButtons:
+    """Test class to verify footer buttons functionality"""
 
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Test Footer Buttons")
-        self.setGeometry(100, 100, 500, 200)
+    def setup_method(self):
+        """Setup method called before each test"""
+        pass
 
-        # Create central widget
+    def test_footer_buttons_creation(self):
+        """Test that footer buttons can be created"""
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
