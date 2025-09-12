@@ -8,7 +8,6 @@ import sys
 import traceback
 import threading
 import time
-import multiprocessing
 import json
 import hashlib
 from datetime import datetime
@@ -106,7 +105,7 @@ def _get_validated_input(
 
 
 # Funzione per sanitizzare comandi subprocess
-def _sanitize_command(cmd):
+def _sanitize_command(cmd: str | list[str]) -> str | list[str]:
     """Sanitizza comandi per prevenire command injection."""
     import shlex
 
@@ -114,11 +113,9 @@ def _sanitize_command(cmd):
         # Dividi il comando in parti e sanitizza ciascuna
         parts = shlex.split(cmd)
         return " ".join(shlex.quote(part) for part in parts)
-    elif isinstance(cmd, list):
+    else:
         # Se è già una lista, sanitizza ciascun elemento
         return [shlex.quote(str(part)) for part in cmd]
-    else:
-        raise ValueError("Comando deve essere stringa o lista")
 
 
 # Sistema di crittografia semplice per dati sensibili
@@ -126,7 +123,7 @@ class SimpleEncryptor:
     """Sistema di crittografia semplice per proteggere dati sensibili."""
 
     def __init__(self, key: str = "DSA_APP_ENCRYPTION_KEY_2024"):
-        self.key = key.encode()[:32].ljust(32, b"\0")  # Assicura 32 byte per AES
+        self.key: bytes = key.encode()[:32].ljust(32, b"\0")  # Assicura 32 byte per AES
 
     def encrypt(self, data: str) -> str:
         """Critta una stringa."""
@@ -170,20 +167,7 @@ class SimpleEncryptor:
 encryptor = SimpleEncryptor()
 
 
-# Funzione per validare path sicuri
-def _validate_safe_path(base_path: str, requested_path: str) -> str:
-    """Valida che il path richiesto sia sicuro e non provochi path traversal."""
-    import os.path
 
-    # Risolve il path assoluto
-    full_path = os.path.abspath(os.path.join(base_path, requested_path))
-
-    # Verifica che il path sia ancora all'interno della directory base
-    base_abs = os.path.abspath(base_path)
-    if not full_path.startswith(base_abs):
-        raise ValueError("Path traversal attempt detected")
-
-    return full_path
 
 
 # Sistema di rate limiting semplice
@@ -191,9 +175,9 @@ class SimpleRateLimiter:
     """Sistema semplice di rate limiting per prevenire attacchi brute force."""
 
     def __init__(self, max_attempts: int = 5, window_seconds: int = 300):
-        self.max_attempts = max_attempts
-        self.window_seconds = window_seconds
-        self.attempts = {}
+        self.max_attempts: int = max_attempts
+        self.window_seconds: int = window_seconds
+        self.attempts: dict[str, list[float]] = {}
 
     def is_allowed(self, key: str) -> bool:
         """Verifica se una chiave è consentita entro i limiti."""
@@ -247,7 +231,7 @@ def log_security_event(event_type: str, details: str, severity: str = "INFO"):
             f"{datetime.now().isoformat()} [{severity}] {event_type}: {safe_details}\n"
         )
         with open(os.path.join(os.path.dirname(__file__), "security.log"), "a") as f:
-            f.write(log_entry)
+            _ = f.write(log_entry)
     except:
         pass  # Se non riusciamo a scrivere il log, continuiamo comunque
 
@@ -326,15 +310,14 @@ except ImportError as e:
     sys.exit(1)
 
 # Sistema di autenticazione semplificato integrato
-import hashlib
-from datetime import datetime
 
 
 class SimpleAuthManager:
     def __init__(self):
-        self.data_dir = os.path.join(os.path.dirname(__file__), "Save", "AUTH")
+        self.data_dir: str = os.path.join(os.path.dirname(__file__), "Save", "AUTH")
         os.makedirs(self.data_dir, exist_ok=True)
-        self.users_file = os.path.join(self.data_dir, "users.json")
+        self.users_file: str = os.path.join(self.data_dir, "users.json")
+        self.users: dict[str, dict[str, str | bool | None]] = {}
         self._load_users()
 
     def _load_users(self):
@@ -388,7 +371,7 @@ class SimpleAuthManager:
             encrypted_data = encryptor.encrypt(users_json)
 
             with open(self.users_file, "w", encoding="utf-8") as f:
-                f.write(encrypted_data)
+                _ = f.write(encrypted_data)
         except Exception as e:
             print(f"Errore salvataggio utenti: {type(e).__name__}")
             # Fallback: salva senza crittografia se la crittografia fallisce
@@ -419,7 +402,7 @@ class SimpleAuthManager:
         except:
             return False
 
-    def authenticate(self, username, password):
+    def authenticate(self, username: str, password: str) -> dict[str, str | bool | None] | None:
         # Rate limiting per prevenire brute force
         if not rate_limiter.is_allowed(f"auth_{username}"):
             print("❌ Troppi tentativi di accesso. Riprova più tardi.")
@@ -435,7 +418,7 @@ class SimpleAuthManager:
             return None
 
         # Supporta sia hash vecchio che nuovo per retrocompatibilità
-        password_hash = user["password_hash"]
+        password_hash = cast(str, user["password_hash"])
         if password_hash.startswith("$"):  # Nuovo formato con salt
             if not self._verify_password_secure(password, password_hash):
                 rate_limiter.record_failure(f"auth_{username}")
@@ -489,11 +472,11 @@ class SimpleAuthManager:
         print(f"✅ Amministratore '{username}' creato con successo!")
         print("🔒 Password hash sicura implementata")
 
-    def get_user_permissions(self, username):
+    def get_user_permissions(self, username: str) -> dict[str, bool]:
         user = self.users.get(username)
         if not user:
             return {"system_access": False}
-        group = user.get("group", "Guest")
+        group = cast(str, user.get("group", "Guest"))
         # Permessi semplificati
         permissions = {
             "Administrator": {
@@ -646,7 +629,7 @@ def perform_security_checks():
 
     # Check required Python packages (sequential for better error handling)
     required_packages = ["PyQt6", "subprocess", "os", "sys", "cv2", "numpy"]
-    missing_packages: list[str] = []
+    missing_packages_second: list[str] = []
     for package in required_packages:
         try:
             available = check_package(package)[1]
@@ -656,114 +639,25 @@ def perform_security_checks():
                 )
                 print(f"✅ Package '{package}' available")
             else:
-                missing_packages.append(package)
+                missing_packages_second.append(package)
                 log_security_event(
                     "PACKAGE_CHECK", f"Package '{package}' missing", "WARNING"
                 )
                 print(f"❌ Package '{package}' missing")
         except Exception as e:
-            missing_packages.append(package)
+            missing_packages_second.append(package)
             log_security_event(
                 "PACKAGE_CHECK", f"Package '{package}' check failed: {e}", "WARNING"
             )
             print(f"⚠️  Package '{package}' check failed: {e}")
 
-    if missing_packages:
+    if missing_packages_second:
         log_security_event(
             "PACKAGE_CHECK",
-            f"Missing packages: {', '.join(missing_packages)}",
+            f"Missing packages: {', '.join(missing_packages_second)}",
             "WARNING",
         )
-        print(f"⚠️  WARNING: Missing packages: {', '.join(missing_packages)}")
-        print("Please install missing packages using: pip install <package>")
-
-    # Take snapshot after security checks
-    if performance_available and performance_monitor:
-        _security_complete_snapshot: SnapshotType = cast(
-            SnapshotType, performance_monitor.take_snapshot("security_checks_complete")
-        )  # noqa: F841
-
-    return True
-    python_version_ok = sys.version_info >= (3, 8)
-    if not python_version_ok:
-        log_security_event("VERSION_CHECK", "Python 3.8+ required", "ERROR")
-        print("❌ ERROR: Python 3.8 or higher required")
-        return False
-
-    # At this point, we know Python version >= 3.8
-    log_security_event("VERSION_CHECK", f"Python {sys.version} detected", "INFO")
-    print(f"✅ Python version: {sys.version}")
-
-    # Check if running as root (security risk)
-    try:
-        if os.geteuid() == 0:
-            log_security_event("PERMISSION_CHECK", "Running as root", "WARNING")
-            print("⚠️  WARNING: Running as root - this may pose security risks")
-    except AttributeError:
-        # os.geteuid() not available on Windows
-        pass
-
-    # Check write permissions in current directory
-    try:
-        test_file = os.path.join(os.getcwd(), ".test_write")
-        with open(test_file, "w") as f:
-            _ = f.write("test")
-        os.remove(test_file)
-        log_security_event("PERMISSION_CHECK", "Write permissions verified", "INFO")
-        print("✅ Write permissions verified")
-    except Exception as e:
-        log_security_event("PERMISSION_CHECK", f"No write permissions: {e}", "ERROR")
-        print(f"❌ ERROR: No write permissions in current directory: {e}")
-        return False
-
-    # Check required directories exist (sequential for better error handling)
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    required_dirs = ["Save", "Screenshot", "assistente_dsa"]
-    required_paths = [os.path.join(project_root, d) for d in required_dirs]
-    for dir_path in required_paths:
-        dir_name, exists = check_directory(dir_path)
-        if not exists:
-            log_security_event(
-                "DIRECTORY_CHECK", f"Directory '{dir_name}' missing", "WARNING"
-            )
-            print(f"⚠️  WARNING: Required directory '{dir_name}' not found")
-        else:
-            log_security_event(
-                "DIRECTORY_CHECK", f"Directory '{dir_name}' exists", "INFO"
-            )
-            print(f"✅ Directory '{dir_name}' exists")
-
-    # Check required Python packages (sequential for better error handling)
-    required_packages = ["PyQt6", "subprocess", "os", "sys", "cv2", "numpy"]
-    missing_packages: list[str] = []
-    for package in required_packages:
-        try:
-            available = check_package(package)[1]
-            if available:
-                log_security_event(
-                    "PACKAGE_CHECK", f"Package '{package}' available", "INFO"
-                )
-                print(f"✅ Package '{package}' available")
-            else:
-                missing_packages.append(package)
-                log_security_event(
-                    "PACKAGE_CHECK", f"Package '{package}' missing", "WARNING"
-                )
-                print(f"❌ Package '{package}' missing")
-        except Exception as e:
-            missing_packages.append(package)
-            log_security_event(
-                "PACKAGE_CHECK", f"Package '{package}' check failed: {e}", "WARNING"
-            )
-            print(f"⚠️  Package '{package}' check failed: {e}")
-
-    if missing_packages:
-        log_security_event(
-            "PACKAGE_CHECK",
-            f"Missing packages: {', '.join(missing_packages)}",
-            "WARNING",
-        )
-        print(f"⚠️  WARNING: Missing packages: {', '.join(missing_packages)}")
+        print(f"⚠️  WARNING: Missing packages: {', '.join(missing_packages_second)}")
         print("Please install missing packages using: pip install <package>")
 
     # Take snapshot after security checks
@@ -801,8 +695,7 @@ def test_imports():
         # Test degli import critici
         try:
             # Test import del modulo principale
-            import main_01_Aircraft
-
+            import assistente_dsa.main_01_Aircraft
             print("✅ Main module (main_01_Aircraft) imported successfully")
 
         except ImportError as e:
@@ -858,15 +751,15 @@ def select_theme():
         {"name": "Chat", "icon": "💬", "description": "Tema chat"},
     ]
 
-    themes = get_setting(
+    themes = cast(list[dict[str, str]], get_setting(
         "themes.available", default_themes
-    )  # pyright: ignore[reportAny]
+    ))
     if not themes:
         print("Nessun tema disponibile")
         return
 
     # Automatically select the first theme (Professionale)
-    selected_theme = cast(str, themes[0]["name"])
+    selected_theme = themes[0]["name"]
     _ = set_setting("themes.selected", selected_theme)
     print(f"✅ Tema selezionato automaticamente: {selected_theme}")
     print("ℹ️  Nota: Menu di selezione temi disabilitato temporaneamente per stabilità")
@@ -925,9 +818,7 @@ class LoginDialog(QDialog):  # type: ignore[misc]
             }
         """
         )
-        _ = self.login_button.clicked.connect(
-            self.attempt_login
-        )  # pyright: ignore[reportUnknownMemberType]
+
         layout.addWidget(self.login_button)
 
         # Status label
@@ -937,12 +828,8 @@ class LoginDialog(QDialog):  # type: ignore[misc]
         layout.addWidget(self.status_label)
 
         # Connect Enter key to login
-        _ = self.username_input.returnPressed.connect(
-            self.attempt_login
-        )  # pyright: ignore[reportUnknownMemberType]
-        _ = self.password_input.returnPressed.connect(
-            self.attempt_login
-        )  # pyright: ignore[reportUnknownMemberType]
+
+
 
     def attempt_login(self):
         """Attempt to login with provided credentials."""
@@ -1009,9 +896,7 @@ class LauncherMainWindow(QMainWindow):  # type: ignore[misc]
             }
         """
         )
-        _ = self.launch_button.clicked.connect(
-            self.launch_aircraft
-        )  # pyright: ignore[reportUnknownMemberType]
+
         layout.addWidget(self.launch_button)
 
         layout.addStretch()
@@ -1082,7 +967,7 @@ def open_launcher_gui():
                     with open(
                         os.path.join(os.path.dirname(__file__), "error.log"), "a"
                     ) as f:
-                        f.write(
+                        _ = f.write(
                             f"{datetime.now()}: Errore avvio app - {type(e).__name__}\n"
                         )
                 except:
@@ -1138,16 +1023,16 @@ def run_app():
 
         selected_theme_name = cast(str, get_setting("themes.selected", "Professionale"))
         themes = cast(
-            list, get_setting("themes.available", [])
-        )  # pyright: ignore[reportMissingTypeArgument,reportUnknownVariableType]
+            list[dict[str, str]], get_setting("themes.available", [])
+        )
         selected_theme_icon = next(
             (
-                cast(str, t["icon"])
+                t["icon"]
                 for t in themes
-                if cast(str, t["name"]) == selected_theme_name
+                if t["name"] == selected_theme_name
             ),
             "🎨",
-        )  # pyright: ignore[reportUnknownVariableType]
+        )
 
         print(f"✅ Global settings loaded - Theme: {settings['application']['theme']}")
         print(
@@ -1200,7 +1085,7 @@ def run_app():
 
         # Verifica permessi per accesso al sistema
         if AUTH_AVAILABLE and auth_manager:
-            permissions = auth_manager.get_user_permissions(current_user["username"])
+            permissions = auth_manager.get_user_permissions(cast(str, current_user["username"]))
             if not permissions.get("system_access", False):
                 print("❌ Accesso al sistema negato")
                 return
@@ -1225,9 +1110,9 @@ def run_app():
 
         # Passa informazioni utente come variabili d'ambiente
         env = os.environ.copy()
-        env["DSA_USERNAME"] = current_user["username"]
-        env["DSA_FULL_NAME"] = current_user["full_name"]
-        env["DSA_GROUP"] = current_user.get("group", "Guest")
+        env["DSA_USERNAME"] = cast(str, current_user["username"])
+        env["DSA_FULL_NAME"] = cast(str, current_user["full_name"])
+        env["DSA_GROUP"] = cast(str, current_user.get("group", "Guest"))
         env["DSA_PERMISSIONS"] = json.dumps(permissions)
 
         try:
@@ -1294,6 +1179,13 @@ def run_app():
     _ = stop_performance_monitoring()
     print("🏁 Application finished")
 
+    return True
+
+
+def main():
+    """Main entry point for the application."""
+    run_app()
+
 
 if __name__ == "__main__":
-    _: object = run_app()
+    main()
