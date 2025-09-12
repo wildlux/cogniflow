@@ -33,7 +33,7 @@ class PerformanceMonitor:
                 try:
                     result = func(*args, **kwargs)
                     execution_time = time.time() - start_time
-                    self.record_metric("{func_name}.execution_time", execution_time)
+                    self.record_metric(f"{func_name}.execution_time", execution_time)
                     return result
                 except Exception as e:
                     execution_time = time.time() - start_time

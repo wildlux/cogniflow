@@ -11,27 +11,23 @@ import time
 import multiprocessing
 from typing import cast, Callable, TYPE_CHECKING
 
-# Webcam capture imports
-try:
-    import cv2  # type: ignore
-    import numpy as np  # type: ignore
-    opencv_available = True
-except ImportError:
-    opencv_available = False
-    print("⚠️  OpenCV not available - webcam features disabled")
+# Webcam capture imports (not used in this file)
+opencv_available = False
 
-# GUI imports for webcam test window
+# GUI imports
 try:
     from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QLabel, QMessageBox, QLineEdit, QFormLayout, QDialog
-    from PyQt6.QtGui import QPixmap, QImage, QPainter, QColor
-    from PyQt6.QtCore import Qt, QTimer
+    from PyQt6.QtCore import Qt
     pyqt_available = True
 except ImportError:
     pyqt_available = False
-    print("⚠️  PyQt6 not available - GUI webcam test disabled")
+    print("⚠️  PyQt6 not available - GUI launcher disabled")
 
 if TYPE_CHECKING:
     from core.performance_monitor import PerformanceMonitor
+    from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QLabel, QMessageBox, QLineEdit, QFormLayout, QDialog
+    from PyQt6.QtGui import QPixmap, QImage, QPainter, QColor
+    from PyQt6.QtCore import Qt, QTimer
 
 # Type definitions for performance monitoring
 SnapshotType = dict[str, object]
@@ -124,7 +120,7 @@ def start_performance_monitoring():
             try:
                 snapshot_count += 1
                 if performance_monitor:
-                    _snapshot: SnapshotType = cast(SnapshotType, performance_monitor.take_snapshot("periodic_{snapshot_count}"))
+                    _snapshot: SnapshotType = cast(SnapshotType, performance_monitor.take_snapshot(f"periodic_{snapshot_count}"))
                 time.sleep(30)  # Take snapshot every 30 seconds
             except Exception as e:
                 print(f"Performance monitoring error: {e}")
@@ -302,7 +298,7 @@ def select_theme():
             choice_num = int(choice)
             if 1 <= choice_num <= len(themes):
                 selected_theme = themes[choice_num - 1]['name']
-                set_setting('themes.selected', selected_theme)
+                _ = set_setting('themes.selected', selected_theme)
                 print(f"✅ Tema selezionato: {selected_theme}")
                 return
             else:
@@ -320,7 +316,7 @@ def select_theme():
 
 
 
-class LoginDialog(QDialog):  # type: ignore
+class LoginDialog(QDialog):  # type: ignore[misc]
     """Login dialog for authentication."""
 
     def __init__(self):
@@ -341,11 +337,11 @@ class LoginDialog(QDialog):  # type: ignore
         # Form layout for username and password
         form_layout = QFormLayout()  # type: ignore
 
-        self.username_input = QLineEdit()  # type: ignore
+        self.username_input: QLineEdit = QLineEdit()  # type: ignore
         self.username_input.setPlaceholderText("Enter username")
         form_layout.addRow("Username:", self.username_input)
 
-        self.password_input = QLineEdit()  # type: ignore
+        self.password_input: QLineEdit = QLineEdit()  # type: ignore
         self.password_input.setPlaceholderText("Enter password")
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)  # type: ignore
         form_layout.addRow("Password:", self.password_input)
@@ -353,7 +349,7 @@ class LoginDialog(QDialog):  # type: ignore
         layout.addLayout(form_layout)
 
         # Login button
-        self.login_button = QPushButton("Login")  # type: ignore
+        self.login_button: QPushButton = QPushButton("Login")  # type: ignore
         self.login_button.setStyleSheet("""
             QPushButton {
                 background-color: #4CAF50;
@@ -373,7 +369,7 @@ class LoginDialog(QDialog):  # type: ignore
         layout.addWidget(self.login_button)
 
         # Status label
-        self.status_label = QLabel("")  # type: ignore
+        self.status_label: QLabel = QLabel("")  # type: ignore
         self.status_label.setStyleSheet("color: #d32f2f; font-size: 12px;")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # type: ignore
         layout.addWidget(self.status_label)
@@ -397,7 +393,7 @@ class LoginDialog(QDialog):  # type: ignore
             self.username_input.setFocus()
 
 
-class LauncherMainWindow(QMainWindow):  # type: ignore
+class LauncherMainWindow(QMainWindow):  # type: ignore[misc]
     """Main launcher window."""
 
     def __init__(self):
@@ -426,7 +422,7 @@ class LauncherMainWindow(QMainWindow):  # type: ignore
 
 
         # Launch Aircraft button
-        self.launch_button = QPushButton("✈️ Launch Aircraft")  # type: ignore
+        self.launch_button: QPushButton = QPushButton("✈️ Launch Aircraft")  # type: ignore
         self.launch_button.setStyleSheet("""
             QPushButton {
                 background-color: #4CAF50;
@@ -464,17 +460,17 @@ class LauncherMainWindow(QMainWindow):  # type: ignore
 
             # Validate script path before execution
             if not os.path.exists(aircraft_script):
-                QMessageBox.critical(self, "Error", f"Script not found: {aircraft_script}")  # type: ignore
+                _ = QMessageBox.critical(self, "Error", f"Script not found: {aircraft_script}")  # type: ignore
                 return
 
             # Secure command execution with timeout
             cmd = [sys.executable, aircraft_script]
             subprocess.Popen(cmd, cwd=current_dir)
 
-            QMessageBox.information(self, "Success", "Aircraft application launched!")  # type: ignore
+            _ = QMessageBox.information(self, "Success", "Aircraft application launched!")  # type: ignore
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to launch Aircraft: {str(e)}")  # type: ignore
+            _ = QMessageBox.critical(self, "Error", f"Failed to launch Aircraft: {str(e)}")  # type: ignore
 
 
 def open_launcher_gui():
@@ -501,7 +497,7 @@ def open_launcher_gui():
         if os.path.exists(aircraft_script):
             cmd = [sys.executable, aircraft_script]
             try:
-                subprocess.Popen(cmd, cwd=current_dir)
+                _ = subprocess.Popen(cmd, cwd=current_dir)
                 print("✅ Applicazione principale avviata con successo")
             except Exception as e:
                 print(f"❌ Errore avvio applicazione principale: {e}")
@@ -512,12 +508,13 @@ def open_launcher_gui():
     # Normal login flow
     print("🔐 Bypass login disabilitato - Richiesta autenticazione...")
     login_dialog = LoginDialog()
-    if login_dialog.exec() == QDialog.DialogCode.Accepted:  # type: ignore
+    result = login_dialog.exec()  # type: ignore
+    if result == QDialog.DialogCode.Accepted:  # type: ignore
         # Login successful, show main window
         print("✅ Login riuscito - Avvio launcher...")
         window = LauncherMainWindow()
         window.show()
-        app.exec()  # type: ignore
+        _ = app.exec()  # type: ignore
     else:
         # Login cancelled or failed - do not start application
         print("❌ Login annullato o fallito - Applicazione non avviata")
@@ -550,7 +547,7 @@ def run_app():
         print("Calling Aircraft main interface...")
 
         # Start periodic performance monitoring
-        _: object = start_performance_monitoring()
+        _ = start_performance_monitoring()
 
         # Verifica che le impostazioni siano accessibili globalmente
         settings = load_settings()
@@ -640,7 +637,7 @@ def run_app():
             print(f"⚠️  Could not export performance metrics: {e}")
 
     # Stop periodic monitoring
-    _: object = stop_performance_monitoring()
+    _ = stop_performance_monitoring()
 
 
 if __name__ == "__main__":

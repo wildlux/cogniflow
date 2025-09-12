@@ -51,9 +51,12 @@ class HealthCheck:
             self.last_error = None
             self.consecutive_failures = 0
 
+            # Check if the result indicates unhealthy status
+            status = result.get("status", "healthy") if isinstance(result, dict) else "healthy"
+
             return {
                 "name": self.name,
-                "status": "healthy",
+                "status": status,
                 "result": result,
                 "response_time": time.time() - start_time,
                 "timestamp": datetime.now()

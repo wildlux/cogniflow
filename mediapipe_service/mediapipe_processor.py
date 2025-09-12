@@ -1,4 +1,12 @@
-import mediapipe as mp
+try:
+    import mediapipe as mp
+    MEDIAPIPE_AVAILABLE = True
+    print("MediaPipe loaded successfully")
+except ImportError as e:
+    mp = None
+    MEDIAPIPE_AVAILABLE = False
+    print(f"MediaPipe not available - using OpenCV fallback mode: {e}")
+
 import cv2
 import numpy as np
 import logging
@@ -10,38 +18,52 @@ logger = logging.getLogger(__name__)
 class MediaPipeProcessor:
     def __init__(self):
         """Initialize MediaPipe processors"""
-        try:
-            self.mp_pose = mp.solutions.pose
-            self.mp_hands = mp.solutions.hands
-            self.mp_drawing = mp.solutions.drawing_utils
-            self.mp_drawing_styles = mp.solutions.drawing_styles
-
-            # Initialize pose detector
-            self.pose = self.mp_pose.Pose(
-                static_image_mode=False,
-                model_complexity=1,
-                smooth_landmarks=True,
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5
-            )
-
-            # Initialize hands detector
-            self.hands = self.mp_hands.Hands(
-                static_image_mode=False,
-                max_num_hands=2,
-                model_complexity=1,
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5
-            )
-
-            self.available = True
-            logger.info("MediaPipe processor initialized successfully")
-
-        except Exception as e:
-            logger.error(f"Failed to initialize MediaPipe: {e}")
+        if not MEDIAPIPE_AVAILABLE:
             self.available = False
             self.pose = None
             self.hands = None
+            logger.warning("MediaPipe not available - using OpenCV fallback")
+            return
+        
+        if MEDIAPIPE_AVAILABLE:
+            try:
+                self.mp_pose = mp.solutions.pose
+                self.mp_hands = mp.solutions.hands
+                self.mp_drawing = mp.solutions.drawing_utils
+                self.mp_drawing_styles = mp.solutions.drawing_styles
+
+                # Initialize pose detector
+                self.pose = self.mp_pose.Pose(
+                    static_image_mode=False,
+                    model_complexity=1,
+                    smooth_landmarks=True,
+                    min_detection_confidence=0.5,
+                    min_tracking_confidence=0.5
+                )
+
+                # Initialize hands detector
+                self.hands = self.mp_hands.Hands(
+                    static_image_mode=False,
+                    max_num_hands=2,
+                    model_complexity=1,
+                    min_detection_confidence=0.5,
+                    min_tracking_confidence=0.5
+                )
+
+                self.available = True
+                logger.info("MediaPipe processor initialized successfully")
+
+            except Exception as e:
+                logger.error(f"Failed to initialize MediaPipe: {e}")
+                self.available = False
+                self.pose = None
+                self.hands = None
+        else:
+            # Fallback to OpenCV-only mode
+            self.available = False
+            self.pose = None
+            self.hands = None
+            logger.info("Using OpenCV fallback mode - MediaPipe not available")
 
     def is_available(self) -> bool:
         """Check if MediaPipe is available"""

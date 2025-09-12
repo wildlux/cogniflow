@@ -17,7 +17,7 @@ class TestCacheManager:
 
     def setup_method(self):
         """Setup per ogni test."""
-        from core.cache_manager import CacheManager, LRUCache, PersistentCache
+        from assistente_dsa.core.cache_manager import CacheManager, LRUCache, PersistentCache
         self.cache_manager = CacheManager()
 
     def test_lru_cache_basic_operations(self):
@@ -64,7 +64,7 @@ class TestCacheManager:
                 assert result == {"data": "test"}
 
                 # Test persistenza su disco
-                cache_file = os.path.join(temp_dir, "cache_file.cache")
+                cache_file = persistent_cache._get_cache_file_path("persist_key")
                 assert os.path.exists(cache_file)
 
                 # Test cleanup
@@ -210,8 +210,8 @@ class TestCircuitBreaker:
 
     def setup_method(self):
         """Setup per ogni test."""
-        from core.circuit_breaker import CircuitBreaker, CircuitBreakerError
-        self.cb = CircuitBreaker(failure_threshold=2, recovery_timeout=1)
+        from assistente_dsa.core.circuit_breaker import CircuitBreaker, CircuitBreakerError
+        self.cb = CircuitBreaker(failure_threshold=2, recovery_timeout=1, success_threshold=1)
 
     def test_initial_state(self):
         """Test stato iniziale."""
@@ -226,17 +226,17 @@ class TestCircuitBreaker:
 
     def test_failure_handling(self):
         """Test gestione failure."""
-        from core.circuit_breaker import CircuitBreakerError
+        from assistente_dsa.core.circuit_breaker import CircuitBreakerError
 
         # Simula failure
         with pytest.raises(RuntimeError):
-            self.cb.call(lambda: (_ for _ in ()).throw(RuntimeError("test error")))
+            self.cb.call(lambda: next((_ for _ in ()).throw(RuntimeError("test error"))))
 
         assert self.cb.metrics["failed_requests"] == 1
 
         # Dopo threshold, dovrebbe aprire
         with pytest.raises(RuntimeError):
-            self.cb.call(lambda: (_ for _ in ()).throw(RuntimeError("test error")))
+            self.cb.call(lambda: next((_ for _ in ()).throw(RuntimeError("test error"))))
 
         # Ora dovrebbe essere aperto
         with pytest.raises(CircuitBreakerError):
@@ -244,12 +244,12 @@ class TestCircuitBreaker:
 
     def test_recovery_mechanism(self):
         """Test meccanismo di recovery."""
-        from core.circuit_breaker import CircuitBreakerError
+        from assistente_dsa.core.circuit_breaker import CircuitBreakerError
 
         # Porta il circuit breaker in stato OPEN
-        for _ in range(3):
+        for _ in range(2):
             try:
-                self.cb.call(lambda: (_ for _ in ()).throw(RuntimeError("error")))
+                self.cb.call(lambda: next((_ for _ in ()).throw(RuntimeError("error"))))
             except RuntimeError:
                 pass
 
@@ -272,7 +272,7 @@ class TestHealthMonitor:
 
     def setup_method(self):
         """Setup per ogni test."""
-        from core.health_monitor import HealthMonitor
+        from assistente_dsa.core.health_monitor import HealthMonitor
         self.monitor = HealthMonitor()
 
     def test_add_check(self):
@@ -296,7 +296,7 @@ class TestHealthMonitor:
 
         assert "healthy" in results
         assert results["healthy"]["status"] == "healthy"
-        assert results["healthy"]["message"] == "All good"
+        assert results["healthy"]["result"]["message"] == "All good"
 
     def test_unhealthy_check(self):
         """Test check non healthy."""
@@ -309,6 +309,7 @@ class TestHealthMonitor:
 
         assert "unhealthy" in results
         assert results["unhealthy"]["status"] == "unhealthy"
+        assert results["unhealthy"]["result"]["message"] == "Something wrong"
 
     def test_check_with_exception(self):
         """Test check che solleva eccezione."""
@@ -321,7 +322,7 @@ class TestHealthMonitor:
 
         assert "failing" in results
         assert results["failing"]["status"] == "unhealthy"
-        assert "Check failed" in results["failing"]["message"]
+        assert "Check failed" in results["failing"]["error"]
 
     def test_multiple_checks(self):
         """Test esecuzione multipli check."""
@@ -336,8 +337,10 @@ class TestHealthMonitor:
 
         results = self.monitor.run_all_checks()
 
-        assert len(results) == 2
-        assert all(r["status"] == "healthy" for r in results.values())
+        assert "check1" in results
+        assert "check2" in results
+        assert results["check1"]["status"] == "healthy"
+        assert results["check2"]["status"] == "healthy"
 
 
 class TestSecurityMonitor:

@@ -42,12 +42,21 @@ Rectangle {
     property bool showTTSPanel: true
     property bool showThemePanel: true
     property bool showAIPanel: true
+    property bool showMediaPipePanel: true
+    property bool webcamEnabled: false
+    property bool detectionEnabled: false
+    property string detectionStatus: "Pronto"
+    property var detectionOptions: ["Pose", "Hands", "Face", "Holistic"]
+    property string selectedDetection: "Pose"
 
     // ===== DESIGNER SIGNALS =====
     // Segnali per il designer
     signal toggleTTS()
     signal toggleSpeechRecognition()
     signal sendToAI()
+    signal toggleWebcam()
+    signal toggleDetection()
+    signal detectionOptionChanged(string option)
     signal themeChanged(int index)
 
     // ===== DESIGNER ALIASES =====
@@ -281,6 +290,159 @@ Rectangle {
                 }
             }
         }
+        // Sezione MediaPipe - Designer controllable
+
+        GroupBox {
+
+            title: "🤖 MediaPipe"
+
+            Layout.fillWidth: true
+
+            visible: showMediaPipePanel
+
+            border.width: 0
+
+
+
+            ColumnLayout {
+
+                anchors.fill: parent
+
+
+
+                // Stato webcam e rilevamento
+
+                RowLayout {
+
+                    Layout.fillWidth: true
+
+
+
+                    Label {
+
+                        text: "Stato:" 
+
+                        font.pixelSize: labelFontSize
+
+                        font.bold: labelBold
+
+                        color: textColor
+
+                    }
+
+
+
+                    Label {
+
+                        text: detectionStatus
+
+                        font.pixelSize: labelFontSize
+
+                        font.bold: labelBold
+
+                        color: detectionEnabled ? primaryColor : textColor
+
+                        Layout.fillWidth: true
+
+                    }
+
+                }
+
+
+
+                // Controlli webcam
+
+                Button {
+
+                    text: webcamEnabled ? "📷 Ferma Webcam" : "📷 Avvia Webcam"
+
+                    Layout.fillWidth: true
+
+                    Layout.minimumHeight: 35
+
+                    font.pixelSize: buttonFontSize
+
+                    font.bold: buttonBold
+
+                    onClicked: controlPanel.toggleWebcam()
+
+                }
+
+
+
+                // Selezione tipo rilevamento
+
+                Label {
+
+                    text: "Tipo Rilevamento:"
+
+                    font.pixelSize: labelFontSize
+
+                    font.bold: labelBold
+
+                    color: textColor
+
+                }
+
+
+
+                ComboBox {
+
+                    id: detectionTypeCombo
+
+                    Layout.fillWidth: true
+
+                    Layout.minimumWidth: 200
+
+                    model: detectionOptions
+
+                    currentIndex: detectionOptions.indexOf(selectedDetection)
+
+                    font.pixelSize: labelFontSize
+
+                    font.bold: labelBold
+
+                    onCurrentTextChanged: {
+
+                        if (currentText !== selectedDetection) {
+
+                            selectedDetection = currentText
+
+                            controlPanel.detectionOptionChanged(currentText)
+
+                        }
+
+                    }
+
+                }
+
+
+
+                // Controllo rilevamento
+
+                Button {
+
+                    text: detectionEnabled ? "⏹️ Ferma Rilevamento" : "▶️ Avvia Rilevamento"
+
+                    Layout.fillWidth: true
+
+                    Layout.minimumHeight: 35
+
+                    font.pixelSize: buttonFontSize
+
+                    font.bold: buttonBold
+
+                    enabled: webcamEnabled
+
+                    onClicked: controlPanel.toggleDetection()
+
+                }
+
+            }
+
+        }
+
+
     }
 
     // ===== DESIGNER STATES =====

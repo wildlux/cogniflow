@@ -10,7 +10,8 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QCheckBox,
-    QGroupBox, QTabWidget, QWidget, QMessageBox, QScrollArea, QGridLayout, QFrame
+    QGroupBox, QTabWidget, QWidget, QMessageBox, QScrollArea, QGridLayout, QFrame,
+    QSlider, QColorDialog
 )
 
 # Import del sistema di configurazione globale
@@ -98,6 +99,7 @@ class SettingsDialog(QDialog):
         self.setup_general_tab()
         self.setup_ui_tab()
         self.setup_ai_tab()
+        self.setup_mediapipe_tab()
         self.setup_test_tab()
         self.setup_personalize_tab()
 
@@ -239,6 +241,259 @@ class SettingsDialog(QDialog):
         layout.addStretch()
 
         self.tab_widget.addTab(widget, "AI")
+
+    def setup_mediapipe_tab(self):
+        """Configura il tab MediaPipe per le impostazioni di rilevamento."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # Scroll area per contenere tutte le impostazioni
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+
+        # === SEZIONE SERVIZIO MEDIAPIPE ===
+        service_group = QGroupBox("🔧 Servizio MediaPipe")
+        service_group.setStyleSheet("QGroupBox { font-weight: bold; }")
+        service_layout = QVBoxLayout(service_group)
+
+        # Toggle per abilitare/disabilitare servizio MediaPipe
+        self.mediapipe_service_enabled = QCheckBox("Usa servizio MediaPipe remoto")
+        self.mediapipe_service_enabled.setToolTip("Se abilitato, usa il servizio MediaPipe remoto invece del rilevamento locale")
+        service_layout.addWidget(self.mediapipe_service_enabled)
+
+        # URL del servizio MediaPipe
+        url_layout = QHBoxLayout()
+        url_layout.addWidget(QLabel("URL servizio:"))
+        self.mediapipe_service_url = QLineEdit()
+        self.mediapipe_service_url.setPlaceholderText("http://localhost:8001")
+        self.mediapipe_service_url.setToolTip("URL del servizio MediaPipe remoto")
+        url_layout.addWidget(self.mediapipe_service_url)
+        service_layout.addLayout(url_layout)
+
+        scroll_layout.addWidget(service_group)
+
+        # === SEZIONE TIPI DI RILEVAMENTO ===
+        detection_group = QGroupBox("🎯 Tipi di Rilevamento")
+        detection_group.setStyleSheet("QGroupBox { font-weight: bold; }")
+        detection_layout = QVBoxLayout(detection_group)
+
+        # Selezione tipo di rilevamento
+        detection_type_layout = QHBoxLayout()
+        detection_type_layout.addWidget(QLabel("Tipo rilevamento:"))
+        self.detection_type_combo = QComboBox()
+        self.detection_type_combo.addItems(["Pose", "Hands", "Face", "Holistic"])
+        self.detection_type_combo.setToolTip("Seleziona il tipo di rilevamento da abilitare")
+        detection_type_layout.addWidget(self.detection_type_combo)
+        detection_layout.addLayout(detection_type_layout)
+
+        # Toggle per tipi specifici
+        self.pose_detection_enabled = QCheckBox("Rilevamento posa umana (Pose)")
+        self.pose_detection_enabled.setToolTip("Abilita rilevamento della posa corporea completa")
+        detection_layout.addWidget(self.pose_detection_enabled)
+
+        self.hand_detection_enabled = QCheckBox("Rilevamento mani (Hands)")
+        self.hand_detection_enabled.setToolTip("Abilita rilevamento e tracciamento delle mani")
+        detection_layout.addWidget(self.hand_detection_enabled)
+
+        self.face_detection_enabled = QCheckBox("Rilevamento volto (Face)")
+        self.face_detection_enabled.setToolTip("Abilita rilevamento dei volti e delle espressioni")
+        detection_layout.addWidget(self.face_detection_enabled)
+
+        self.gesture_recognition_enabled = QCheckBox("Riconoscimento gesti")
+        self.gesture_recognition_enabled.setToolTip("Abilita riconoscimento dei gesti delle mani")
+        detection_layout.addWidget(self.gesture_recognition_enabled)
+
+        self.facial_expression_enabled = QCheckBox("Rilevamento espressioni facciali")
+        self.facial_expression_enabled.setToolTip("Abilita analisi delle espressioni facciali")
+        detection_layout.addWidget(self.facial_expression_enabled)
+
+        scroll_layout.addWidget(detection_group)
+
+        # === SEZIONE IMPOSTAZIONI MANI ===
+        hands_group = QGroupBox("🤏 Impostazioni Tracciamento Mani")
+        hands_group.setStyleSheet("QGroupBox { font-weight: bold; }")
+        hands_layout = QVBoxLayout(hands_group)
+
+        # Tracciamento mani sinistra/destra
+        hand_tracking_layout = QHBoxLayout()
+        hand_tracking_layout.addWidget(QLabel("Tracciamento mani:"))
+        self.left_hand_tracking = QCheckBox("Mano sinistra")
+        self.left_hand_tracking.setToolTip("Abilita tracciamento della mano sinistra")
+        hand_tracking_layout.addWidget(self.left_hand_tracking)
+        self.right_hand_tracking = QCheckBox("Mano destra")
+        self.right_hand_tracking.setToolTip("Abilita tracciamento della mano destra")
+        hand_tracking_layout.addWidget(self.right_hand_tracking)
+        hand_tracking_layout.addStretch()
+        hands_layout.addLayout(hand_tracking_layout)
+
+        # Soglia confidenza mani
+        hand_confidence_layout = QHBoxLayout()
+        hand_confidence_layout.addWidget(QLabel("Confidenza mani:"))
+        self.hand_confidence_slider = QSlider(Qt.Orientation.Horizontal)
+        self.hand_confidence_slider.setRange(1, 100)
+        self.hand_confidence_slider.setValue(50)
+        self.hand_confidence_slider.setToolTip("Soglia minima di confidenza per il rilevamento delle mani")
+        hand_confidence_layout.addWidget(self.hand_confidence_slider)
+        self.hand_confidence_label = QLabel("50%")
+        hand_confidence_layout.addWidget(self.hand_confidence_label)
+        hands_layout.addLayout(hand_confidence_layout)
+
+        scroll_layout.addWidget(hands_group)
+
+        # === SEZIONE IMPOSTAZIONI VOLTO ===
+        face_group = QGroupBox("😊 Impostazioni Rilevamento Volto")
+        face_group.setStyleSheet("QGroupBox { font-weight: bold; }")
+        face_layout = QVBoxLayout(face_group)
+
+        # Soglia confidenza volto
+        face_confidence_layout = QHBoxLayout()
+        face_confidence_layout.addWidget(QLabel("Confidenza volto:"))
+        self.face_confidence_slider = QSlider(Qt.Orientation.Horizontal)
+        self.face_confidence_slider.setRange(1, 100)
+        self.face_confidence_slider.setValue(50)
+        self.face_confidence_slider.setToolTip("Soglia minima di confidenza per il rilevamento dei volti")
+        face_confidence_layout.addWidget(self.face_confidence_slider)
+        self.face_confidence_label = QLabel("50%")
+        face_confidence_layout.addWidget(self.face_confidence_label)
+        face_layout.addLayout(face_confidence_layout)
+
+        # Opzioni aggiuntive volto
+        self.detect_glasses = QCheckBox("Rileva occhiali")
+        self.detect_glasses.setToolTip("Abilita rilevamento degli occhiali sui volti")
+        face_layout.addWidget(self.detect_glasses)
+
+        scroll_layout.addWidget(face_group)
+
+        # === SEZIONE IMPOSTAZIONI GESTI ===
+        gesture_group = QGroupBox("👋 Impostazioni Riconoscimento Gesti")
+        gesture_group.setStyleSheet("QGroupBox { font-weight: bold; }")
+        gesture_layout = QVBoxLayout(gesture_group)
+
+        # Timeout gesto
+        gesture_timeout_layout = QHBoxLayout()
+        gesture_timeout_layout.addWidget(QLabel("Timeout gesto (sec):"))
+        self.gesture_timeout_spin = QSpinBox()
+        self.gesture_timeout_spin.setRange(1, 10)
+        self.gesture_timeout_spin.setValue(3)
+        self.gesture_timeout_spin.setToolTip("Tempo massimo per completare un gesto")
+        gesture_timeout_layout.addWidget(self.gesture_timeout_spin)
+        gesture_timeout_layout.addStretch()
+        gesture_layout.addLayout(gesture_timeout_layout)
+
+        # Sensibilità gesto
+        gesture_sensitivity_layout = QHBoxLayout()
+        gesture_sensitivity_layout.addWidget(QLabel("Sensibilità gesto:"))
+        self.gesture_sensitivity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.gesture_sensitivity_slider.setRange(1, 10)
+        self.gesture_sensitivity_slider.setValue(5)
+        self.gesture_sensitivity_slider.setToolTip("Sensibilità del riconoscimento gesti (1=bassa, 10=alta)")
+        gesture_sensitivity_layout.addWidget(self.gesture_sensitivity_slider)
+        self.gesture_sensitivity_label = QLabel("5")
+        gesture_sensitivity_layout.addWidget(self.gesture_sensitivity_label)
+        gesture_layout.addLayout(gesture_sensitivity_layout)
+
+        scroll_layout.addWidget(gesture_group)
+
+        # === SEZIONE FEEDBACK VISIVO ===
+        visual_group = QGroupBox("👁️ Feedback Visivo")
+        visual_group.setStyleSheet("QGroupBox { font-weight: bold; }")
+        visual_layout = QVBoxLayout(visual_group)
+
+        # Opzioni visuali
+        self.show_hand_landmarks = QCheckBox("Mostra landmark mani")
+        self.show_hand_landmarks.setToolTip("Visualizza i punti di riferimento delle mani rilevate")
+        visual_layout.addWidget(self.show_hand_landmarks)
+
+        self.show_pose_landmarks = QCheckBox("Mostra landmark posa")
+        self.show_pose_landmarks.setToolTip("Visualizza i punti di riferimento della posa corporea")
+        visual_layout.addWidget(self.show_pose_landmarks)
+
+        self.show_expressions = QCheckBox("Mostra espressioni facciali")
+        self.show_expressions.setToolTip("Visualizza le espressioni facciali rilevate")
+        visual_layout.addWidget(self.show_expressions)
+
+        self.show_bounding_boxes = QCheckBox("Mostra rettangoli di delimitazione")
+        self.show_bounding_boxes.setToolTip("Visualizza i rettangoli attorno agli oggetti rilevati")
+        self.show_bounding_boxes.setChecked(True)
+        visual_layout.addWidget(self.show_bounding_boxes)
+
+        scroll_layout.addWidget(visual_group)
+
+        # === SEZIONE IMPOSTAZIONI AVANZATE ===
+        advanced_group = QGroupBox("⚙️ Impostazioni Avanzate")
+        advanced_group.setStyleSheet("QGroupBox { font-weight: bold; }")
+        advanced_layout = QVBoxLayout(advanced_group)
+
+        # Parametri umani
+        human_params_layout = QGridLayout()
+        human_params_layout.addWidget(QLabel("Area minima umana:"), 0, 0)
+        self.human_min_area_spin = QSpinBox()
+        self.human_min_area_spin.setRange(1000, 50000)
+        self.human_min_area_spin.setValue(10000)
+        self.human_min_area_spin.setSingleStep(1000)
+        human_params_layout.addWidget(self.human_min_area_spin, 0, 1)
+        human_params_layout.addWidget(QLabel("px²"), 0, 2)
+
+        human_params_layout.addWidget(QLabel("Area massima umana:"), 1, 0)
+        self.human_max_area_spin = QSpinBox()
+        self.human_max_area_spin.setRange(50000, 500000)
+        self.human_max_area_spin.setValue(300000)
+        self.human_max_area_spin.setSingleStep(10000)
+        human_params_layout.addWidget(self.human_max_area_spin, 1, 1)
+        human_params_layout.addWidget(QLabel("px²"), 1, 2)
+
+        advanced_layout.addLayout(human_params_layout)
+
+        # Parametri pelle
+        skin_params_layout = QGridLayout()
+        skin_params_layout.addWidget(QLabel("Range colore pelle - Min:"), 0, 0)
+        self.skin_min_hue = QSpinBox()
+        self.skin_min_hue.setRange(0, 179)
+        self.skin_min_hue.setValue(0)
+        skin_params_layout.addWidget(self.skin_min_hue, 0, 1)
+        self.skin_min_sat = QSpinBox()
+        self.skin_min_sat.setRange(0, 255)
+        self.skin_min_sat.setValue(20)
+        skin_params_layout.addWidget(self.skin_min_sat, 0, 2)
+        self.skin_min_val = QSpinBox()
+        self.skin_min_val.setRange(0, 255)
+        self.skin_min_val.setValue(70)
+        skin_params_layout.addWidget(self.skin_min_val, 0, 3)
+
+        skin_params_layout.addWidget(QLabel("Range colore pelle - Max:"), 1, 0)
+        self.skin_max_hue = QSpinBox()
+        self.skin_max_hue.setRange(0, 179)
+        self.skin_max_hue.setValue(20)
+        skin_params_layout.addWidget(self.skin_max_hue, 1, 1)
+        self.skin_max_sat = QSpinBox()
+        self.skin_max_sat.setRange(0, 255)
+        self.skin_max_sat.setValue(255)
+        skin_params_layout.addWidget(self.skin_max_sat, 1, 2)
+        self.skin_max_val = QSpinBox()
+        self.skin_max_val.setRange(0, 255)
+        self.skin_max_val.setValue(255)
+        skin_params_layout.addWidget(self.skin_max_val, 1, 3)
+
+        advanced_layout.addLayout(skin_params_layout)
+
+        scroll_layout.addWidget(advanced_group)
+        scroll_layout.addStretch()
+
+        scroll_area.setWidget(scroll_widget)
+        layout.addWidget(scroll_area)
+
+        self.tab_widget.addTab(widget, "🤖 MediaPipe")
+
+        # Connetti gli slider ai label per aggiornare i valori in tempo reale
+        self.hand_confidence_slider.valueChanged.connect(
+            lambda v: self.hand_confidence_label.setText(f"{v}%"))
+        self.face_confidence_slider.valueChanged.connect(
+            lambda v: self.face_confidence_label.setText(f"{v}%"))
+        self.gesture_sensitivity_slider.valueChanged.connect(
+            lambda v: self.gesture_sensitivity_label.setText(str(v)))
+
 
     def setup_test_tab(self):
         """Configura il tab di test per scopi di sviluppo."""
@@ -828,6 +1083,36 @@ class SettingsDialog(QDialog):
             self.test_combo.setCurrentText(get_setting('test.test_option', 'Opzione 1'))
             self.test_checkbox.setChecked(get_setting('test.test_enabled', True))
 
+
+            # MediaPipe
+            self.mediapipe_service_enabled.setChecked(get_setting("mediapipe.service_enabled", True))
+            self.mediapipe_service_url.setText(get_setting("mediapipe.service_url", "http://localhost:8001"))
+            self.detection_type_combo.setCurrentText(get_setting("mediapipe.detection_type", "Pose"))
+            self.pose_detection_enabled.setChecked(get_setting("mediapipe.pose_detection_enabled", True))
+            self.hand_detection_enabled.setChecked(get_setting("mediapipe.hand_detection_enabled", True))
+            self.face_detection_enabled.setChecked(get_setting("mediapipe.face_detection_enabled", False))
+            self.gesture_recognition_enabled.setChecked(get_setting("mediapipe.gesture_recognition_enabled", True))
+            self.facial_expression_enabled.setChecked(get_setting("mediapipe.facial_expression_enabled", False))
+            self.left_hand_tracking.setChecked(get_setting("mediapipe.left_hand_tracking_enabled", False))
+            self.right_hand_tracking.setChecked(get_setting("mediapipe.right_hand_tracking_enabled", True))
+            self.hand_confidence_slider.setValue(get_setting("mediapipe.hand_confidence", 50))
+            self.face_confidence_slider.setValue(get_setting("mediapipe.face_confidence", 50))
+            self.gesture_timeout_spin.setValue(get_setting("mediapipe.gesture_timeout", 3))
+            self.gesture_sensitivity_slider.setValue(get_setting("mediapipe.gesture_sensitivity", 5))
+            self.show_hand_landmarks.setChecked(get_setting("mediapipe.show_hand_landmarks", True))
+            self.show_pose_landmarks.setChecked(get_setting("mediapipe.show_pose_landmarks", True))
+            self.show_expressions.setChecked(get_setting("mediapipe.show_expressions", True))
+            self.show_bounding_boxes.setChecked(get_setting("mediapipe.show_bounding_boxes", True))
+            self.detect_glasses.setChecked(get_setting("mediapipe.detect_glasses", True))
+            self.human_min_area_spin.setValue(get_setting("mediapipe.human_min_area", 10000))
+            self.human_max_area_spin.setValue(get_setting("mediapipe.human_max_area", 300000))
+            self.skin_min_hue.setValue(get_setting("mediapipe.skin_min_hue", 0))
+            self.skin_min_sat.setValue(get_setting("mediapipe.skin_min_sat", 20))
+            self.skin_min_val.setValue(get_setting("mediapipe.skin_min_val", 70))
+            self.skin_max_hue.setValue(get_setting("mediapipe.skin_max_hue", 20))
+            self.skin_max_sat.setValue(get_setting("mediapipe.skin_max_sat", 255))
+            self.skin_max_val.setValue(get_setting("mediapipe.skin_max_val", 255))
+
         except Exception as e:
             QMessageBox.warning(self, "Errore", f"Errore nel caricamento delle impostazioni: {e}")
 
@@ -860,6 +1145,36 @@ class SettingsDialog(QDialog):
             set_setting('test.test_number', self.test_number_spin.value())
             set_setting('test.test_option', self.test_combo.currentText())
             set_setting('test.test_enabled', self.test_checkbox.isChecked())
+
+            # MediaPipe
+            set_setting("mediapipe.service_enabled", self.mediapipe_service_enabled.isChecked())
+            set_setting("mediapipe.service_url", self.mediapipe_service_url.text())
+            set_setting("mediapipe.detection_type", self.detection_type_combo.currentText())
+            set_setting("mediapipe.pose_detection_enabled", self.pose_detection_enabled.isChecked())
+            set_setting("mediapipe.hand_detection_enabled", self.hand_detection_enabled.isChecked())
+            set_setting("mediapipe.face_detection_enabled", self.face_detection_enabled.isChecked())
+            set_setting("mediapipe.gesture_recognition_enabled", self.gesture_recognition_enabled.isChecked())
+            set_setting("mediapipe.facial_expression_enabled", self.facial_expression_enabled.isChecked())
+            set_setting("mediapipe.left_hand_tracking_enabled", self.left_hand_tracking.isChecked())
+            set_setting("mediapipe.right_hand_tracking_enabled", self.right_hand_tracking.isChecked())
+            set_setting("mediapipe.hand_confidence", self.hand_confidence_slider.value())
+            set_setting("mediapipe.face_confidence", self.face_confidence_slider.value())
+            set_setting("mediapipe.gesture_timeout", self.gesture_timeout_spin.value())
+            set_setting("mediapipe.gesture_sensitivity", self.gesture_sensitivity_slider.value())
+            set_setting("mediapipe.show_hand_landmarks", self.show_hand_landmarks.isChecked())
+            set_setting("mediapipe.show_pose_landmarks", self.show_pose_landmarks.isChecked())
+            set_setting("mediapipe.show_expressions", self.show_expressions.isChecked())
+            set_setting("mediapipe.show_bounding_boxes", self.show_bounding_boxes.isChecked())
+            set_setting("mediapipe.detect_glasses", self.detect_glasses.isChecked())
+            set_setting("mediapipe.human_min_area", self.human_min_area_spin.value())
+            set_setting("mediapipe.human_max_area", self.human_max_area_spin.value())
+            set_setting("mediapipe.skin_min_hue", self.skin_min_hue.value())
+            set_setting("mediapipe.skin_min_sat", self.skin_min_sat.value())
+            set_setting("mediapipe.skin_min_val", self.skin_min_val.value())
+            set_setting("mediapipe.skin_max_hue", self.skin_max_hue.value())
+            set_setting("mediapipe.skin_max_sat", self.skin_max_sat.value())
+            set_setting("mediapipe.skin_max_val", self.skin_max_val.value())
+
 
             print("✅ Tutte le impostazioni salvate nel file settings.json")
             QMessageBox.information(self, "Successo", "Impostazioni salvate con successo!")

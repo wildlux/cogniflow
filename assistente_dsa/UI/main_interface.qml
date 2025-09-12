@@ -311,6 +311,53 @@ ApplicationWindow {
                 }, typeof ollamaBridge !== "undefined" ? ollamaBridge : null)
 
                 onThemeChanged: {
+                onToggleWebcam: {
+
+                    if (typeof mediaPipeBridge !== "undefined") {
+
+                        mediaPipeBridge.toggleWebcam()
+
+                    } else {
+
+                        LogFunctions.addLogMessage("ERROR", "MediaPipe bridge non disponibile")
+
+                    }
+
+                }
+
+
+
+                onToggleDetection: {
+
+                    if (typeof mediaPipeBridge !== "undefined") {
+
+                        mediaPipeBridge.toggleDetection()
+
+                    } else {
+
+                        LogFunctions.addLogMessage("ERROR", "MediaPipe bridge non disponibile")
+
+                    }
+
+                }
+
+
+
+                onDetectionOptionChanged: {
+
+                    if (typeof mediaPipeBridge !== "undefined") {
+
+                        mediaPipeBridge.changeDetectionOption(option)
+
+                    } else {
+
+                        LogFunctions.addLogMessage("ERROR", "MediaPipe bridge non disponibile")
+
+                    }
+
+                }
+
+
                     // Tema aggiornato automaticamente tramite binding
                     console.log("Tema cambiato a:", themeManager.currentTheme)
                 }
@@ -789,6 +836,95 @@ ApplicationWindow {
             })
         }
     }
+    }
+
+
+
+    // Connessioni ai segnali del bridge MediaPipe
+
+    Connections {
+
+        target: typeof mediaPipeBridge !== "undefined" ? mediaPipeBridge : null
+
+        ignoreUnknownSignals: false
+
+
+
+        function onWebcamToggled(enabled) {
+
+            controlPanel.webcamEnabled = enabled
+
+            LogFunctions.addLogMessage("INFO", "Webcam " + (enabled ? "attivata" : "disattivata"))
+
+        }
+
+
+
+        function onDetectionToggled(enabled) {
+
+            controlPanel.detectionEnabled = enabled
+
+            LogFunctions.addLogMessage("INFO", "Rilevamento " + (enabled ? "attivato" : "disattivato"))
+
+        }
+
+
+
+        function onDetectionOptionChanged(option) {
+
+            controlPanel.selectedDetection = option
+
+            LogFunctions.addLogMessage("INFO", "Tipo rilevamento cambiato: " + option)
+
+        }
+
+
+
+        function onStatusChanged(status) {
+
+            controlPanel.detectionStatus = status
+
+            LogFunctions.addLogMessage("INFO", "MediaPipe: " + status)
+
+        }
+
+
+
+        function onGestureDetected(gesture) {
+
+            LogFunctions.addLogMessage("INFO", "Gesto rilevato: " + gesture)
+
+        }
+
+
+
+        function onHandPositionChanged(x, y) {
+
+            // Potrebbe essere usato per controlli futuri
+
+            console.log("Posizione mano: " + x + ", " + y)
+
+        }
+
+
+
+        function onHumanDetected(humans) {
+
+            LogFunctions.addLogMessage("INFO", "Umani rilevati: " + humans.length)
+
+        }
+
+
+
+        function onHumanPositionChanged(x, y) {
+
+            console.log("Posizione umana: " + x + ", " + y)
+
+        }
+
+    }
+
+
 
     // Componente Log Panel - Ottimizzato per il designer
     LogPanel {
