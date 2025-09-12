@@ -302,7 +302,7 @@ class VideoThread(QThread):
                         self.gesture_detected_signal.emit(hand_info['gesture'])
 
                         # Add visual cursor indicator
-                        cursor_color = (0, 255, 0) if hand_info['gesture'] == "Mano Aperta" else (0, 0, 255)
+                        cursor_color = (0, 255, 0) if hand_info['gesture'] == "Open Hand" else (0, 0, 255)
                         cv2.circle(frame, (hand_center_x, hand_center_y), 10, cursor_color, 2)
                         cv2.circle(frame, (hand_center_x, hand_center_y), 2, cursor_color, -1)
 
@@ -649,11 +649,11 @@ class VideoThread(QThread):
         # Decisione finale
         if (is_closed_by_compactness and is_closed_by_solidity and is_closed_by_fingers) or \
            (is_closed_by_aspect and is_closed_by_fingers):
-            return "Mano Chiusa"
+            return "Closed Hand"
         elif is_open_by_compactness and is_open_by_solidity and is_open_by_fingers:
-            return "Mano Aperta"
+            return "Open Hand"
         else:
-            return "Gesto Parziale"
+            return "Partial Gesture"
 
     def detect_facial_expressions(self, frame):
         """Rileva le espressioni facciali usando landmark e geometria."""
@@ -792,11 +792,11 @@ class VideoThread(QThread):
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
             # Se la mano è chiusa, inizia il trascinamento
-            if gesture == "Mano Chiusa" and not self.is_dragging:
+            if gesture == "Closed Hand" and not self.is_dragging:
                 self.start_dragging()
                 cv2.putText(frame, 'TRASCINAMENTO INIZIATO!', (hand_center_x - 100, hand_center_y - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-            elif gesture == "Mano Aperta" and self.is_dragging:
+            elif gesture == "Open Hand" and self.is_dragging:
                 self.stop_dragging()
                 cv2.putText(frame, 'TRASCINAMENTO COMPLETATO!', (hand_center_x - 120, hand_center_y - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
@@ -937,11 +937,11 @@ class VideoThread(QThread):
 
         # Determina il gesto basato su dita e solidità
         if finger_count >= 4 and solidity > 0.75:
-            gesture = "Mano Aperta"
+            gesture = "Open Hand"
         elif finger_count <= 2 or solidity < 0.65:
-            gesture = "Mano Chiusa"
+            gesture = "Closed Hand"
         else:
-            gesture = "Gesto Parziale"
+            gesture = "Partial Gesture"
 
         # Calcola la confidenza
         confidence = min(1.0, (finger_count * 0.2) + (solidity * 0.3) + 0.3)
@@ -1009,7 +1009,7 @@ class VideoThread(QThread):
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
             # Gestisci il trascinamento con timer
-            if hand_info['gesture'] == "Mano Chiusa":
+            if hand_info['gesture'] == "Closed Hand":
                 if not self.is_dragging:
                     import time
                     current_time = time.time()

@@ -608,26 +608,26 @@ class WebcamTestWindow(QMainWindow):
         self.current_gesture = gesture
 
         # Update status with more detailed information
-        if gesture == "Mano Chiusa":
+        if gesture == "Closed Hand":
             if self.is_dragging:
-                self.status_label.setText("Status: Trascinamento attivo - Mano Chiusa")
+                self.status_label.setText("Status: Trascinamento attivo - Closed Hand")
             else:
-                self.status_label.setText("Status: Mano Chiusa rilevata - Pronto per trascinare")
-        elif gesture == "Mano Aperta":
+                self.status_label.setText("Status: Closed Hand rilevata - Pronto per trascinare")
+        elif gesture == "Open Hand":
             if self.is_dragging:
-                self.status_label.setText("Status: Mano Aperta - Rilascia trascinamento")
+                self.status_label.setText("Status: Open Hand - Rilascia trascinamento")
             else:
-                self.status_label.setText("Status: Mano Aperta rilevata")
+                self.status_label.setText("Status: Open Hand rilevata")
         else:
             self.status_label.setText(f"Status: Gesto rilevato - {gesture}")
 
         # Handle drag gestures
-        if gesture == "Mano Chiusa" and not self.is_dragging:
+        if gesture == "Closed Hand" and not self.is_dragging:
             # Start dragging if hand is over the button
             button_rect = self.test_button.geometry()
             if button_rect.contains(self.hand_x, self.hand_y):
                 self.start_drag()
-        elif gesture == "Mano Aperta" and self.is_dragging:
+        elif gesture == "Open Hand" and self.is_dragging:
             # Stop dragging
             self.stop_drag()
 
@@ -823,7 +823,7 @@ class WebcamTestWindow(QMainWindow):
             self.video_thread = VideoThread(main_window=self)
             self.video_thread.change_pixmap_signal.connect(self.update_webcam_feed_pixmap)
             self.video_thread.status_signal.connect(self.on_video_thread_status)
-            self.video_thread.hand_position_signal.connect(self.on_hand_position_update)
+            self.video_thread.human_position_signal.connect(self.on_hand_position_update)
             self.video_thread.gesture_detected_signal.connect(self.on_gesture_detected)
 
             # Connect human detection signals (LIDAR-like)

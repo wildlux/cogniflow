@@ -128,11 +128,11 @@ def test_gesture_detection_logic():
         # Test gesture classification logic
         finger_count = 0  # Mock value
         if finger_count >= 4 and solidity > 0.75:
-            gesture = "Mano Aperta"
+            gesture = "Open Hand"
         elif finger_count <= 2 or solidity < 0.65:
-            gesture = "Mano Chiusa"
+            gesture = "Closed Hand"
         else:
-            gesture = "Gesto Parziale"
+            gesture = "Partial Gesture"
 
         print(f"✓ Gesture classification: {gesture}")
 
