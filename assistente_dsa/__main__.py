@@ -8,11 +8,12 @@ Questo file gestisce l'avvio sicuro dell'applicazione con:
 - Avvio dell'interfaccia principale
 """
 
+from __future__ import annotations
+
 import sys
 import logging
 import traceback
 from pathlib import Path
-from typing import List, Tuple
 
 # Configurazione logging
 logging.basicConfig(
@@ -37,7 +38,7 @@ def test_critical_imports():
         ("main_03_configurazione_e_opzioni", "Sistema configurazione"),
     ]
 
-    failed_imports: List[Tuple[str, str, str]] = []
+    failed_imports: list[tuple[str, str, str]] = []
 
     for module_name, description in critical_imports:
         try:
