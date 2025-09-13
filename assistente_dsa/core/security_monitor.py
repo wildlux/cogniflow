@@ -7,6 +7,7 @@ Monitora attività sospette e fornisce alert di sicurezza
 import logging
 import time
 import threading
+import json
 from typing import Dict, List, Any
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -152,6 +153,151 @@ class SecurityMonitor:
                 self.failed_attempts.get(ip, 0)
                 >= self.thresholds["max_failed_attempts"] * 2
             )
+
+    def detect_anomalous_activity(self) -> List[Dict[str, Any]]:
+        """Rileva attività anomale usando analisi statistica."""
+        anomalies = []
+        with self.lock:
+            if len(self.recent_activities) < 10:
+                return anomalies  # Non abbastanza dati
+
+            # Analizza pattern di attività
+            recent_events = self.recent_activities[-100:]  # Ultimi 100 eventi
+
+            # Conta eventi per tipo
+            event_counts = defaultdict(int)
+            for event in recent_events:
+                event_counts[event["type"]] += 1
+
+            # Rileva picchi anomali
+            avg_events_per_type = len(recent_events) / len(event_counts)
+            for event_type, count in event_counts.items():
+                if count > avg_events_per_type * 3:  # 3 volte la media
+                    anomalies.append({
+                        "type": "ANOMALOUS_ACTIVITY_SPIKE",
+                        "description": f"Picco anomalo di eventi {event_type}: {count} eventi",
+                        "severity": "HIGH",
+                        "data": {"event_type": event_type, "count": count}
+                    })
+
+            # Rileva attività da IP sospetti
+            ip_counts = defaultdict(int)
+            for event in recent_events:
+                ip_counts[event.get("source_ip", "unknown")] += 1
+
+            for ip, count in ip_counts.items():
+                if count > 20:  # Più di 20 eventi da un singolo IP
+                    anomalies.append({
+                        "type": "SUSPICIOUS_IP_ACTIVITY",
+                        "description": f"Attività elevata da IP {ip}: {count} eventi",
+                        "severity": "MEDIUM",
+                        "data": {"ip": ip, "count": count}
+                    })
+
+        return anomalies
+
+    def generate_security_report(self) -> Dict[str, Any]:
+        """Genera un report di sicurezza completo."""
+        with self.lock:
+            anomalies = self.detect_anomalous_activity()
+
+            return {
+                "timestamp": datetime.now(),
+                "summary": {
+                    "total_alerts": len(self.alerts),
+                    "active_anomalies": len(anomalies),
+                    "suspicious_activities": dict(self.suspicious_activities),
+                    "failed_attempts": dict(self.failed_attempts),
+                    "blocked_ips": [
+                        ip for ip in self.failed_attempts.keys()
+                        if self.is_ip_blocked(ip)
+                    ]
+                },
+                "recent_alerts": self.alerts[-10:],  # Ultimi 10 alert
+                "anomalies": anomalies,
+                "recommendations": self._generate_security_recommendations()
+            }
+
+    def _generate_security_recommendations(self) -> List[str]:
+        """Genera raccomandazioni di sicurezza basate sull'analisi."""
+        recommendations = []
+
+        # Raccomandazioni basate sugli alert attivi
+        if len(self.alerts) > 5:
+            recommendations.append("🔴 Alto numero di alert di sicurezza - revisione urgente del sistema")
+
+        # Raccomandazioni basate sui tentativi falliti
+        total_failed = sum(self.failed_attempts.values())
+        if total_failed > 10:
+            recommendations.append("🟡 Molti tentativi di accesso falliti - possibile attacco brute force")
+
+        # Raccomandazioni basate sulle attività sospette
+        for activity, count in self.suspicious_activities.items():
+            if count > 5:
+                recommendations.append(f"🟡 Attività sospetta elevata: {activity} ({count} occorrenze)")
+
+        # Raccomandazioni generali
+        if not recommendations:
+            recommendations.append("✅ Sistema di sicurezza operativo normalmente")
+
+        return recommendations
+
+    def export_security_audit(self, filepath: str):
+        """Esporta un audit di sicurezza completo."""
+        report = self.generate_security_report()
+
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(report, f, indent=2, default=str)
+            logger.info(f"Security audit exported to {filepath}")
+        except Exception as e:
+            logger.error(f"Failed to export security audit: {e}")
+
+    def get_security_score(self) -> Dict[str, Any]:
+        """Calcola un punteggio di sicurezza complessivo."""
+        with self.lock:
+            score = 100  # Punteggio base
+
+            # Penalità per alert attivi
+            alert_penalty = len(self.alerts) * 5
+            score -= min(alert_penalty, 30)
+
+            # Penalità per tentativi falliti
+            failed_penalty = sum(self.failed_attempts.values()) * 2
+            score -= min(failed_penalty, 20)
+
+            # Penalità per attività sospette
+            suspicious_penalty = sum(self.suspicious_activities.values()) * 3
+            score -= min(suspicious_penalty, 25)
+
+            # Bonus per attività recenti normali
+            if len(self.recent_activities) > 50:
+                score += 5
+
+            score = max(0, min(100, score))  # Limita tra 0 e 100
+
+            return {
+                "score": score,
+                "level": self._get_security_level(score),
+                "factors": {
+                    "alerts": len(self.alerts),
+                    "failed_attempts": sum(self.failed_attempts.values()),
+                    "suspicious_activities": sum(self.suspicious_activities.values())
+                }
+            }
+
+    def _get_security_level(self, score: int) -> str:
+        """Converte il punteggio in un livello di sicurezza."""
+        if score >= 90:
+            return "EXCELLENT"
+        elif score >= 80:
+            return "GOOD"
+        elif score >= 70:
+            return "FAIR"
+        elif score >= 60:
+            return "POOR"
+        else:
+            return "CRITICAL"
 
 
 # Istanza globale del monitor di sicurezza

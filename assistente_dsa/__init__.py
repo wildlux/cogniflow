@@ -85,6 +85,22 @@ Struttura aggiornata del progetto CogniFlow - Assistente DSA (Settembre 2025):
 │   ├── 📄 ollama_bridge.py                # Bridge Ollama per QML
 │   ├── 📄 qml_launcher.py                 # Launcher QML
 │   └── 📄 settings_dialog.py              # Dialog impostazioni
+├── 📁 Autenticazione_e_Accesso/          # 🔐 Sistema Autenticazione
+│   ├── 📄 __init__.py                     # Package initialization
+│   ├── 📄 auth_manager.py                 # 👤 Gestione autenticazione principale
+│   ├── 📄 login_dialog.py                 # 🔐 Dialog di login
+│   ├── 📄 password_reset_dialog.py        # 🔑 Recupero password
+│   ├── 📄 auth_flow.py                    # 🔄 Flusso autenticazione
+│   ├── 📄 auth_module.py                  # ⚙️ Modulo autenticazione
+│   ├── 📄 app_launcher.py                 # 🚀 Launcher applicazione
+│   ├── 📄 gui_components.py               # 🎨 Componenti GUI autenticazione
+│   ├── 📄 security_utils.py               # 🔒 Utilità sicurezza
+│   ├── 📄 simple_auth.py                  # 🔒 Autenticazione semplice
+│   ├── 📄 simple_auth_manager.py          # 👑 Manager autenticazione semplice
+│   ├── 📄 user_auth_manager.py            # 👥 Manager utenti
+│   ├── 📄 test_auth_setup.py              # 🧪 Test setup autenticazione
+│   ├── 📄 test_password_reset.py          # 🧪 Test reset password
+│   └── 📄 test_password_reset_fixed.py    # 🧪 Test reset password (corretto)
 └── 📁 ICO-fonts-wallpaper/                # 🎨 Risorse Grafiche
     ├── 📄 ChatGPT Image 3 set 2025, 01_20_38.png
     ├── 📄 ICONA.ico                       # Icona applicazione
@@ -251,6 +267,50 @@ python test_qml_integration.py  # 🧪 Test componenti QML
 - 📱 Versione mobile/web
 
 ==================================================================================
+                      🔒 NOTE SICUREZZA AGGIUNTIVE
+==================================================================================
+
+🛡️ **MISURE DI SICUREZZA IMPLEMENTATE:**
+
+1. **CRITTOGRAFIA MIGLIORATA:**
+   - 🔐 AES-256-GCM con autenticazione
+   - 🔑 Derivazione chiavi PBKDF2 sicura
+   - 🎲 Sale casuale per ogni crittografia
+   - 🔄 Fallback per retrocompatibilità
+
+2. **PROTEZIONE PASSWORD:**
+   - 🔒 Hashing PBKDF2 con 100k iterazioni
+   - 🎯 Sale unico per password
+   - ⏱️ Rate limiting anti-brute force
+   - 📝 Validazione input sicura
+
+3. **LOGGING SICURO:**
+   - 📋 Log separati per sicurezza
+   - 🚫 Protezione dati sensibili
+   - 🔄 Rotazione automatica log
+   - 📁 Directory sicura per log
+
+4. **SANITIZZAZIONE INPUT:**
+   - 🧹 Validazione whitelist
+   - 🛡️ Protezione injection attacks
+   - ⚡ Sanitizzazione comandi shell
+   - 🔍 Monitoraggio pattern pericolosi
+
+⚠️ **RACCOMANDAZIONI OPERATIVE:**
+- 🔐 Usare variabile DSA_ENCRYPTION_KEY
+- 🚫 Non committare mai file .env
+- 🔄 Aggiornare regolarmente dipendenze
+- 📊 Monitorare log di sicurezza
+- 🔒 Usare HTTPS per comunicazioni
+
+=================================================================================
 """
+
+# Import dei moduli di autenticazione per accesso facilitato
+try:
+    from .Autenticazione_e_Accesso import *
+    print("✅ Authentication module loaded")
+except ImportError as e:
+    print(f"⚠️  Authentication module not available: {e}")
 
 # print ("ciao")

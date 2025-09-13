@@ -36,28 +36,7 @@ class DetectionHandlers:
                     self.main_window.hand_detector = None
                     self.main_window.face_detector = None
 
-            elif detection_system == "mediapipe":
-                # Inizializza MediaPipe per il rilevamento
-                try:
-                    # TODO: Create MediaPipeHandDetector class
-                    # from .mediapipe.detector.mediapipe_detector import MediaPipeHandDetector
-                    raise ImportError("MediaPipe detector not yet implemented")
-                except ImportError:
-                    logging.warning(
-                        "MediaPipe detector non disponibile, uso OpenCV come fallback"
-                    )
-                    try:
-                        from .visual_background import VideoThread
 
-                        self.main_window.hand_detector = VideoThread()
-                        self.main_window.face_detector = VideoThread()
-                        logging.info(
-                            "Sistema di rilevamento OpenCV inizializzato (fallback)"
-                        )
-                    except ImportError:
-                        logging.warning("Nessun sistema di rilevamento disponibile")
-                        self.main_window.hand_detector = None
-                        self.main_window.face_detector = None
             else:
                 logging.warning(
                     "Sistema di rilevamento '{detection_system}' non riconosciuto, uso OpenCV"

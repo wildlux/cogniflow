@@ -35,8 +35,7 @@ def main():
     bridge = register_bridge(engine)
 
     # Registra il bridge MediaPipe nel contesto QML
-    if register_mediapipe_bridge:
-        mediapipe_bridge = register_mediapipe_bridge(engine)
+    # No MediaPipe bridge to register
         print("✅ MediaPipe bridge registrato")
     else:
         print("⚠️ MediaPipe bridge non disponibile")

@@ -10,6 +10,11 @@ import os
 import sys
 import importlib.util
 from datetime import datetime
+
+# Aggiungi il percorso del progetto ai path di sistema per gli import
+project_root = os.path.dirname(os.path.dirname(__file__))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 from PyQt6.QtCore import (
     Qt,
     QTimer,
@@ -43,88 +48,99 @@ from PyQt6.QtWidgets import (
     QInputDialog,
 )
 
-# Import TTS per la pronuncia IPA
+# Import centralizzato delle dipendenze
 try:
-    from Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager import TTSThread
+    helper_path = os.path.join(os.path.dirname(__file__), "0_HELPER_DEPENDENCY.py")
+    spec = importlib.util.spec_from_file_location("helper_dependency", helper_path)
+    if spec and spec.loader:
+        helper_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(helper_module)
+        print("✅ Helper dependency loaded successfully")
+    else:
+        print("⚠️  Could not load helper dependency")
+except Exception as e:
+    print(f"⚠️  Helper dependency not available: {e}")
 
-    TTS_AVAILABLE = True
-except ImportError:
-    TTSThread = None
-    TTS_AVAILABLE = False
-    logging.warning(
-        "Sistema TTS non disponibile - funzionalità di pronuncia IPA limitata"
-    )
+# Import delle funzioni e classi necessarie con gestione errori
+def safe_import(module_path, attr_name, default_value=None):
+    """Import sicuro che restituisce un valore di default se l'import fallisce."""
+    try:
+        module = __import__(module_path, fromlist=[attr_name])
+        return getattr(module, attr_name, default_value)
+    except (ImportError, AttributeError) as e:
+        print(f"⚠️  Import failed for {module_path}.{attr_name}: {e}")
+        return default_value
 
-# Import del sistema di configurazione
-from .main_03_configurazione_e_opzioni import get_config, load_settings
+# Import delle impostazioni e configurazione
+load_settings = safe_import('core.config_module', 'load_settings', lambda: {})
+get_config = safe_import('core.config_module', 'get_config', lambda: None)
 
+# Import del bridge Ollama per AI
+OllamaBridge = safe_import('Artificial_Intelligence.Ollama.ollama_bridge', 'OllamaBridge', None)
+
+# Import dei componenti UI
+DraggableTextWidget = safe_import('UI.draggable_text_widget', 'DraggableTextWidget', None)
+SettingsDialog = safe_import('UI.settings_dialog', 'SettingsDialog', None)
+show_user_friendly_error = safe_import('UI.user_friendly_errors', 'show_user_friendly_error', lambda *args, **kwargs: None)
+
+# Import dei thread per riconoscimento vocale
+SpeechRecognitionThread = safe_import('Artificial_Intelligence.Riconoscimento_Vocale.managers.speech_recognition_manager', 'SpeechRecognitionThread', None)
+
+# Altre funzioni mancanti
+ensure_vosk_model_available = safe_import('Artificial_Intelligence.Riconoscimento_Vocale.managers.speech_recognition_manager', 'ensure_vosk_model_available', lambda *args, **kwargs: False)
+AudioFileTranscriptionThread = safe_import('Artificial_Intelligence.Riconoscimento_Vocale.managers.speech_recognition_manager', 'AudioFileTranscriptionThread', None)
+TTSThread = safe_import('Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager', 'TTSThread', None)
+
+# Import per OCR
 try:
-    from UI.draggable_text_widget import DraggableTextWidget
+    import pytesseract
+    from PIL import Image
+    OCR_AVAILABLE = True
 except ImportError:
-    DraggableTextWidget = None
-
-try:
-    from UI.settings_dialog import SettingsDialog
-except ImportError:
-    SettingsDialog = None
-
-# Import del bridge Ollama per l'integrazione AI
-try:
-    from Artificial_Intelligence.Ollama.ollama_bridge import OllamaBridge
-except ImportError:
-    OllamaBridge = None
-
-# Import del riconoscimento vocale
-try:
-    from Artificial_Intelligence.Riconoscimento_Vocale.managers.speech_recognition_manager import (
-        SpeechRecognitionThread,
-        AudioFileTranscriptionThread,
-        ensure_vosk_model_available,
-    )
-except ImportError:
-    SpeechRecognitionThread = None
-    AudioFileTranscriptionThread = None
-    ensure_vosk_model_available = None
-
-# Import del sistema di errori user-friendly
-try:
-    from UI.user_friendly_errors import show_user_friendly_error, show_success_message  # type: ignore
-except ImportError:
-    # Fallback se il modulo non è disponibile
-    def show_user_friendly_error(parent, error, context=""):
-        from PyQt6.QtWidgets import QMessageBox
-
-        QMessageBox.critical(parent, "Errore", "Errore: {str(error)}")
-
-    def show_success_message(parent, operation, details=""):
-        from PyQt6.QtWidgets import QMessageBox
-
-        QMessageBox.information(
-            parent, "Successo", "Operazione completata: {operation}"
-        )
-
+    pytesseract = None
+    Image = None
+    OCR_AVAILABLE = False
+    print("⚠️  OCR functionality not available")
 
 # Import per funzionalità multimediali
 try:
     from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
-    from PyQt6.QtMultimediaWidgets import QVideoWidget
-
     MULTIMEDIA_AVAILABLE = True
 except ImportError:
     QMediaPlayer = None
     QAudioOutput = None
-    QVideoWidget = None
     MULTIMEDIA_AVAILABLE = False
+    print("⚠️  Multimedia functionality not available")
 
-# Import VideoThread per gesture recognition
+# Controllo disponibilità TTS
 try:
-    from Artificial_Intelligence.Video.visual_background import VideoThread
-
-    VIDEO_THREAD_AVAILABLE = True
+    from Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager import TTSThread
+    TTS_AVAILABLE = True
 except ImportError:
-    VideoThread = None
-    VIDEO_THREAD_AVAILABLE = False
-    logging.warning("VideoThread non disponibile - funzionalità webcam limitate")
+    TTS_AVAILABLE = False
+    print("⚠️  TTS functionality not available")
+
+# Funzione di utilità mancante
+def show_success_message(parent, title, message):
+    """Mostra un messaggio di successo."""
+    try:
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.information(parent, title, message)
+    except:
+        print(f"✅ {title}: {message}")
+
+# Funzione di fallback per get_setting
+def get_setting(key, default=None):
+    """Ottiene un'impostazione con fallback."""
+    try:
+        settings = load_settings()
+        return settings.get(key, default)
+    except:
+        return default
+
+print("✅ Import process completed")
+
+# Rimuovi la definizione di initialize_application da qui - sarà alla fine del file
 
 
 class WebcamTestWindow(QMainWindow):
@@ -166,9 +182,7 @@ class WebcamTestWindow(QMainWindow):
         self.expressions_enabled = False
 
         # Backend selection state
-        self.current_backend = "opencv"  # "opencv" or "mediapipe"
-        self.mediapipe_available = False
-        self.vm_mode = False  # Se usare MediaPipe in VM
+        self.current_backend = "opencv"  # Only OpenCV supported
 
         self.setup_ui()
         self.setup_connections()
@@ -462,61 +476,8 @@ class WebcamTestWindow(QMainWindow):
         )
         controls_layout.addWidget(self.expressions_btn)
 
-        # Pulsante selezione backend
-        self.backend_btn = QPushButton("🔄 OpenCV")
-        self.backend_btn.setMinimumHeight(35)
-        self.backend_btn.setEnabled(False)
-        self.backend_btn.setStyleSheet(
-            """
-            QPushButton {
-                background: #6f42c1;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                font-size: 12px;
-                font-weight: bold;
-                padding: 6px 12px;
-            }
-            QPushButton:hover {
-                background: #5a359a;
-            }
-            QPushButton:pressed {
-                background: #4c2d85;
-            }
-            QPushButton:disabled {
-                background: #6c757d;
-            }
-        """
-        )
-        controls_layout.addWidget(self.backend_btn)
 
-        # Pulsante modalità VM
-        self.vm_btn = QPushButton("🖥️ VM OFF")
-        self.vm_btn.setMinimumHeight(35)
-        self.vm_btn.setEnabled(False)
-        self.vm_btn.setStyleSheet(
-            """
-            QPushButton {
-                background: #20c997;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                font-size: 12px;
-                font-weight: bold;
-                padding: 6px 12px;
-            }
-            QPushButton:hover {
-                background: #17a2b8;
-            }
-            QPushButton:pressed {
-                background: #138496;
-            }
-            QPushButton:disabled {
-                background: #6c757d;
-            }
-        """
-        )
-        controls_layout.addWidget(self.vm_btn)
+
 
         controls_layout.addStretch()
         layout.addLayout(controls_layout)
@@ -716,11 +677,7 @@ class WebcamTestWindow(QMainWindow):
         self.gestures_btn.clicked.connect(self.toggle_gestures)
         self.expressions_btn.clicked.connect(self.toggle_expressions)
 
-        # Connessione selezione backend
-        self.backend_btn.clicked.connect(self.toggle_backend)
 
-        # Connessione modalità VM
-        self.vm_btn.clicked.connect(self.toggle_vm_mode)
 
     def on_hand_position_update(self, webcam_x, webcam_y):
         """Gestisce l'aggiornamento della posizione della mano."""
@@ -1212,11 +1169,7 @@ class WebcamTestWindow(QMainWindow):
             self.gestures_btn.setEnabled(True)
             self.expressions_btn.setEnabled(True)
 
-            # Abilita il pulsante selezione backend
-            self.backend_btn.setEnabled(True)
 
-            # Abilita il pulsante modalità VM
-            self.vm_btn.setEnabled(True)
         else:
             self.status_label.setText("Status: Webcam non avviata correttamente")
             print("⚠️ Webcam thread non è operativo")
@@ -1233,11 +1186,7 @@ class WebcamTestWindow(QMainWindow):
             self.gestures_btn.setEnabled(False)
             self.expressions_btn.setEnabled(False)
 
-            # Disabilita il pulsante selezione backend
-            self.backend_btn.setEnabled(False)
 
-            # Disabilita il pulsante modalità VM
-            self.vm_btn.setEnabled(False)
 
             # Stop and cleanup VideoThread
             if self.video_thread:
@@ -1613,210 +1562,9 @@ class WebcamTestWindow(QMainWindow):
         # if self.video_thread and hasattr(self.video_thread, 'toggle_expressions'):
         #     self.video_thread.toggle_expressions(self.expressions_enabled)
 
-    def toggle_backend(self):
-        """Alterna tra backend OpenCV e MediaPipe."""
-        if not self.webcam_active:
-            return
 
-        # Verifica disponibilità MediaPipe
-        mediapipe_available = False
-        try:
-            import mediapipe as mp  # type: ignore
 
-            mediapipe_available = True
-        except ImportError:
-            pass
 
-        if self.current_backend == "opencv":
-            if mediapipe_available:
-                self.current_backend = "mediapipe"
-                self.backend_btn.setText("🔄 MediaPipe")
-                self.backend_btn.setStyleSheet(
-                    """
-                    QPushButton {
-                        background: #e83e8c;
-                        color: white;
-                        border: none;
-                        border-radius: 6px;
-                        font-size: 12px;
-                        font-weight: bold;
-                        padding: 6px 12px;
-                    }
-                    QPushButton:hover {
-                        background: #d63384;
-                    }
-                    QPushButton:pressed {
-                        background: #c8237c;
-                    }
-                """
-                )
-                print("🔄 Backend cambiato: MediaPipe")
-                self.status_label.setText("Status: Backend MediaPipe attivo")
-            else:
-                print("❌ MediaPipe non disponibile")
-                self.status_label.setText("Status: MediaPipe non disponibile")
-                return
-        else:
-            self.current_backend = "opencv"
-            self.backend_btn.setText("🔄 OpenCV")
-            self.backend_btn.setStyleSheet(
-                """
-                QPushButton {
-                    background: #6f42c1;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    font-size: 12px;
-                    font-weight: bold;
-                    padding: 6px 12px;
-                }
-                QPushButton:hover {
-                    background: #5a359a;
-                }
-                QPushButton:pressed {
-                    background: #4c2d85;
-                }
-            """
-            )
-            print("🔄 Backend cambiato: OpenCV")
-            self.status_label.setText("Status: Backend OpenCV attivo")
-
-        # Applica il cambio di backend al VideoThread
-        if self.video_thread:
-            self.video_thread.current_backend = self.current_backend
-            if hasattr(self.video_thread, "set_backend"):
-                self.video_thread.set_backend(self.current_backend)
-
-    def toggle_vm_mode(self):
-        """Attiva/disattiva la modalità macchina virtuale per MediaPipe."""
-        if not self.webcam_active:
-            return
-
-        self.vm_mode = not self.vm_mode
-
-        if self.vm_mode:
-            self.vm_btn.setText("🖥️ VM ON")
-            self.vm_btn.setStyleSheet(
-                """
-                QPushButton {
-                    background: #dc3545;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    font-size: 12px;
-                    font-weight: bold;
-                    padding: 6px 12px;
-                }
-                QPushButton:hover {
-                    background: #c82333;
-                }
-                QPushButton:pressed {
-                    background: #bd2130;
-                }
-            """
-            )
-            print("🖥️ Modalità VM attivata per MediaPipe")
-            self.status_label.setText("Status: Modalità VM attiva")
-
-            # Inizializza la configurazione VM
-            vm_config_path = os.path.join(
-                os.path.dirname(__file__),
-                "Artificial_Intelligence",
-                "Video",
-                "mediapipe",
-                "config",
-                "mediapipe_vm_config.py",
-            )
-            if os.path.exists(vm_config_path):
-                try:
-                    spec = importlib.util.spec_from_file_location(
-                        "mediapipe_vm_config", vm_config_path
-                    )
-                    if spec and spec.loader:
-                        mediapipe_vm_config = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(mediapipe_vm_config)
-                        mediapipe_vm = mediapipe_vm_config.mediapipe_vm
-
-                        if mediapipe_vm.is_vm_available():
-                            if mediapipe_vm.start_vm_service():
-                                print("✅ Servizio MediaPipe VM avviato")
-                                self.status_label.setText("Status: VM MediaPipe attiva")
-                            else:
-                                print("❌ Errore avvio servizio VM")
-                                self.status_label.setText("Status: Errore VM")
-                                self.vm_mode = False
-                                self.vm_btn.setText("🖥️ VM OFF")
-                                return
-                        else:
-                            print("⚠️ VM MediaPipe non configurata")
-                            self.status_label.setText("Status: VM non configurata")
-                            self.vm_mode = False
-                            self.vm_btn.setText("🖥️ VM OFF")
-                            return
-                except Exception as e:
-                    print(f"❌ Errore caricamento configurazione VM: {e}")
-                    self.status_label.setText("Status: Errore VM config")
-                    self.vm_mode = False
-                    self.vm_btn.setText("🖥️ VM OFF")
-                    return
-            else:
-                print("⚠️ File configurazione VM non trovato")
-                self.status_label.setText("Status: VM config mancante")
-                self.vm_mode = False
-                self.vm_btn.setText("🖥️ VM OFF")
-                return
-        else:
-            self.vm_btn.setText("🖥️ VM OFF")
-            self.vm_btn.setStyleSheet(
-                """
-                QPushButton {
-                    background: #20c997;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    font-size: 12px;
-                    font-weight: bold;
-                    padding: 6px 12px;
-                }
-                QPushButton:hover {
-                    background: #17a2b8;
-                }
-                QPushButton:pressed {
-                    background: #138496;
-                }
-            """
-            )
-            print("🖥️ Modalità VM disattivata")
-
-            # Ferma il servizio VM
-            vm_config_path = os.path.join(
-                os.path.dirname(__file__),
-                "Artificial_Intelligence",
-                "Video",
-                "mediapipe",
-                "config",
-                "mediapipe_vm_config.py",
-            )
-            if os.path.exists(vm_config_path):
-                try:
-                    spec = importlib.util.spec_from_file_location(
-                        "mediapipe_vm_config", vm_config_path
-                    )
-                    if spec and spec.loader:
-                        mediapipe_vm_config = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(mediapipe_vm_config)
-                        mediapipe_vm_config.mediapipe_vm.stop_vm_service()
-                        print("✅ Servizio MediaPipe VM fermato")
-                except Exception as e:
-                    print(f"Errore arresto servizio VM: {e}")
-
-            self.status_label.setText("Status: VM disattivata")
-
-        # Aggiorna il VideoThread con la modalità VM
-        if self.video_thread:
-            self.video_thread.vm_mode = self.vm_mode
-            if hasattr(self.video_thread, "set_vm_mode"):
-                self.video_thread.set_vm_mode(self.vm_mode)
 
 
 # Import per OCR
@@ -2079,6 +1827,61 @@ class MainWindow(QMainWindow):
                     "Campo Vuoto",
                     "Scrivi qualcosa nel campo prima di inviare! 💭",
                 )
+                return
+
+            # Controlla se il testo inizia con il trigger AI
+            ai_trigger = get_setting("ai.ai_trigger", "++++")
+            if ai_trigger and isinstance(ai_trigger, str) and text.startswith(ai_trigger):
+                # Estrai il testo dopo il trigger
+                ai_prompt = text[len(ai_trigger):].strip()
+
+                if not ai_prompt:
+                    from PyQt6.QtWidgets import QMessageBox
+                    QMessageBox.warning(
+                        self,
+                        "Prompt AI Vuoto",
+                        f"Il trigger '{ai_trigger}' è stato rilevato ma non c'è testo da inviare all'AI.\n\nScrivi qualcosa dopo il trigger!",
+                    )
+                    return
+
+                # Invia la richiesta all'AI
+                print(f"🤖 Rilevato trigger AI '{ai_trigger}', invio prompt: {ai_prompt[:50]}...")
+
+                # Mostra feedback visivo nella status bar se disponibile
+                if hasattr(self, 'statusBar'):
+                    status_bar = self.statusBar()
+                    if status_bar:
+                        status_bar.showMessage(f"🤖 Invio richiesta AI: {ai_prompt[:30]}...")
+
+                # Usa il bridge Ollama se disponibile
+                if hasattr(self, 'ollama_bridge') and self.ollama_bridge:
+                    try:
+                        # Invia la richiesta all'AI usando il metodo corretto
+                        model = get_setting("ai.selected_ai_model", "gemma:2b")
+                        self.ollama_bridge.sendPrompt(ai_prompt, model)
+                        from PyQt6.QtWidgets import QMessageBox
+                        QMessageBox.information(
+                            self,
+                            "Richiesta AI Inviata",
+                            f"✅ Prompt inviato all'AI ({model}):\n\n'{ai_prompt[:100]}{'...' if len(ai_prompt) > 100 else ''}'",
+                        )
+                    except Exception as e:
+                        from PyQt6.QtWidgets import QMessageBox
+                        QMessageBox.warning(
+                            self,
+                            "Errore AI",
+                            f"❌ Errore nell'invio della richiesta all'AI:\n\n{str(e)}",
+                        )
+                else:
+                    from PyQt6.QtWidgets import QMessageBox
+                    QMessageBox.warning(
+                        self,
+                        "AI Non Disponibile",
+                        "❌ Il servizio AI non è disponibile.\n\nVerifica che Ollama sia installato e configurato.",
+                    )
+
+                # Svuota il campo dopo l'invio
+                self.footer_pensierini_input.clear()
                 return
 
             # Crea il nuovo widget pensierino
@@ -7954,7 +7757,10 @@ ESEMPI:
 def setup_logging():
     """Configura il sistema di logging."""
     log_config = get_config()
-    log_file = log_config.get_setting("files.log_file", "Save/LOG/app.log")
+    if log_config and hasattr(log_config, 'get_setting'):
+        log_file = log_config.get_setting("files.log_file", "Save/LOG/app.log")
+    else:
+        log_file = "Save/LOG/app.log"
 
     # Assicura che la directory dei log esista
     log_dir = os.path.dirname(log_file)
@@ -8019,7 +7825,7 @@ def main():
 
         # Crea applicazione Qt
         app = QApplication(sys.argv)
-        app.setApplicationName(settings["application"]["app_name"])
+        app.setApplicationName(settings.get("application", {}).get("app_name", "CogniFlow"))
         app.setOrganizationName("DSA Aircraft")
         print("QApplication created successfully")
 

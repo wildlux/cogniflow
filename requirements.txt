@@ -9,13 +9,15 @@ requests>=2.31.0
 
 # Image processing
 Pillow>=10.0.0
-mediapipe>=0.10.0
 opencv-python>=4.8.0
 # pytesseract (external, requires tesseract-ocr system package)
 
 # Audio processing
 # vosk (external model files required)
 # pyaudio (system dependencies required)
+
+# Security and cryptography
+cryptography>=41.0.0
 
 # Development and testing
 pytest>=7.4.0
@@ -27,4 +29,3 @@ typing-extensions>=4.7.0
 
 # Optional: MediaPipe services (richiede sistema specifico)
 # flask>=2.0.0
-# mediapipe>=0.10.0  # Nota: potrebbe richiedere installazione manuale

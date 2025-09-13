@@ -9,30 +9,12 @@ import asyncio
 from PyQt6.QtCore import QThread, pyqtSignal, QSize, Qt
 from PyQt6.QtGui import QImage, QPixmap
 
-# Import MediaPipe client
-try:
-    from services.mediapipe_client import MediaPipeClient
+# Import centralizzato delle dipendenze
+from ...0_HELPER_DEPENDENCY import *
 
-    MEDIAPIPE_CLIENT_AVAILABLE = True
-except ImportError:
-    MEDIAPIPE_CLIENT_AVAILABLE = False
-    MediaPipeClient = None
-    logging.warning("MediaPipe client non disponibile")
-
-# MediaPipe imports
-try:
-    import mediapipe as mp  # type: ignore
-
-    MEDIAPIPE_AVAILABLE = True
-    mp_pose = mp.solutions.pose
-    mp_drawing = mp.solutions.drawing_utils
-    mp_drawing_styles = mp.solutions.drawing_styles
-except ImportError:
-    MEDIAPIPE_AVAILABLE = False
-    mp_pose = None
-    mp_drawing = None
-    mp_drawing_styles = None
-    logging.warning("MediaPipe non disponibile - rilevamento pose limitato")
+# Inizializzazione modulo video
+if __name__ == "__main__":
+    initialize_application()
 
 
 class VideoThread(QThread):
@@ -65,22 +47,7 @@ class VideoThread(QThread):
         )
         self.main_window = main_window
 
-        # Initialize MediaPipe client
-        self.mediapipe_client = None
-        self.use_mediapipe_service = True  # Flag to enable/disable MediaPipe service
-
-        if MEDIAPIPE_CLIENT_AVAILABLE and MediaPipeClient:
-            try:
-                mediapipe_url = os.getenv(
-                    "MEDIAPIPE_SERVICE_URL", "http://localhost:8001"
-                )
-                self.mediapipe_client = MediaPipeClient(mediapipe_url)
-                logging.info(f"MediaPipe client initialized with URL: {mediapipe_url}")
-            except Exception as e:
-                logging.warning(f"Failed to initialize MediaPipe client: {e}")
-                self.mediapipe_client = None
-        else:
-            logging.info("MediaPipe client not available, using local detection")
+        # Using OpenCV only - no MediaPipe client needed
 
         # Carica i classificatori Haar per il rilevamento
         try:
@@ -145,41 +112,17 @@ class VideoThread(QThread):
         }
         self.active_inputs = set()  # Traccia dispositivi attivi (mani + mouse)
 
-        # Backend selection
-        self.current_backend = "opencv"  # "opencv" or "mediapipe"
-        self.vm_mode = False  # Se usare MediaPipe in VM
-        self.mediapipe_pose = None
-        self.mediapipe_hands = None
+        # Backend selection - OpenCV only
+        self.current_backend = "opencv"
 
     def set_backend(self, backend):
-        """Imposta il backend per il rilevamento (opencv o mediapipe)."""
-        if backend not in ["opencv", "mediapipe"]:
-            logging.warning(f"Backend non supportato: {backend}")
-            return
+        """Imposta il backend per il rilevamento (solo OpenCV supportato)."""
+        if backend != "opencv":
+            logging.warning(f"Backend '{backend}' non supportato. Usando OpenCV.")
+            backend = "opencv"
 
         self.current_backend = backend
-        logging.info(f"Backend cambiato a: {backend}")
-
-        # Inizializza MediaPipe se necessario
-        if backend == "mediapipe" and MEDIAPIPE_AVAILABLE:
-            try:
-                if self.mediapipe_pose is None:
-                    self.mediapipe_pose = mp_pose.Pose(
-                        min_detection_confidence=0.5, min_tracking_confidence=0.5
-                    )
-                if self.mediapipe_hands is None:
-                    self.mediapipe_hands = mp.solutions.hands.Hands(
-                        max_num_hands=2,
-                        min_detection_confidence=0.5,
-                        min_tracking_confidence=0.5,
-                    )
-                logging.info("MediaPipe inizializzato correttamente")
-            except Exception as e:
-                logging.error(f"Errore inizializzazione MediaPipe: {e}")
-                self.current_backend = "opencv"  # Fallback a OpenCV
-        elif backend == "mediapipe" and not MEDIAPIPE_AVAILABLE:
-            logging.warning("MediaPipe richiesto ma non disponibile, uso OpenCV")
-            self.current_backend = "opencv"
+        logging.info(f"Backend impostato a: {backend}")
 
     def set_vm_mode(self, enabled):
         """Imposta la modalità macchina virtuale per MediaPipe."""
@@ -316,7 +259,7 @@ class VideoThread(QThread):
         # Prima prova con approccio MediaPipe-style se possibile
         try:
             # Usa approccio ibrido MediaPipe-OpenCV
-            frame = self.detect_faces_mediapipe(frame)
+            # Face detection using OpenCV only
             return frame
         except Exception as e:
             logging.warning(
@@ -424,14 +367,7 @@ class VideoThread(QThread):
         if not self.gesture_recognition_enabled:
             return frame
 
-        # Se MediaPipe è disponibile e abilitato, usa quello invece di OpenCV
-        if MEDIAPIPE_AVAILABLE and self.use_mediapipe_service and self.mediapipe_client:
-            try:
-                return self.detect_hands_mediapipe(frame)
-            except Exception as e:
-                logging.warning(
-                    f"MediaPipe hand detection failed: {e}, falling back to OpenCV"
-                )
+        # Using OpenCV detection only
 
         # Fallback a OpenCV tradizionale
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -621,41 +557,7 @@ class VideoThread(QThread):
         if not self.human_detection_enabled:
             return frame
 
-        # Controlla se MediaPipe è realmente disponibile
-        mediapipe_available = (
-            MEDIAPIPE_AVAILABLE
-            and self.mediapipe_client is not None
-            and MEDIAPIPE_CLIENT_AVAILABLE
-        )
-
-        logging.debug(f"MediaPipe disponibile: {mediapipe_available}")
-
-        if mediapipe_available and self.use_mediapipe_service:
-            try:
-                logging.info("Tentativo rilevamento pose con MediaPipe service")
-
-                # Verifica che il client sia funzionante
-                if hasattr(self.mediapipe_client, "detect_pose"):
-                    # Run MediaPipe detection asynchronously
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    result = loop.run_until_complete(
-                        self.detect_humans_mediapipe(frame)
-                    )
-                    loop.close()
-
-                    if result is not None:
-                        logging.info("Rilevamento pose MediaPipe riuscito")
-                        return result
-                    else:
-                        logging.warning(
-                            "MediaPipe service restituito None, fallback a OpenCV"
-                        )
-                else:
-                    logging.warning("MediaPipe client non ha metodo detect_pose")
-            except Exception as e:
-                logging.error(f"Errore MediaPipe service: {e}")
-                logging.info("Passaggio a fallback OpenCV")
+        # Using OpenCV detection only
 
         # Fallback sempre attivo a OpenCV migliorato
         logging.info("Utilizzo rilevamento pose OpenCV")
@@ -664,21 +566,7 @@ class VideoThread(QThread):
         # Fallback to original OpenCV method
         return self.detect_humans_opencv(frame)
 
-    async def detect_humans_mediapipe(self, frame):
-        """Rilevamento umani usando MediaPipe service."""
-        try:
-            # Verifica che il client sia disponibile
-            if self.mediapipe_client is None:
-                logging.error("MediaPipe client is None")
-                return None
 
-            # Verifica che il metodo detect_pose esista
-            if not hasattr(self.mediapipe_client, "detect_pose"):
-                logging.error("MediaPipe client does not have detect_pose method")
-                return None
-
-            # Get pose detection from service
-            pose_result = await self.mediapipe_client.detect_pose(frame)
 
             if pose_result and pose_result.get("detected"):
                 # Draw pose landmarks
@@ -2077,73 +1965,7 @@ class VideoThread(QThread):
 
         return frame
 
-    def detect_faces_mediapipe(self, frame):
-        """Rilevamento facciale usando approccio MediaPipe-style."""
-        if self.face_cascade is None:
-            logging.warning("Face cascade not available for MediaPipe-style detection")
-            return self.detect_faces_opencv(frame)
 
-        try:
-            logging.info("Tentativo rilevamento faccia con approccio MediaPipe-style")
-
-            # Implementazione che usa OpenCV ma con approccio MediaPipe-like
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            gray = cv2.equalizeHist(gray)
-
-            # Parametri ottimizzati per somigliare a MediaPipe
-            faces = self.face_cascade.detectMultiScale(
-                gray,
-                scaleFactor=1.1,
-                minNeighbors=3,
-                minSize=(30, 30),
-                maxSize=(300, 300),
-                flags=cv2.CASCADE_SCALE_IMAGE,
-            )
-
-            logging.info(f"MediaPipe-style detection found {len(faces)} faces")
-
-            # Mostra stato del rilevamento
-            if len(faces) > 0:
-                cv2.putText(
-                    frame,
-                    f"Faccia rilevata (MP-style): {len(faces)}",
-                    (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (0, 255, 0),
-                    2,
-                )
-            else:
-                cv2.putText(
-                    frame,
-                    "Nessuna faccia rilevata (MP-style)",
-                    (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (0, 255, 255),
-                    2,
-                )
-
-            # Disegna rettangoli con stile MediaPipe
-            for x, y, w, h in faces:
-                # Rettangolo più sottile come MediaPipe
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                cv2.putText(
-                    frame,
-                    "Face (MP)",
-                    (x, y - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.6,
-                    (0, 255, 0),
-                    1,
-                )
-
-            return frame
-
-        except Exception as e:
-            logging.error(f"Errore in detect_faces_mediapipe: {e}")
-            # Fallback completo a OpenCV tradizionale
-            return self.detect_faces_opencv(frame)
 
     def detect_faces_opencv(self, frame):
         """Rilevamento facciale tradizionale con OpenCV."""

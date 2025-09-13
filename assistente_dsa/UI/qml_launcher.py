@@ -19,12 +19,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 # Import del bridge Ollama
 from Artificial_Intelligence.Ollama.ollama_bridge import register_bridge
 
-# Import del bridge MediaPipe
-try:
-    from services.mediapipe_bridge import register_mediapipe_bridge
-except ImportError:
-    register_mediapipe_bridge = None
-    print("MediaPipe bridge non disponibile")
+# MediaPipe removed - no bridge needed
 
 
 def main():
@@ -38,8 +33,7 @@ def main():
     bridge = register_bridge(engine)
 
     # Registra il bridge MediaPipe nel contesto QML
-    if register_mediapipe_bridge:
-        mediapipe_bridge = register_mediapipe_bridge(engine)
+    # No MediaPipe bridge to register
         print("✅ MediaPipe bridge registrato")
     else:
         print("⚠️ MediaPipe bridge non disponibile")

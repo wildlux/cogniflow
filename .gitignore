@@ -32,6 +32,19 @@ logs/
 !recommended_models.json
 !installed_models.json
 
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+
+# Security logs
+security.log
+*.log
+
+# Sensitive data files
+**/Save/AUTH/users.json
+**/Save/SETUP_TOOLS_&_Data/settings.json
+
 # Modelli AI pesanti (scaricati automaticamente)
 assistente_dsa/Artificial_Intelligence/Riconoscimento_Vocale/models/vosk_models/
 assistente_dsa/Artificial_Intelligence/Riconoscimento_Vocale/models/vosk-*.zip
