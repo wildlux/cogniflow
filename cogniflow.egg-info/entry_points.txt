@@ -1,0 +1,2 @@
+[console_scripts]
+cogniflow = assistente_dsa.main_00_launcher:main

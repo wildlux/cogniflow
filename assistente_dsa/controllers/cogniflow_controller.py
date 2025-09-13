@@ -12,17 +12,41 @@ from typing import Dict, List, Any, Optional, Callable
 
 from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 
-# Import dei servizi
-from ..services.ai_service import AIService
-from ..services.tts_service import TTSService
-from ..services.speech_recognition_service import SpeechRecognitionService
-from ..services.ocr_service import OCRService
-from ..services.media_service import MediaService
-from ..services.project_service import ProjectService
+# Import dei servizi con gestione robusta
+try:
+    # Prova importazione relativa
+    from ..services.ai_service import AIService
+    from ..services.tts_service import TTSService
+    from ..services.speech_recognition_service import SpeechRecognitionService
+    from ..services.ocr_service import OCRService
+    from ..services.media_service import MediaService
+    from ..services.project_service import ProjectService
+except ImportError:
+    try:
+        # Fallback: importazione assoluta
+        from services.ai_service import AIService
+        from services.tts_service import TTSService
+        from services.speech_recognition_service import SpeechRecognitionService
+        from services.ocr_service import OCRService
+        from services.media_service import MediaService
+        from services.project_service import ProjectService
+    except ImportError as e:
+        logging.error(f"❌ Impossibile importare servizi: {e}")
+        raise
 
-# Import dei modelli
-from ..models.project_model import ProjectModel
-from ..models.settings_model import SettingsModel
+# Import dei modelli con gestione robusta
+try:
+    # Prova importazione relativa
+    from ..models.project_model import ProjectModel
+    from ..models.settings_model import SettingsModel
+except ImportError:
+    try:
+        # Fallback: importazione assoluta
+        from models.project_model import ProjectModel
+        from models.settings_model import SettingsModel
+    except ImportError as e:
+        logging.error(f"❌ Impossibile importare modelli: {e}")
+        raise
 
 
 class CogniFlowController(QObject):

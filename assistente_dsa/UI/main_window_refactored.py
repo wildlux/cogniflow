@@ -40,44 +40,84 @@ from .settings_dialog import SettingsDialog
 
 # Import del controller (quando sarà disponibile)
 try:
+    # Prova importazione relativa
     from ..controllers.cogniflow_controller import CogniFlowController
 
     CONTROLLER_AVAILABLE = True
 except ImportError:
-    CogniFlowController = None
-    CONTROLLER_AVAILABLE = False
+    try:
+        # Fallback: importazione assoluta
+        from controllers.cogniflow_controller import CogniFlowController
+
+        CONTROLLER_AVAILABLE = True
+    except ImportError:
+        CogniFlowController = None
+        CONTROLLER_AVAILABLE = False
 
 # Import TTS per la pronuncia IPA
 try:
+    # Prova importazione relativa
     from ..Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager import TTSThread
 
     TTS_AVAILABLE = True
 except ImportError:
-    TTSThread = None
-    TTS_AVAILABLE = False
-    logging.warning(
-        "Sistema TTS non disponibile - funzionalità di pronuncia IPA limitata"
-    )
+    try:
+        # Fallback: importazione assoluta
+        from Artificial_Intelligence.Sintesi_Vocale.managers.tts_manager import (
+            TTSThread,
+        )
+
+        TTS_AVAILABLE = True
+    except ImportError:
+        TTSThread = None
+        TTS_AVAILABLE = False
+        logging.warning(
+            "Sistema TTS non disponibile - funzionalità di pronuncia IPA limitata"
+        )
 
 # Import del sistema di configurazione
-from ..main_03_configurazione_e_opzioni import get_config, load_settings
+try:
+    # Prova importazione relativa
+    from ..main_03_configurazione_e_opzioni import get_config, load_settings
+except ImportError:
+    try:
+        # Fallback: importazione assoluta
+        from main_03_configurazione_e_opzioni import get_config, load_settings
+    except ImportError as e:
+        logging.error(f"❌ Impossibile importare configurazione: {e}")
+        logging.error("💡 Assicurati di eseguire dal launcher principale")
+        raise
 
 # Altri import esistenti...
 try:
+    # Prova importazione relativa
     from ..Artificial_Intelligence.Ollama.ollama_bridge import OllamaBridge
 except ImportError:
-    OllamaBridge = None
+    try:
+        # Fallback: importazione assoluta
+        from Artificial_Intelligence.Ollama.ollama_bridge import OllamaBridge
+    except ImportError:
+        OllamaBridge = None
 
 try:
+    # Prova importazione relativa
     from ..Artificial_Intelligence.Riconoscimento_Vocale.managers.speech_recognition_manager import (
         SpeechRecognitionThread,
         AudioFileTranscriptionThread,
         ensure_vosk_model_available,
     )
 except ImportError:
-    SpeechRecognitionThread = None
-    AudioFileTranscriptionThread = None
-    ensure_vosk_model_available = None
+    try:
+        # Fallback: importazione assoluta
+        from Artificial_Intelligence.Riconoscimento_Vocale.managers.speech_recognition_manager import (
+            SpeechRecognitionThread,
+            AudioFileTranscriptionThread,
+            ensure_vosk_model_available,
+        )
+    except ImportError:
+        SpeechRecognitionThread = None
+        AudioFileTranscriptionThread = None
+        ensure_vosk_model_available = None
 
 # Import del sistema di errori user-friendly
 try:

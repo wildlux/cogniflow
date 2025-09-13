@@ -28,4 +28,21 @@ mypy>=1.5.0
 typing-extensions>=4.7.0
 
 # Optional: MediaPipe services (richiede sistema specifico)
-# flask>=2.0.0
+flask>=2.0.0
+httpx>=0.25.0
+
+# MediaPipe - INSTALLAZIONE MANUALE RICHIESTA
+# ============================================
+# MediaPipe non può essere installato via pip su tutti i sistemi
+# a causa di dipendenze specifiche OS e compilazione richiesta.
+#
+# Per installare MediaPipe:
+# 1. Verifica requisiti sistema: https://developers.google.com/mediapipe/framework/getting_started/install
+# 2. Installa dipendenze OS necessarie
+# 3. Compila da sorgente o usa wheel precompilato se disponibile
+# 4. Repository: https://github.com/google-ai-edge/mediapipe
+#
+# Comando alternativo (se disponibile):
+# pip install mediapipe
+#
+# Nota: Il codice gestisce automaticamente l'assenza di MediaPipe

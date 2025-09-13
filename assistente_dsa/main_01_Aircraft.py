@@ -5380,44 +5380,54 @@ class MainWindow(QMainWindow):
         if text and text.strip():
             logging.info("📝 Testo valido ricevuto: '{text.strip()}'")
 
+            # Verifica che l'UI sia completamente inizializzata
+            if not hasattr(self, "pensierini_layout"):
+                logging.warning(
+                    "⚠️ pensierini_layout non ancora inizializzato - ritento più tardi"
+                )
+                # Ritarda l'operazione di 100ms per permettere l'inizializzazione dell'UI
+                from PyQt6.QtCore import QTimer
+
+                QTimer.singleShot(
+                    100, lambda: self._add_recognized_text_to_pensierini(text.strip())
+                )
+                return
+
             # Inserisci il testo direttamente nella colonna dei pensierini
-            if hasattr(self, "pensierini_layout") and self.pensierini_layout:
+            if self.pensierini_layout:
                 logging.info("✅ pensierini_layout disponibile")
-
-                # Crea un nuovo pensierino con il testo riconosciuto
-                if DraggableTextWidget:
-                    try:
-                        widget = DraggableTextWidget(
-                            f"🎤 {text.strip()}", self.settings
-                        )
-                        self.pensierini_layout.addWidget(widget)
-                        logging.info(
-                            f"✅ Widget creato e aggiunto ai pensierini: {text[:50]}..."
-                        )
-                    except Exception as e:
-                        logging.error(f"❌ Errore creazione widget: {e}")
-                        # Fallback: mostra in un messaggio (sezione pensierini rimossa)
-                        QMessageBox.information(
-                            self, "Testo Riconosciuto", f"Testo: {text.strip()}"
-                        )
-                else:
-                    logging.warning(
-                        "⚠️ DraggableTextWidget non disponibile, uso fallback"
-                    )
-                    # Fallback: mostra in un messaggio (sezione pensierini rimossa)
-                    QMessageBox.information(
-                        self, "Testo Riconosciuto", f"Testo: {text.strip()}"
-                    )
+                self._add_recognized_text_to_pensierini(text.strip())
             else:
-                logging.error("❌ pensierini_layout non disponibile")
+                logging.error("❌ pensierini_layout è None")
+                # Fallback: mostra in un messaggio
+                QMessageBox.information(
+                    self, "Testo Riconosciuto", f"Testo: {text.strip()}"
+                )
 
-            # Mostra notifica di successo
+    def _add_recognized_text_to_pensierini(self, text):
+        """Aggiunge il testo riconosciuto ai pensierini in modo thread-safe."""
+        try:
+            # Crea un nuovo pensierino con il testo riconosciuto
+            if DraggableTextWidget:
+                widget = DraggableTextWidget(f"🎤 {text}", self.settings)
+                self.pensierini_layout.addWidget(widget)
+                logging.info(
+                    f"✅ Widget creato e aggiunto ai pensierini: {text[:50]}..."
+                )
+
+                # Scroll automatico alla fine della colonna pensierini
+                if hasattr(self, "pensierini_scroll") and self.pensierini_scroll:
+                    scroll_bar = self.pensierini_scroll.verticalScrollBar()
+                    if scroll_bar:
+                        scroll_bar.setValue(scroll_bar.maximum())
+            else:
+                logging.error("❌ DraggableTextWidget non disponibile")
+                QMessageBox.information(self, "Testo Riconosciuto", f"Testo: {text}")
+        except Exception as e:
+            logging.error(f"❌ Errore aggiunta testo ai pensierini: {e}")
+            # Fallback: mostra in un messaggio
             QMessageBox.information(
-                self,
-                "Testo Riconosciuto",
-                f"✅ Testo riconosciuto con successo!\n\n"
-                f"📝 \"{text.strip()[:100]}{'...' if len(text.strip()) > 100 else ''}\"\n\n"
-                f"💭 Aggiunto ai pensierini!",
+                self, "Testo Riconosciuto", f"Testo: {text.strip()}"
             )
         else:
             logging.warning("⚠️ Testo vuoto o None ricevuto: '{text}'")
@@ -5876,8 +5886,32 @@ Riformulazione intensa:"""
             )
 
     def extract_text_from_image(self, image_path):
-        """Estrae testo da un'immagine usando pytesseract."""
+        """Estrae testo da un'immagine usando VLM OCR o pytesseract come fallback."""
         try:
+            # Prima prova con VLM OCR se disponibile
+            if VLM_OCR_AVAILABLE and get_vlm_ocr:
+                try:
+                    vlm_ocr = get_vlm_ocr()
+                    if vlm_ocr.is_available():
+                        logging.info("Usando VLM OCR per estrazione testo")
+                        result = vlm_ocr.extract_text(
+                            image_path=image_path, language="ita+eng"
+                        )
+
+                        if result and result.get("text"):
+                            text = result["text"]
+                            logging.info(
+                                f"VLM OCR completato: {len(text)} caratteri estratti"
+                            )
+                            return text
+                        else:
+                            logging.warning(
+                                "VLM OCR non ha restituito testo, uso fallback"
+                            )
+                except Exception as e:
+                    logging.warning(f"VLM OCR fallito, uso fallback: {e}")
+
+            # Fallback a pytesseract tradizionale
             if not Image or not pytesseract:
                 raise ImportError("PIL o pytesseract non disponibili")
 
@@ -5887,15 +5921,18 @@ Riformulazione intensa:"""
             # Configurazione OCR ottimale
             custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzàèéìòùÀÈÉÌÒÙ .,!?-()[]{}:;"\'\n'
 
-            # Esegui OCR
+            # Esegui OCR tradizionale
             text = pytesseract.image_to_string(
                 image, lang="ita+eng", config=custom_config
             )
 
+            logging.info(
+                f"OCR tradizionale completato: {len(text.strip())} caratteri estratti"
+            )
             return text.strip()
 
-        except Exception:
-            logging.error("Errore estrazione testo da immagine: {e}")
+        except Exception as e:
+            logging.error(f"Errore estrazione testo da immagine: {e}")
             raise
 
     def extract_text_from_pdf(self, pdf_path):
@@ -5906,6 +5943,47 @@ Riformulazione intensa:"""
             "Converti prima il PDF in immagini per utilizzare l'OCR.\n\n"
             "Funzionalità futura: estrazione automatica immagini da PDF."
         )
+
+    def handle_ocr_button(self):
+        """Gestisce l'OCR avanzato usando VLM o fallback tradizionale."""
+        try:
+            # Verifica disponibilità OCR
+            ocr_available = (
+                VLM_OCR_AVAILABLE and get_vlm_ocr and get_vlm_ocr().is_available()
+            ) or OCR_AVAILABLE
+
+            if not ocr_available:
+                QMessageBox.warning(
+                    self,
+                    "OCR Non Disponibile",
+                    "La funzionalità OCR richiede:\n\n"
+                    "• VLM OCR (raccomandato): Ollama con modello LLaVA\n"
+                    "• OCR tradizionale: pytesseract e PIL\n\n"
+                    "Installa con:\n"
+                    "pip install pytesseract pillow\n\n"
+                    "Per VLM OCR:\n"
+                    "ollama pull llava-phi3",
+                )
+                return
+
+            # Apri dialog per selezionare immagine/documento
+            file_dialog = QFileDialog(self)
+            file_dialog.setWindowTitle("Seleziona documento per OCR Avanzato")
+            file_dialog.setNameFilter(
+                "Immagini e documenti (*.png *.jpg *.jpeg *.bmp *.tiff *.pdf);;Immagini (*.png *.jpg *.jpeg *.bmp *.tiff);;PDF (*.pdf);;Tutti i file (*)"
+            )
+
+            if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
+                selected_files = file_dialog.selectedFiles()
+                if selected_files:
+                    file_path = selected_files[0]
+                    self.process_ocr_file(file_path)
+
+        except Exception as e:
+            logging.error(f"Errore caricamento file OCR: {e}")
+            QMessageBox.critical(
+                self, "Errore", f"Errore durante il caricamento del file:\n{str(e)}"
+            )
 
     def handle_audio_transcription_button(self):
         """Gestisce la trascrizione di file audio in testo."""

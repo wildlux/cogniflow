@@ -11,6 +11,9 @@ class DetectionHandlers:
         self.main_window = main_window
         self.logger = logging.getLogger(__name__)
 
+        # Inizializza Vision Language Detector
+        self.vlm_detector = None
+
     def initialize_detection_system(self):
         """Inizializza il sistema di rilevamento basato sulle impostazioni."""
         try:

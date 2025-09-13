@@ -34,14 +34,18 @@ Struttura aggiornata del progetto CogniFlow - Assistente DSA (Settembre 2025):
 ├── 📄 main_01_Aircraft.py                  # ✈️ AIRCRAFT - Interfaccia principale PyQt6
 ├── 📄 main_03_configurazione_e_opzioni.py  # ⚙️ CONFIG - Sistema configurazione centralizzato
 ├── 📄 test_qml_integration.py              # 🧪 Test integrazione QML
+├── 📄 test_vlm_integration.py              # 🧪 Test integrazione VLM
+├── 📄 vlm_integration_test_report.txt      # 📊 Report test VLM
 ├── 📄 README_SALVATAGGIO_CARICAMENTO.md    # 📖 Documentazione salvataggio/caricamento
 ├── 📁 Artificial_Intelligence/             # 🧠 AI CENTRALIZZATO
 │   ├── 📄 __init__.py                      # Inizializzazione AI
-│   ├── 📁 Ollama/                         # 🤖 Ollama AI Manager
-│   │   ├── 📄 __init__.py                 # Init Ollama
-│   │   ├── 📄 ollama_manager.py           # Manager modelli Ollama
-│   │   ├── 📄 installed_models.json       # Modelli installati
-│   │   └── 📄 recommended_models.json     # Modelli raccomandati
+ │   ├── 📁 Ollama/                         # 🤖 Ollama AI Manager
+ │   │   ├── 📄 __init__.py                 # Init Ollama
+ │   │   ├── 📄 ollama_manager.py           # Manager modelli Ollama
+ │   │   ├── 📄 vlm_manager.py              # Manager Visual Language Model (VLM)
+ │   │   ├── 📄 vlm_ocr.py                  # VLM OCR per riconoscimento testo immagini
+ │   │   ├── 📄 installed_models.json       # Modelli installati
+ │   │   └── 📄 recommended_models.json     # Modelli raccomandati
 │   ├── 📁 Riconoscimento_Vocale/          # 🎤 Riconoscimento Vocale
 │   │   ├── 📄 __init__.py                 # Init Speech Recognition
 │   │   ├── 📁 managers/                   # Manager riconoscimento
@@ -58,13 +62,14 @@ Struttura aggiornata del progetto CogniFlow - Assistente DSA (Settembre 2025):
 │   │   └── 📁 handlers/                  # Handler TTS
 │   │       ├── 📄 text_reading_handlers.py # Handler lettura testo
 │   │       └── 📄 voice_handlers.py     # Handler voce
-│   └── 📁 Video/                          # 📹 Elaborazione Video
-│       ├── 📄 detection_handlers.py      # Handler rilevamento
-│       ├── 📄 visual_background.py       # Sfondo video
-│       └── 📁 CPU_Check_Temperature/     # Monitoraggio CPU/Temperatura
-│           ├── 📄 __init__.py           # Init monitoraggio
-│           ├── 📄 cpu_handlers.py       # Handler CPU
-│           └── 📄 cpu_monitor.py        # Monitor CPU
+ │   └── 📁 Video/                          # 📹 Elaborazione Video
+ │       ├── 📄 detection_handlers.py      # Handler rilevamento
+ │       ├── 📄 vision_language_detector.py # Detector linguaggio visivo integrato
+ │       ├── 📄 visual_background.py       # Sfondo video
+ │       └── 📁 CPU_Check_Temperature/     # Monitoraggio CPU/Temperatura
+ │           ├── 📄 __init__.py           # Init monitoraggio
+ │           ├── 📄 cpu_handlers.py       # Handler CPU
+ │           └── 📄 cpu_monitor.py        # Monitor CPU
 ├── 📁 Save/                               # 💾 Sistema Salvataggio Dati
 │   ├── 📄 __init__.py                     # Init sistema salvataggio
 │   ├── 📁 LOG/                           # 📋 Sistema Logging
@@ -148,11 +153,13 @@ main_00_launcher.py → 🔍 Test Sicurezza & Import
                      🧠 SISTEMA AI CENTRALIZZATO
 ===================================================================================
 
-🤖 **OLLAMA INTEGRATION:**
-- ✅ Manager modelli Ollama avanzato
-- ✅ Supporto modelli italiani raccomandati
-- ✅ Integrazione DSA ottimizzata
-- ✅ Gestione modelli installati automatica
+ 🤖 **OLLAMA INTEGRATION:**
+ - ✅ Manager modelli Ollama avanzato
+ - ✅ Visual Language Model (VLM) integrato
+ - ✅ VLM OCR per riconoscimento testo immagini
+ - ✅ Supporto modelli italiani raccomandati
+ - ✅ Integrazione DSA ottimizzata
+ - ✅ Gestione modelli installati automatica
 
 🎤 **SPEECH RECOGNITION UNIFICATO:**
 - ✅ Supporto Vosk per riconoscimento offline
@@ -166,11 +173,12 @@ main_00_launcher.py → 🔍 Test Sicurezza & Import
 - ✅ Manager TTS centralizzato
 - ✅ Supporto lingue multiple
 
-📹 **VIDEO PROCESSING:**
-- ✅ Handler rilevamento video
-- ✅ Monitoraggio CPU e temperatura
-- ✅ Sfondo video dinamico
-- ✅ Integrazione con sistema AI
+ 📹 **VIDEO PROCESSING:**
+ - ✅ Handler rilevamento video
+ - ✅ Vision Language Detector integrato
+ - ✅ Monitoraggio CPU e temperatura
+ - ✅ Sfondo video dinamico
+ - ✅ Integrazione con sistema AI e VLM
 
 ===================================================================================
                      💾 SISTEMA SALVATAGGIO AVANZATO
@@ -259,12 +267,12 @@ python test_qml_integration.py  # 🧪 Test componenti QML
                      🔄 AGGIORNAMENTI FUTURI
 ===================================================================================
 
-🚀 **ROADMAP 2025:**
-- 🔄 Integrazione AI più avanzata
-- 🎯 Nuove funzionalità TTS multilingua
-- 📹 Miglioramenti video processing
-- 🌐 Supporto cloud per progetti
-- 📱 Versione mobile/web
+ 🚀 **ROADMAP 2025:**
+ - 🔄 Integrazione AI più avanzata con VLM
+ - 🎯 Nuove funzionalità TTS multilingua
+ - 📹 Miglioramenti video processing e OCR
+ - 🌐 Supporto cloud per progetti
+ - 📱 Versione mobile/web
 
 ==================================================================================
                       🔒 NOTE SICUREZZA AGGIUNTIVE

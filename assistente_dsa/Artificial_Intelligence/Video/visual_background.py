@@ -6,15 +6,80 @@ import numpy as np
 import math
 import os
 import asyncio
+import logging
 from PyQt6.QtCore import QThread, pyqtSignal, QSize, Qt
 from PyQt6.QtGui import QImage, QPixmap
 
-# Import centralizzato delle dipendenze
-from ...0_HELPER_DEPENDENCY import *
+# Import Vision Language Detector - NUOVA IMPLEMENTAZIONE VLM
+try:
+    from .vision_language_detector import VisionLanguageDetector
 
-# Inizializzazione modulo video
-if __name__ == "__main__":
-    initialize_application()
+    VLM_AVAILABLE = True
+    logging.info("VisionLanguageDetector importato con successo")
+except ImportError as e:
+    VLM_AVAILABLE = False
+    VisionLanguageDetector = None
+    logging.warning(f"VisionLanguageDetector non disponibile: {e}")
+
+# Import VLM Manager - NUOVA IMPLEMENTAZIONE
+try:
+    # Prova import relativo
+    from ...Artificial_Intelligence.Ollama.vlm_manager import (
+        VLMManager,
+        get_vlm_manager,
+    )
+
+    VLM_MANAGER_AVAILABLE = True
+    logging.info("VLM Manager importato con successo")
+except ImportError:
+    try:
+        # Fallback: import assoluto
+        import sys
+        import os
+
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        parent_dir = os.path.dirname(os.path.dirname(current_dir))
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+
+        from assistente_dsa.Artificial_Intelligence.Ollama.vlm_manager import (
+            VLMManager,
+            get_vlm_manager,
+        )
+
+        VLM_MANAGER_AVAILABLE = True
+        logging.info("VLM Manager importato con successo (fallback)")
+    except ImportError as e:
+        VLM_MANAGER_AVAILABLE = False
+        VLMManager = None
+        get_vlm_manager = None
+        logging.warning(f"VLM Manager non disponibile: {e}")
+
+# Import MediaPipe client - MANTIENI COME FALLBACK
+try:
+    from .mediapipe.client.mediapipe_client import MediaPipeClient
+
+    MEDIAPIPE_CLIENT_AVAILABLE = True
+    logging.info("MediaPipe client disponibile come fallback")
+except ImportError:
+    MEDIAPIPE_CLIENT_AVAILABLE = False
+    MediaPipeClient = None
+    logging.info("MediaPipe client non disponibile - solo VLM")
+
+# MediaPipe imports
+try:
+    import mediapipe as mp  # type: ignore
+
+    MEDIAPIPE_AVAILABLE = True
+    mp_pose = mp.solutions.pose
+    mp_drawing = mp.solutions.drawing_utils
+    mp_drawing_styles = mp.solutions.drawing_styles
+except ImportError:
+    MEDIAPIPE_AVAILABLE = False
+    mp_pose = None
+    mp_drawing = None
+    mp_drawing_styles = None
+    logging.warning("MediaPipe non disponibile - rilevamento pose limitato")
 
 
 class VideoThread(QThread):
@@ -47,7 +112,43 @@ class VideoThread(QThread):
         )
         self.main_window = main_window
 
-        # Using OpenCV only - no MediaPipe client needed
+<<<<<<< HEAD
+        # Initialize Vision Language Detector
+        self.vlm_detector = None
+        if VLM_AVAILABLE and VisionLanguageDetector:
+            try:
+                self.vlm_detector = VisionLanguageDetector()
+                logging.info("VisionLanguageDetector inizializzato nella VideoThread")
+            except Exception as e:
+                logging.warning(f"Errore inizializzazione VLM: {e}")
+                self.vlm_detector = None
+
+        # Initialize VLM Manager
+        self.vlm_manager = None
+        if VLM_MANAGER_AVAILABLE and get_vlm_manager:
+            try:
+                self.vlm_manager = get_vlm_manager()
+                logging.info("VLM Manager inizializzato nella VideoThread")
+            except Exception as e:
+                logging.warning(f"Errore inizializzazione VLM Manager: {e}")
+                self.vlm_manager = None
+
+        # Initialize MediaPipe client (fallback)
+        self.mediapipe_client = None
+        self.use_mediapipe_service = True  # Flag to enable/disable MediaPipe service
+
+        if MEDIAPIPE_CLIENT_AVAILABLE and MediaPipeClient:
+            try:
+                mediapipe_url = os.getenv(
+                    "MEDIAPIPE_SERVICE_URL", "http://localhost:8001"
+                )
+                self.mediapipe_client = MediaPipeClient(mediapipe_url)
+                logging.info(f"MediaPipe client initialized with URL: {mediapipe_url}")
+            except Exception as e:
+                logging.warning(f"Failed to initialize MediaPipe client: {e}")
+                self.mediapipe_client = None
+        else:
+            logging.info("MediaPipe client not available, using local detection")
 
         # Carica i classificatori Haar per il rilevamento
         try:
@@ -232,6 +333,73 @@ class VideoThread(QThread):
 
                 if self.human_detection_enabled:
                     frame = self.detect_humans(frame)
+
+                # ===========================================
+                # Integrazione VLM Manager per analisi avanzata
+                # ===========================================
+                if self.vlm_manager and self.vlm_manager.is_initialized:
+                    try:
+                        # Analizza il frame con VLM per gesture, OCR, etc.
+                        vlm_results = self.vlm_manager.analyze_frame(frame)
+
+                        # Elabora risultati gesture
+                        if "gestures" in vlm_results and vlm_results["gestures"]:
+                            gesture = vlm_results["gestures"][0]
+                            gesture_type = gesture.get("gesture", "unknown")
+
+                            # Invia segnale gesture rilevata
+                            self.gesture_detected_signal.emit(gesture_type)
+
+                            # Aggiungi testo informativo al frame
+                            cv2.putText(
+                                frame,
+                                f"VLM Gesture: {gesture_type}",
+                                (10, frame.shape[0] - 60),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.7,
+                                (0, 255, 0),
+                                2,
+                            )
+
+                        # Elabora risultati umani
+                        if "humans" in vlm_results and vlm_results["humans"]:
+                            humans_count = len(vlm_results["humans"])
+                            self.human_detected_signal.emit(vlm_results["humans"])
+
+                            # Aggiungi testo informativo al frame
+                            cv2.putText(
+                                frame,
+                                f"VLM Humans: {humans_count}",
+                                (10, frame.shape[0] - 100),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.7,
+                                (255, 0, 255),
+                                2,
+                            )
+
+                        # Aggiungi indicatore VLM attivo
+                        cv2.putText(
+                            frame,
+                            "VLM: ACTIVE",
+                            (frame.shape[1] - 120, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.6,
+                            (0, 255, 255),
+                            2,
+                        )
+
+                    except Exception as e:
+                        logging.warning(f"Errore analisi VLM: {e}")
+                        # Aggiungi indicatore errore VLM
+                        cv2.putText(
+                            frame,
+                            "VLM: ERROR",
+                            (frame.shape[1] - 120, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.6,
+                            (0, 0, 255),
+                            2,
+                        )
 
                 # Converti il frame in QPixmap per efficienza
                 rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)

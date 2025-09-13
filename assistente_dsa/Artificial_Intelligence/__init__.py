@@ -10,7 +10,7 @@ from . import Ollama
 
 # Esporta le classi principali per accesso diretto
 from .Sintesi_Vocale.managers.tts_manager import TTSThread
-from .Sintesi_Vocale.managers.tts_engine_manager import tts_manager
+from .Sintesi_Vocale.managers.tts_engine_manager import TTSManager
 from .Riconoscimento_Vocale.managers.speech_recognition_manager import (
     SpeechRecognitionThread,
 )
@@ -21,7 +21,7 @@ __all__ = [
     "Riconoscimento_Vocale",
     "Ollama",
     "TTSThread",
-    "tts_manager",
+    "TTSManager",
     "SpeechRecognitionThread",
     "OllamaManager",
     "OllamaThread",
