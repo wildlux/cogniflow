@@ -56,9 +56,7 @@ def launch_main_application(user: Dict[str, Any], permissions: Dict[str, bool]) 
         return False
 
 def prepare_application_environment(user: Dict[str, Any], permissions: Dict[str, bool]) -> Dict[str, str]:
-    """
-    Prepara l'ambiente per l'avvio dell'applicazione
-    """
+    """Prepare environment variables for the application."""
     env = os.environ.copy()
     env["DSA_USERNAME"] = user["username"]
     env["DSA_FULL_NAME"] = user["full_name"]
@@ -67,8 +65,6 @@ def prepare_application_environment(user: Dict[str, Any], permissions: Dict[str,
     return env
 
 def get_application_path() -> str:
-    """
-    Restituisce il percorso dell'applicazione principale
-    """
+    """Get the path to the main application script."""
     current_dir = os.path.dirname(os.path.dirname(__file__))
     return os.path.join(current_dir, "main_01_Aircraft.py")

@@ -22,9 +22,7 @@ except ImportError:
     from admin_setup_dialog import AdminSetupDialog
 
 class LauncherMainWindow(QMainWindow):
-    """
-    Finestra principale del launcher dopo il login
-    """
+    """Main window for the launcher after login."""
     def __init__(self, authenticated_user=None):
         super().__init__()
         self.authenticated_user = authenticated_user
@@ -96,7 +94,7 @@ class LauncherMainWindow(QMainWindow):
             self.status_label.setStyleSheet("color: #f44336; font-size: 12px;")
 
 def open_launcher_gui():
-    """Apre la finestra del launcher con autenticazione o bypass"""
+    """Open the launcher GUI with authentication or bypass."""
     if not pyqt_available:
         print("❌ PyQt6 not available. Cannot open GUI window.")
         return

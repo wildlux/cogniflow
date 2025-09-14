@@ -56,7 +56,7 @@ class SettingsModel:
         }
 
     def get(self, key: str, default: Any = None) -> Any:
-        """Ottiene un'impostazione usando la notazione con punti"""
+        """Get a setting using dot notation."""
         keys = key.split(".")
         value = self._settings
 
@@ -68,7 +68,7 @@ class SettingsModel:
             return default
 
     def set(self, key: str, value: Any):
-        """Imposta un'impostazione usando la notazione con punti"""
+        """Set a setting using dot notation."""
         keys = key.split(".")
         settings = self._settings
 
@@ -82,21 +82,21 @@ class SettingsModel:
         settings[keys[-1]] = value
 
     def save(self) -> bool:
-        """Salva le impostazioni"""
+        """Save the settings."""
         try:
             return save_settings(self._settings)
         except Exception:
             return False
 
     def reload(self):
-        """Ricarica le impostazioni"""
+        """Reload the settings."""
         self._load_settings()
 
     def get_all(self) -> Dict[str, Any]:
-        """Restituisce tutte le impostazioni"""
+        """Return all settings."""
         return self._settings.copy()
 
     def reset_to_defaults(self):
-        """Resetta alle impostazioni di default"""
+        """Reset to default settings."""
         self._settings = self._get_default_settings()
         self.save()

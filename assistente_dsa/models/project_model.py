@@ -19,7 +19,7 @@ class ProjectModel:
         self.version = "1.0"
 
     def to_dict(self) -> Dict[str, Any]:
-        """Converte il progetto in dizionario per la serializzazione"""
+        """Convert the project to a dictionary for serialization."""
         return {
             "name": self.name,
             "data": self.data,
@@ -30,7 +30,7 @@ class ProjectModel:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ProjectModel":
-        """Crea un progetto da un dizionario"""
+        """Create a project from a dictionary."""
         project = cls(name=data.get("name", ""), data=data.get("data", {}))
         project.created_at = datetime.fromisoformat(
             data.get("created_at", datetime.now().isoformat())
@@ -42,9 +42,9 @@ class ProjectModel:
         return project
 
     def update_modified(self):
-        """Aggiorna la data di ultima modifica"""
+        """Update the last modified date."""
         self.last_modified = datetime.now()
 
     def is_empty(self) -> bool:
-        """Verifica se il progetto è vuoto"""
+        """Check if the project is empty."""
         return not self.name and not self.data

@@ -1,3 +1,7 @@
+"""
+Performance monitoring module for tracking system performance.
+"""
+
 import os, time, threading
 from typing import cast, Optional, Callable, Any
 
@@ -7,12 +11,14 @@ performance_monitor = None
 measure_function_time = None
 
 def conditional_decorator(decorator_func, name: str):
+    """Apply decorator conditionally."""
     def decorator(func):
         return decorator_func(name)(func) if decorator_func else func
     return decorator
 
 @conditional_decorator(measure_function_time, "security_checks")
 def start_performance_monitoring():
+    """Start performance monitoring thread."""
     global performance_thread, stop_monitoring
     if not performance_monitor:
         return
@@ -35,6 +41,7 @@ def start_performance_monitoring():
     print("🔄 Performance monitoring started (30s intervals)")
 
 def stop_performance_monitoring():
+    """Stop performance monitoring thread."""
     global stop_monitoring
     if performance_thread and performance_thread.is_alive():
         stop_monitoring = True
