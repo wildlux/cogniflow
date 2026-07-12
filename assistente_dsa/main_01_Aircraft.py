@@ -2312,8 +2312,11 @@ class HandwritingCanvas(QWidget):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_D:
+            # Ignora l'auto-repeat: resettare _last a ogni ripetizione
+            # spezzerebbe il tratto (effetto tratteggio).
+            if not event.isAutoRepeat():
+                self._last = None  # nuovo tratto pulito al primo press
             self._draw_enabled = True
-            self._last = None  # nuovo tratto pulito quando si preme D
         else:
             super().keyPressEvent(event)
 
