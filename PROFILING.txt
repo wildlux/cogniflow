@@ -1,0 +1,101 @@
+====================================================================
+COME PROFILARE CogniFlow (Python / PyQt6)
+====================================================================
+
+Profilare = misurare DOVE il programma spende tempo (o memoria), così
+si ottimizza solo ciò che conta davvero. Nella sessione i comandi si
+possono lanciare con il prefisso "! " (es. ! python3 -m cProfile ...).
+
+--------------------------------------------------------------------
+1) cProfile — il profiler integrato (parti da qui)
+--------------------------------------------------------------------
+Misura quante volte viene chiamata ogni funzione e quanto tempo passa.
+
+    cd /home/wildlux/Desktop/Cogniflow
+    python3 -m cProfile -o profilo.prof -m assistente_dsa
+
+Usa l'app normalmente (apri la webcam, disegna, chiedi all'AI, ...),
+poi CHIUDI l'app: viene salvato il file "profilo.prof".
+Per leggerlo:
+
+    python3 -c "import pstats; pstats.Stats('profilo.prof').sort_stats('cumulative').print_stats(25)"
+
+- cumulative = tempo totale, incluse le funzioni chiamate dentro
+               (utile per capire "da dove parte" la lentezza).
+- tottime    = tempo speso DENTRO la funzione stessa
+               (utile per trovare il ciclo caldo).
+
+--------------------------------------------------------------------
+2) Vederlo graficamente — snakeviz
+--------------------------------------------------------------------
+Molto più leggibile del testo (grafico nel browser):
+
+    pip3 install --break-system-packages snakeviz
+    snakeviz profilo.prof
+
+--------------------------------------------------------------------
+3) Profilare una SINGOLA azione (consigliato per una GUI)
+--------------------------------------------------------------------
+L'app ha un event loop: profilare "tutto" mescola l'attesa dell'utente
+col lavoro reale. Meglio misurare una singola operazione sospetta.
+Avvolgila così, temporaneamente, nel codice:
+
+    import cProfile, pstats
+    pr = cProfile.Profile()
+    pr.enable()
+    self._on_main_webcam_frame(pixmap)   # <-- la cosa da misurare
+    pr.disable()
+    pstats.Stats(pr).sort_stats('tottime').print_stats(15)
+
+Oppure, per un colpo d'occhio veloce, cronometra un blocco:
+
+    import time
+    t = time.perf_counter()
+    # ... codice ...
+    print("durata:", time.perf_counter() - t)
+
+--------------------------------------------------------------------
+4) Riga per riga — line_profiler (quando hai isolato la funzione)
+--------------------------------------------------------------------
+cProfile dice QUALE funzione; line_profiler dice QUALE RIGA dentro.
+
+    pip3 install --break-system-packages line_profiler
+
+Metti @profile sopra la funzione da analizzare e lancia con:
+
+    kernprof -l -v script.py
+
+E' il passo finale, quando sai gia' dove guardare.
+
+--------------------------------------------------------------------
+5) Memoria (se il problema è RAM, non velocità)
+--------------------------------------------------------------------
+    import tracemalloc
+    tracemalloc.start()
+    # ... codice ...
+    for s in tracemalloc.take_snapshot().statistics('lineno')[:10]:
+        print(s)
+
+Per profili di memoria più seri:
+
+    pip3 install --break-system-packages memray
+
+--------------------------------------------------------------------
+IL METODO IN PRATICA
+--------------------------------------------------------------------
+1. cProfile sull'intera app o sull'azione lenta.
+2. Guarda le prime righe per cumulative / tottime.
+3. Se una funzione domina, puntaci line_profiler.
+4. Ottimizza SOLO quella.
+
+Quasi sempre il 90% del tempo sta in pochissimi punti (spesso gia'
+dentro OpenCV / MediaPipe / Tesseract, cioe' fuori dal codice Python).
+
+--------------------------------------------------------------------
+NOTA
+--------------------------------------------------------------------
+Si puo' aggiungere all'app un interruttore di profiling (es. la
+variabile d'ambiente COGNIFLOW_PROFILE=1) che avvia cProfile e salva
+il report alla chiusura, per profilare quando serve senza modificare
+il codice ogni volta.
+====================================================================

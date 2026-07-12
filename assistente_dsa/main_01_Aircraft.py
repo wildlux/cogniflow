@@ -9776,6 +9776,49 @@ def test_imports():
         return False
 
 
+def _run_event_loop(app):
+    """Avvia l'event loop Qt, con profiling opzionale.
+
+    Impostando la variabile d'ambiente COGNIFLOW_PROFILE=1 l'esecuzione viene
+    profilata con cProfile: alla chiusura dell'app viene salvato un file .prof
+    e stampato un riepilogo. Il nome del file si può scegliere con
+    COGNIFLOW_PROFILE_OUT.
+
+    Esempio:
+        COGNIFLOW_PROFILE=1 ./avvia_cogniflow.sh
+    Poi apri il report con:  snakeviz profilo_*.prof
+    """
+    if not os.environ.get("COGNIFLOW_PROFILE"):
+        return app.exec()
+
+    import cProfile
+    import pstats
+    from datetime import datetime
+
+    out = os.environ.get("COGNIFLOW_PROFILE_OUT") or (
+        f"profilo_{datetime.now():%Y%m%d_%H%M%S}.prof"
+    )
+    print(f"🔎 Profiling attivo (COGNIFLOW_PROFILE): report in '{out}' alla chiusura.")
+    profiler = cProfile.Profile()
+    profiler.enable()
+    try:
+        return app.exec()
+    finally:
+        profiler.disable()
+        try:
+            profiler.dump_stats(out)
+            print(f"\n🔎 Profilo salvato in: {out}")
+            print("   Primi 25 per tempo cumulativo:")
+            pstats.Stats(profiler).sort_stats("cumulative").print_stats(25)
+            print(f"   Apri con:  snakeviz {out}")
+            print(
+                f"   Oppure:    python3 -c \"import pstats; "
+                f"pstats.Stats('{out}').sort_stats('tottime').print_stats(25)\""
+            )
+        except Exception as e:
+            print(f"⚠️ Impossibile salvare il profilo: {e}")
+
+
 def main():
     """Funzione principale per avviare la schermata aircraft."""
     print("✈️ Avvio Aircraft - Schermata principale...")
@@ -9839,8 +9882,8 @@ def main():
         logger.info("✓ Aircraft avviata con successo")
         print("✅ Aircraft - Schermata principale avviata!")
 
-        # Avvia event loop
-        sys.exit(app.exec())
+        # Avvia event loop (con profiling opzionale: COGNIFLOW_PROFILE=1)
+        sys.exit(_run_event_loop(app))
 
     except Exception as e:
         logger.error(f"Errore avvio Aircraft: {e}")

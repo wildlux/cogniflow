@@ -29,3 +29,7 @@ backup_unused_files/
 .vscode/
 .idea/
 .claude/
+
+# Report di profiling
+profilo_*.prof
+*.prof
