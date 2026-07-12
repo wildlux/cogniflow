@@ -17,19 +17,52 @@ class SecureEncryptor:
     """
     def __init__(self, key: Optional[str] = None):
         if key is None:
-            # Usa variabile d'ambiente o genera chiave sicura
-            key = os.environ.get("DSA_ENCRYPTION_KEY", self._generate_secure_key())
+            # Usa variabile d'ambiente o chiave persistita su disco
+            key = os.environ.get("DSA_ENCRYPTION_KEY") or self._load_or_create_key()
+
+        # Conserva la passphrase: serve in decrypt per derivare la chiave
+        # dal salt memorizzato nel file cifrato
+        self._passphrase = key
 
         # Deriva chiave sicura da password usando PBKDF2
         salt = secrets.token_bytes(16)
-        self.key = hashlib.pbkdf2_hmac(
+        self.key = self._derive_key(salt)
+        self.salt = salt
+
+    def _derive_key(self, salt: bytes) -> bytes:
+        """Deriva la chiave AES dalla passphrase e dal salt dato"""
+        return hashlib.pbkdf2_hmac(
             'sha256',
-            key.encode('utf-8'),
+            self._passphrase.encode('utf-8'),
             salt,
             100000,
             dklen=32
         )
-        self.salt = salt
+
+    def _load_or_create_key(self) -> str:
+        """Carica la chiave persistita, o la genera e la salva (0600).
+
+        Senza una chiave stabile tra un avvio e l'altro i dati cifrati
+        (es. users.json) diventerebbero illeggibili al riavvio.
+        """
+        key_file = os.path.join(
+            os.path.dirname(__file__), "Save", "AUTH", ".encryption_key"
+        )
+        try:
+            if os.path.exists(key_file):
+                with open(key_file, "r", encoding="utf-8") as f:
+                    stored = f.read().strip()
+                if stored:
+                    return stored
+            os.makedirs(os.path.dirname(key_file), exist_ok=True)
+            new_key = self._generate_secure_key()
+            with open(key_file, "w", encoding="utf-8") as f:
+                f.write(new_key)
+            os.chmod(key_file, 0o600)
+            return new_key
+        except Exception as e:
+            print(f"⚠️  Impossibile persistere la chiave di crittografia: {e}")
+            return self._generate_secure_key()
 
     def _generate_secure_key(self) -> str:
         """Genera una chiave sicura casuale"""
@@ -92,9 +125,13 @@ class SecureEncryptor:
             tag = encrypted_bytes[28:44]
             ciphertext = encrypted_bytes[44:]
 
+            # La chiave va derivata dal salt memorizzato nel file,
+            # non da quello generato a questo avvio
+            key = self._derive_key(salt)
+
             # Crea cipher AES-GCM
             cipher = Cipher(
-                algorithms.AES(self.key),
+                algorithms.AES(key),
                 modes.GCM(nonce, tag),
                 backend=default_backend()
             )

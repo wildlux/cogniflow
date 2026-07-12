@@ -258,8 +258,8 @@ class UIManager(QObject):
         """Crea la barra superiore"""
         top_layout = QHBoxLayout()
 
-        # Pulsante Opzioni
-        self.options_button = QPushButton("⚙️ Opzioni")
+        # Pulsante Impostazioni
+        self.options_button = QPushButton("⚙️ Impostazioni")
         self.options_button.clicked.connect(
             lambda: self.button_clicked.emit("options", {})
         )

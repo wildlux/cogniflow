@@ -1831,6 +1831,23 @@ class VideoThread(QThread):
             if len(landmarks) < 21:
                 return "Unknown"
 
+            # Gesto "O"/OK: punta del pollice (4) e dell'indice (8) che si
+            # toccano formando un cerchio. Lo riconosciamo confrontando la
+            # distanza pollice-indice con la dimensione della mano (polso 0 ->
+            # base del medio 9), così è indipendente dalla distanza dalla webcam.
+            thumb_tip = landmarks[4]
+            index_tip = landmarks[8]
+            wrist = landmarks[0]
+            middle_mcp = landmarks[9]
+            hand_size = math.hypot(
+                middle_mcp[0] - wrist[0], middle_mcp[1] - wrist[1]
+            )
+            pinch_dist = math.hypot(
+                thumb_tip[0] - index_tip[0], thumb_tip[1] - index_tip[1]
+            )
+            if hand_size > 0 and (pinch_dist / hand_size) < 0.45:
+                return "OK Circle"
+
             # Analizza la posizione delle punte delle dita
             finger_tips = [
                 landmarks[4],

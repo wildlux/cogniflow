@@ -46,3 +46,13 @@ httpx>=0.25.0
 # pip install mediapipe
 #
 # Nota: Il codice gestisce automaticamente l'assenza di MediaPipe
+
+# === OCR, PDF e traduzione offline (aggiunti) ===
+# OCR locale (richiede il binario di sistema tesseract-ocr + lingue: ita, eng)
+pytesseract>=0.3.10
+# Lettura/rendering PDF
+PyMuPDF>=1.24.0
+# Traduzione offline con modelli locali (scarica i pacchetti lingua al primo uso)
+argostranslate>=1.9.0
+# Conversione formati audio per la trascrizione offline (richiede ffmpeg di sistema)
+pydub>=0.25.1

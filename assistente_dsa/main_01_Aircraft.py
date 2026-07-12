@@ -30,6 +30,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import (
     QFontDatabase,
     QFont,
+    QFontMetrics,
     QColor,
     QShortcut,
     QKeySequence,
@@ -47,6 +48,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLineEdit,
     QTextEdit,
+    QSizePolicy,
     QGroupBox,
     QScrollArea,
     QMessageBox,
@@ -1891,7 +1893,7 @@ class HandMouseController(QObject):
 
     def on_gesture(self, gesture):
         """Riceve il gesto rilevato; con debounce per filtrare il rumore."""
-        if gesture not in ("Open Hand", "Closed Hand", "Two Fingers"):
+        if gesture not in ("Open Hand", "Closed Hand", "Two Fingers", "OK Circle"):
             return
         if gesture == self._last_gesture:
             self._gesture_streak += 1
@@ -1918,6 +1920,27 @@ class HandMouseController(QObject):
             self._end_scroll()
             if self.pressed:
                 self._release()
+        elif gesture == "OK Circle":
+            # Gesto "O" (indice+pollice): richiesta di informazione se la mano
+            # si trova sopra l'Area di Lavoro (B).
+            self._end_scroll()
+            if self._hand_over_work_area() and hasattr(
+                self.win, "request_information_gesture"
+            ):
+                self.win.request_information_gesture()
+
+    def _hand_over_work_area(self):
+        """True se il cursore mano è sopra l'Area di Lavoro (colonna B)."""
+        scroll = getattr(self.win, "work_area_scroll", None)
+        if scroll is None or self.pos is None:
+            return False
+        central = self.win.centralWidget()
+        if central is None:
+            return False
+        point = QPoint(int(self.pos[0]), int(self.pos[1]))
+        global_pos = central.mapToGlobal(point)
+        vp = scroll.viewport()
+        return vp.rect().contains(vp.mapFromGlobal(global_pos))
 
     def _find_scroll_area(self, widget):
         """Risale la gerarchia cercando un'area di scorrimento."""
@@ -2082,11 +2105,125 @@ class HandMouseController(QObject):
         return text if len(text) <= max_len else text[: max_len - 1] + "…"
 
 
+class FooterPensierinoEdit(QTextEdit):
+    """Campo pensierino rapido multiriga che si espande verso l'alto.
+
+    Invio invia, Shift+Invio va a capo. L'altezza cresce con il contenuto
+    (da 1 riga fino a ``max_lines``); essendo nel footer, l'espansione si
+    sviluppa visivamente verso l'alto.
+    """
+
+    send_requested = pyqtSignal()
+
+    def __init__(self, *args, min_lines=1, max_lines=12, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._min_lines = min_lines
+        self._max_lines = max_lines
+        self.setSizePolicy(
+            self.sizePolicy().horizontalPolicy(),
+            QSizePolicy.Policy.Preferred,
+        )
+        self.document().documentLayout().documentSizeChanged.connect(
+            lambda _=None: self._adjust_height()
+        )
+        self.textChanged.connect(self._adjust_height)
+        self._adjust_height()
+
+    def _line_px(self):
+        return max(1, self.fontMetrics().lineSpacing())
+
+    def _chrome_px(self):
+        # Margini del documento + bordi/padding del frame
+        doc_margin = int(self.document().documentMargin()) * 2
+        frame = self.frameWidth() * 2 + 8
+        return doc_margin + frame
+
+    def _adjust_height(self):
+        line = self._line_px()
+        doc_h = self.document().size().height()
+        content_lines = max(self._min_lines, int(round(doc_h / line)) if line else 1)
+        content_lines = min(self._max_lines, content_lines)
+        new_h = int(content_lines * line + self._chrome_px())
+        if self.height() != new_h:
+            self.setMinimumHeight(int(self._min_lines * line + self._chrome_px()))
+            self.setMaximumHeight(int(self._max_lines * line + self._chrome_px()))
+            self.setFixedHeight(new_h)
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and not (
+            event.modifiers() & Qt.KeyboardModifier.ShiftModifier
+        ):
+            self.send_requested.emit()
+        else:
+            super().keyPressEvent(event)
+
+
+class AnalogClock(QWidget):
+    """Orologio analogico che si aggiorna ogni secondo."""
+
+    def __init__(self, parent=None, size=140):
+        super().__init__(parent)
+        self.setFixedSize(size, size)
+        self.setToolTip("Orologio")
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self.update)
+        self._timer.start(1000)
+
+    def paintEvent(self, event):
+        from datetime import datetime
+
+        now = datetime.now()
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        side = min(self.width(), self.height())
+        painter.translate(self.width() / 2, self.height() / 2)
+        painter.scale(side / 200.0, side / 200.0)  # spazio logico -100..100
+
+        # Quadrante
+        painter.setPen(QPen(QColor("#495057"), 3))
+        painter.setBrush(QColor("#ffffff"))
+        painter.drawEllipse(QPointF(0, 0), 95, 95)
+
+        # Tacche delle ore
+        painter.setPen(QPen(QColor("#495057"), 3))
+        for _ in range(12):
+            painter.drawLine(0, -78, 0, -90)
+            painter.rotate(30)
+        # Tacche dei minuti
+        painter.setPen(QPen(QColor("#adb5bd"), 1))
+        for i in range(60):
+            if i % 5:
+                painter.drawLine(0, -86, 0, -90)
+            painter.rotate(6)
+
+        def _hand(angle, length, tail, width, color):
+            pen = QPen(QColor(color), width)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            painter.setPen(pen)
+            painter.save()
+            painter.rotate(angle)
+            painter.drawLine(QPointF(0, tail), QPointF(0, -length))
+            painter.restore()
+
+        # Lancette (12 in alto = -y)
+        _hand(30 * (now.hour % 12) + 0.5 * now.minute, 48, 12, 6, "#343a40")
+        _hand(6 * now.minute + 0.1 * now.second, 70, 14, 4, "#343a40")
+        _hand(6 * now.second, 82, 18, 1.5, "#e53935")
+
+        # Perno centrale
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor("#e53935"))
+        painter.drawEllipse(QPointF(0, 0), 4, 4)
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.settings = load_settings()
         self.text_widgets = []
+
+        # Registro dei messaggi/errori dell'applicazione (mostrati da "Messaggi")
+        self.app_messages = []
 
         # Variabili di stato per il footer
         self.tutor_session_active = False  # Stato sessione tutor
@@ -2162,7 +2299,7 @@ class MainWindow(QMainWindow):
         """Invia un pensierino dalla sezione footer alla colonna A (pensierini)."""
         try:
             # Ottieni il testo dal campo footer
-            text = self.footer_pensierini_input.text().strip()
+            text = self.footer_pensierini_input.toPlainText().strip()
 
             if not text:
                 # Campo vuoto, mostra messaggio informativo
@@ -2173,6 +2310,25 @@ class MainWindow(QMainWindow):
                     "Campo Vuoto",
                     "Scrivi qualcosa nel campo prima di inviare! 💭",
                 )
+                return
+
+            # Calcolatrice: se il pensierino inizia con "=" lo calcoliamo
+            # (es. "=2+3*4", "=sqrt(16)+2**3").
+            try:
+                from core.document_tools import calculate, looks_like_math
+                from UI.draggable_text_widget import DraggableTextWidget as _DTW
+
+                if looks_like_math(text):
+                    risultato = calculate(text)
+                    esito = f"🧮 {text.lstrip('=').strip()} = {risultato}"
+                    if _DTW and hasattr(self, "pensierini_layout"):
+                        self.pensierini_layout.addWidget(_DTW(esito, self.settings))
+                    self.set_status_message(esito)
+                    self.footer_pensierini_input.clear()
+                    return
+            except Exception as e:
+                self.add_message(f"Calcolo non riuscito: {e}", "error")
+                self.set_status_message(f"🧮 Errore nel calcolo: {e}")
                 return
 
             # Controlla se il testo inizia con il trigger AI
@@ -2315,7 +2471,7 @@ class MainWindow(QMainWindow):
         <ul>
             <li><b>Webcam:</b> Attiva/disattiva modalità speculare</li>
             <li><b>Fullscreen:</b> F11 per schermo intero</li>
-            <li><b>Opzioni:</b> Personalizza colori, font e impostazioni</li>
+            <li><b>Impostazioni:</b> Personalizza colori, font e preferenze</li>
         </ul>
 
         <h3>⌨️ Scorciatoie</h3>
@@ -2722,15 +2878,13 @@ class MainWindow(QMainWindow):
         main_layout = QHBoxLayout(main_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Widget contenitore per la griglia 2 colonne
+        # Widget contenitore per il menu verticale delle categorie
         grid_container = QWidget()
-        grid_container.setMaximumWidth(
-            170
-        )  # Larghezza aumentata per ospitare 20px di spaziatura
+        grid_container.setMaximumWidth(190)
         grid_layout = QGridLayout(grid_container)
         grid_layout.setContentsMargins(5, 5, 5, 5)
-        grid_layout.setHorizontalSpacing(20)  # 20px tra colonne
-        grid_layout.setVerticalSpacing(8)  # 8px tra righe (mantenuto)
+        grid_layout.setHorizontalSpacing(8)
+        grid_layout.setVerticalSpacing(8)
 
         # Stili comuni per i pulsanti
         button_style = """
@@ -2763,80 +2917,71 @@ class MainWindow(QMainWindow):
             }
         """
 
-        # Crea i pulsanti per la griglia 2x3
-        self.transcription_btn = QPushButton("🎤\nTrascrizione")
+        # Menu categorie: colonna verticale di pulsanti larghi (icona + testo)
+        menu_button_style = """
+            QPushButton {
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.95);
+                color: #495057;
+                font-weight: bold;
+                font-size: 12px;
+                padding: 10px 12px;
+                text-align: left;
+                min-height: 40px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #f8f9ff, stop:1 #e8f4fd);
+                border-color: #64b5f6;
+            }
+            QPushButton:checked {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #e3f2fd, stop:1 #bbdefb);
+                color: #1976d2;
+                border-color: #2196f3;
+                border-left: 4px solid #2196f3;
+            }
+        """
+
+        # Menu semplificato: solo Trascrizione e Materie
+        # (Utilità e IoT rimossi; AI e Media rimosso in precedenza)
+        self.transcription_btn = QPushButton("🎤  Trascrizione")
         self.transcription_btn.setCheckable(True)
-        self.transcription_btn.setStyleSheet(button_style)
+        self.transcription_btn.setStyleSheet(menu_button_style)
 
-        self.ai_media_btn = QPushButton("🧠\nAI & Media")
-        self.ai_media_btn.setCheckable(True)
-        self.ai_media_btn.setStyleSheet(button_style)
-
-        self.subjects_btn = QPushButton("📚\nMaterie")
+        self.subjects_btn = QPushButton("📚  Materie")
         self.subjects_btn.setCheckable(True)
-        self.subjects_btn.setStyleSheet(button_style)
+        self.subjects_btn.setStyleSheet(menu_button_style)
 
-        self.utilities_btn = QPushButton("🛠️\nUtilità")
-        self.utilities_btn.setCheckable(True)
-        self.utilities_btn.setStyleSheet(button_style)
-
-        self.iot_btn = QPushButton("🔌\nIoT")
-        self.iot_btn.setCheckable(True)
-        self.iot_btn.setStyleSheet(button_style)
-
-        # Disponi i pulsanti in griglia 2 colonne
-        grid_layout.addWidget(self.transcription_btn, 0, 0)  # Riga 0, Colonna 0
-        grid_layout.addWidget(self.ai_media_btn, 0, 1)  # Riga 0, Colonna 1
-        grid_layout.addWidget(self.subjects_btn, 1, 0)  # Riga 1, Colonna 0
-        grid_layout.addWidget(self.utilities_btn, 1, 1)  # Riga 1, Colonna 1
-        grid_layout.addWidget(self.iot_btn, 2, 0)  # Riga 2, Colonna 0
+        # Disponi i pulsanti in una singola colonna (menu verticale)
+        grid_layout.addWidget(self.transcription_btn, 0, 0)
+        grid_layout.addWidget(self.subjects_btn, 1, 0)
+        grid_layout.setRowStretch(2, 1)
 
         # Stacked widget per il contenuto a destra
         self.tools_stack = QStackedWidget()
 
         # Crea i contenuti
         transcription_tab = self.create_transcription_tab()
-        ai_media_tab = self.create_ai_media_tab()
         subjects_tab = self.create_subjects_tab()
-        utilities_tab = self.create_utilities_tab()
-        iot_tab = self.create_iot_tab()
 
         # Aggiungi i contenuti allo stack
         self.tools_stack.addWidget(transcription_tab)
-        self.tools_stack.addWidget(ai_media_tab)
         self.tools_stack.addWidget(subjects_tab)
-        self.tools_stack.addWidget(utilities_tab)
-        self.tools_stack.addWidget(iot_tab)
 
         # Metodo per gestire il cambio di tab
         def switch_to_tab(index):
-            # Deseleziona tutti i pulsanti
-            self.transcription_btn.setChecked(False)
-            self.ai_media_btn.setChecked(False)
-            self.subjects_btn.setChecked(False)
-            self.utilities_btn.setChecked(False)
-            self.iot_btn.setChecked(False)
-
-            # Seleziona il pulsante corrente
-            buttons = [
-                self.transcription_btn,
-                self.ai_media_btn,
-                self.subjects_btn,
-                self.utilities_btn,
-                self.iot_btn,
-            ]
+            buttons = [self.transcription_btn, self.subjects_btn]
+            for b in buttons:
+                b.setChecked(False)
             if 0 <= index < len(buttons):
                 buttons[index].setChecked(True)
-
-            # Cambia il contenuto
             self.tools_stack.setCurrentIndex(index)
 
         # Collega i pulsanti al metodo di cambio
         self.transcription_btn.clicked.connect(lambda: switch_to_tab(0))
-        self.ai_media_btn.clicked.connect(lambda: switch_to_tab(1))
-        self.subjects_btn.clicked.connect(lambda: switch_to_tab(2))
-        self.utilities_btn.clicked.connect(lambda: switch_to_tab(3))
-        self.iot_btn.clicked.connect(lambda: switch_to_tab(4))
+        self.subjects_btn.clicked.connect(lambda: switch_to_tab(1))
 
         # Seleziona il primo pulsante per default
         switch_to_tab(0)
@@ -3071,7 +3216,7 @@ class MainWindow(QMainWindow):
 
             # Aggiorna il testo del pulsante
             if hasattr(self, "toggle_tools_button"):
-                self.toggle_tools_button.setText("🔧 Cassetta degli attrezzi")
+                self.toggle_tools_button.setText("🔧\nCassetta\ndegli\nattrezzi")
 
             # Salva nelle preferenze
             self.settings["ui"] = self.settings.get("ui", {})
@@ -3091,7 +3236,7 @@ class MainWindow(QMainWindow):
 
             # Aggiorna il testo del pulsante
             if hasattr(self, "toggle_tools_button"):
-                self.toggle_tools_button.setText("🔧 Cassetta degli attrezzi")
+                self.toggle_tools_button.setText("🔧\nCassetta\ndegli\nattrezzi")
 
             # Salva nelle preferenze
             self.settings["ui"] = self.settings.get("ui", {})
@@ -3181,7 +3326,7 @@ class MainWindow(QMainWindow):
         # Ascolto vocale continuo con parola d'ordine
         self.wake_listener = None
 
-        # Notifiche per i download in background (Opzioni → 📥 Download)
+        # Notifiche per i download in background (Impostazioni → 📥 Download)
         try:
             from core.download_manager import download_manager
 
@@ -3195,7 +3340,7 @@ class MainWindow(QMainWindow):
         """Restituisce il nome di un modello Vosk installato, oppure None.
 
         Se nessun modello è presente propone lo scaricamento in background
-        (Opzioni → 📥 Download): l'app resta utilizzabile nel frattempo.
+        (Impostazioni → 📥 Download): l'app resta utilizzabile nel frattempo.
         """
         try:
             from core.download_manager import download_manager, CATALOG
@@ -3217,7 +3362,7 @@ class MainWindow(QMainWindow):
                 "Download in corso",
                 "Il modello vocale si sta già scaricando in background.\n\n"
                 "Puoi continuare a usare CogniFlow: il progresso è visibile\n"
-                "in ⚙️ Opzioni → 📥 Download. Riprova quando è completato.",
+                "in ⚙️ Impostazioni → 📥 Download. Riprova quando è completato.",
             )
             return None
 
@@ -3233,7 +3378,7 @@ class MainWindow(QMainWindow):
             "Per usare la voce serve un modello di riconoscimento.\n\n"
             f"Scaricare ora '{suggestion}' in background?\n"
             "Potrai continuare a usare CogniFlow: il progresso è visibile\n"
-            "in ⚙️ Opzioni → 📥 Download (dove trovi anche il modello completo).",
+            "in ⚙️ Impostazioni → 📥 Download (dove trovi anche il modello completo).",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
@@ -3299,13 +3444,13 @@ class MainWindow(QMainWindow):
             send_now = True
 
         if text:
-            current = self.footer_pensierini_input.text().strip()
-            self.footer_pensierini_input.setText(
+            current = self.footer_pensierini_input.toPlainText().strip()
+            self.footer_pensierini_input.setPlainText(
                 f"{current} {text}".strip() if current else text
             )
             self.footer_pensierini_input.setFocus()
 
-        if send_now and self.footer_pensierini_input.text().strip():
+        if send_now and self.footer_pensierini_input.toPlainText().strip():
             self.send_footer_pensierino()
 
     def _on_wake_error(self, message):
@@ -3327,7 +3472,7 @@ class MainWindow(QMainWindow):
             box.setWindowTitle("Download non completato")
             box.setText(
                 f"Il download di '{item_id}' è stato annullato o è fallito.\n"
-                "Puoi riprovare da ⚙️ Opzioni → 📥 Download."
+                "Puoi riprovare da ⚙️ Impostazioni → 📥 Download."
             )
         box.setModal(False)
         box.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
@@ -3394,7 +3539,7 @@ class MainWindow(QMainWindow):
         vt.start()
 
         self._set_webcam_panels_transparent(True)
-        self.webcam_button.setText("📹 Webcam ON")
+        self.webcam_button.setText("📹")
         self.webcam_button.setChecked(True)
         self.webcam_active = True
         print("📹 Webcam integrata attiva: mano chiusa = click, aperta = rilascia")
@@ -3416,7 +3561,7 @@ class MainWindow(QMainWindow):
             self.video_bg_label.clear()
 
         self._set_webcam_panels_transparent(False)
-        self.webcam_button.setText("📹 Webcam")
+        self.webcam_button.setText("📹")
         self.webcam_button.setChecked(False)
         self.webcam_active = False
         print("📹 Webcam integrata disattivata")
@@ -3542,18 +3687,64 @@ class MainWindow(QMainWindow):
             print(f"Errore nella creazione del pensierino: {e}")
             show_user_friendly_error(self, e, "creazione pensierino")
 
+    # Nomi delle ore in italiano per l'orologio "fuzzy" stile KDE
+    _ORE_IT = {
+        1: "l'una", 2: "le due", 3: "le tre", 4: "le quattro",
+        5: "le cinque", 6: "le sei", 7: "le sette", 8: "le otto",
+        9: "le nove", 10: "le dieci", 11: "le undici", 12: "le dodici",
+    }
+
+    @classmethod
+    def _fuzzy_time_it(cls, now):
+        """Ora in forma discorsiva, es. 20:44 -> 'Le nove meno un quarto'."""
+        h12 = now.hour % 12 or 12
+        # Arrotonda al multiplo di 5 minuti più vicino
+        m5 = int(round(now.minute / 5.0)) * 5
+        nxt = (h12 % 12) + 1
+        if m5 >= 60:
+            m5 = 0
+            h12, nxt = nxt, (nxt % 12) + 1
+        base = cls._ORE_IT[h12]
+        succ = cls._ORE_IT[nxt]
+        frasi = {
+            0: base,
+            5: f"{base} e cinque",
+            10: f"{base} e dieci",
+            15: f"{base} e un quarto",
+            20: f"{base} e venti",
+            25: f"{base} e venticinque",
+            30: f"{base} e mezza",
+            35: f"{succ} meno venticinque",
+            40: f"{succ} meno venti",
+            45: f"{succ} meno un quarto",
+            50: f"{succ} meno dieci",
+            55: f"{succ} meno cinque",
+        }
+        frase = frasi[m5]
+        return frase[:1].upper() + frase[1:]
+
+    _MESI_IT = [
+        "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+        "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
+    ]
+
     def _update_time_labels(self):
-        """Aggiorna le etichette degli orari in basso a sinistra e destra."""
+        """Aggiorna l'orario: ora numerica sotto l'orologio, data breve ed estesa."""
         try:
             from datetime import datetime
 
-            # Ottieni la data e ora corrente
             now = datetime.now()
-            time_str = now.strftime("⌚️ %d/%m/%Y %H:%M")
+            ora_num = now.strftime("%H:%M")
+            data_breve = now.strftime("%d/%m/%Y")
+            data_estesa = f"{now.day} {self._MESI_IT[now.month - 1]} {now.year}"
+            fuzzy = self._fuzzy_time_it(now)
 
-            # Aggiorna l'etichetta del tempo in basso a sinistra
+            # L'etichetta è posizionata SOTTO l'orologio analogico:
+            # ora numerica, data breve, data estesa, forma discorsiva.
             if hasattr(self, "left_time_label"):
-                self.left_time_label.setText(time_str)
+                self.left_time_label.setText(
+                    f"{ora_num}\n{data_breve}\n{data_estesa}\n{fuzzy}"
+                )
 
         except Exception as e:
             print(f"Errore nell'aggiornamento degli orari: {e}")
@@ -3673,12 +3864,17 @@ class MainWindow(QMainWindow):
 
         # Top bar
         top_layout = QHBoxLayout()
-        self.options_button = QPushButton("⚙️ Opzioni")
+        self.options_button = QPushButton("⚙️ Impostazioni")
         self.options_button.setObjectName("options_button")  # ID per CSS
         self.options_button.clicked.connect(self.open_settings)
         top_layout.addWidget(self.options_button)
 
-        # Pulsante per mostrare/nascondere il pannello strumenti (spostato in basso)
+        # Pulsante "Messaggi": raccoglie i messaggi di errore dell'applicazione
+        self.messages_button = QPushButton("✉️ Messaggi")
+        self.messages_button.setObjectName("messages_button")
+        self.messages_button.setToolTip("Mostra i messaggi ed errori dell'applicazione")
+        self.messages_button.clicked.connect(self.show_messages_dialog)
+        top_layout.addWidget(self.messages_button)
 
         top_layout.addStretch()
         self.project_name_input = QLineEdit()
@@ -3698,6 +3894,74 @@ class MainWindow(QMainWindow):
         self.load_button.setObjectName("load_button")  # ID per CSS
         self.load_button.clicked.connect(self.load_project)
         top_layout.addWidget(self.load_button)
+
+        # Pulsante webcam e guida "?" a destra di Carica, con un po' di spazio
+        top_layout.addSpacing(24)
+
+        self.webcam_button = QPushButton("📹")
+        self.webcam_button.setObjectName("webcam_button")
+        self.webcam_button.setCheckable(True)
+        self.webcam_button.setMinimumHeight(28)
+        self.webcam_button.setFixedWidth(48)
+        self.webcam_button.clicked.connect(self.toggle_webcam)
+        self.webcam_button.setToolTip("Attiva/disattiva webcam in modalità speculare")
+        webcam_font_size = self.settings.get("fonts", {}).get("main_font_size", 13) - 1
+        self.webcam_button.setStyleSheet(
+            f"""
+            QPushButton#webcam_button {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(255, 255, 255, 0.95), stop:1 rgba(248, 249, 250, 0.95));
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                padding: 6px 8px;
+                font-size: {webcam_font_size}px;
+                font-weight: bold;
+                color: #495057;
+                min-height: 20px;
+            }}
+            QPushButton#webcam_button:hover {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(248, 249, 250, 0.95), stop:1 rgba(241, 243, 244, 0.95));
+                border-color: #adb5bd;
+            }}
+            QPushButton#webcam_button:checked {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(40, 167, 69, 0.1), stop:1 rgba(34, 197, 94, 0.1));
+                border-color: #28a745;
+                color: #155724;
+            }}
+        """
+        )
+        top_layout.addWidget(self.webcam_button)
+
+        self.quick_help_button = QPushButton("?")
+        self.quick_help_button.setObjectName("quick_help_button")
+        self.quick_help_button.setMinimumHeight(28)
+        self.quick_help_button.setFixedWidth(40)
+        self.quick_help_button.setStyleSheet(
+            """
+            QPushButton#quick_help_button {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #17a2b8, stop:1 #138496);
+                border: 1px solid #117a8b;
+                border-radius: 6px;
+                padding: 4px 8px;
+                font-size: 16px;
+                font-weight: bold;
+                color: white;
+            }
+            QPushButton#quick_help_button:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #138496, stop:1 #117a8b);
+            }
+            QPushButton#quick_help_button:pressed {
+                background: #117a8b;
+            }
+        """
+        )
+        self.quick_help_button.setToolTip("Mostra guida rapida dell'applicazione")
+        self.quick_help_button.clicked.connect(self.show_quick_help)
+        top_layout.addWidget(self.quick_help_button)
 
         main_layout.addLayout(top_layout)
 
@@ -4103,7 +4367,7 @@ class MainWindow(QMainWindow):
         # Update button states
         if hasattr(self, "toggle_tools_button"):
             self.toggle_tools_button.setChecked(tools_visible)
-            self.toggle_tools_button.setText("🔧 Cassetta degli attrezzi")
+            self.toggle_tools_button.setText("🔧\nCassetta\ndegli\nattrezzi")
 
         # Add vertical splitter to main layout
         main_layout.addWidget(vertical_splitter, 1)
@@ -4114,23 +4378,23 @@ class MainWindow(QMainWindow):
         # Footer con informazioni di stato
         footer_layout = QHBoxLayout()
 
-        # Orario in basso a sinistra
+        # Orario sotto l'orologio analogico (ora, data breve, data estesa, fuzzy)
         self.left_time_label = QLabel("⌚️")
         self.left_time_label.setObjectName("left_time_label")
-        time_font_size = self.settings.get("fonts", {}).get("main_font_size", 13) - 1
+        time_font_size = self.settings.get("fonts", {}).get("main_font_size", 13) + 1
         self.left_time_label.setStyleSheet(
             f"""
             QLabel#left_time_label {{
                 color: #495057;
                 font-size: {time_font_size}px;
-                padding: 5px 10px;
+                padding: 4px 10px;
                 background: rgba(255, 255, 255, 0.9);
                 border-radius: 8px;
                 border: 1px solid #dee2e6;
                 font-weight: bold;
-                text-align: center;
-                min-height: 20px;
-                max-width: 150px;
+                qproperty-alignment: AlignCenter;
+                min-width: 150px;
+                max-width: 220px;
             }}
         """
         )
@@ -4144,50 +4408,13 @@ class MainWindow(QMainWindow):
             QLabel#click_status_label {{
                 color: #666;
                 font-size: {click_font_size}px;
-                padding: 5px 10px;
-                background: rgba(255, 255, 255, 0.8);
-                border-radius: 5px;
-                border: 1px solid #ddd;
+                padding: 4px 14px;
+                background: rgba(0, 0, 0, 0.04);
+                border-radius: 4px;
+                border: 1px solid #e0e0e0;
                 font-weight: normal;
                 text-align: left;
-                min-height: 20px;
-                max-width: 200px;
-            }}
-        """
-        )
-
-        # Pulsante webcam in basso a destra
-        self.webcam_button = QPushButton("📹 Webcam")
-        self.webcam_button.setObjectName("webcam_button")
-        self.webcam_button.setCheckable(True)
-        self.webcam_button.setMinimumHeight(32)
-        self.webcam_button.setMaximumWidth(100)
-        self.webcam_button.clicked.connect(self.toggle_webcam)
-        self.webcam_button.setToolTip("Attiva/disattiva webcam in modalità speculare")
-        webcam_font_size = self.settings.get("fonts", {}).get("main_font_size", 13) - 1
-        self.webcam_button.setStyleSheet(
-            f"""
-            QPushButton#webcam_button {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(255, 255, 255, 0.95), stop:1 rgba(248, 249, 250, 0.95));
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                padding: 6px 8px;
-                font-size: {webcam_font_size}px;
-                font-weight: bold;
-                color: #495057;
-                min-height: 20px;
-            }}
-            QPushButton#webcam_button:hover {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(248, 249, 250, 0.95), stop:1 rgba(241, 243, 244, 0.95));
-                border-color: #adb5bd;
-            }}
-            QPushButton#webcam_button:checked {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(40, 167, 69, 0.1), stop:1 rgba(34, 197, 94, 0.1));
-                border-color: #28a745;
-                color: #155724;
+                min-height: 18px;
             }}
         """
         )
@@ -4197,17 +4424,20 @@ class MainWindow(QMainWindow):
         pensierini_footer_layout = QHBoxLayout()
         pensierini_footer_layout.setSpacing(8)
 
-        # Campo di testo per pensierini nel footer
-        self.footer_pensierini_input = QLineEdit()
+        # Campo di testo multiriga che si espande verso l'alto col contenuto
+        self.footer_pensierini_input = FooterPensierinoEdit(min_lines=1, max_lines=12)
         self.footer_pensierini_input.setPlaceholderText(
             "💭 Scrivi pensierino rapido..."
         )
         self.footer_pensierini_input.setMinimumWidth(200)
-        self.footer_pensierini_input.setMaximumWidth(300)
-        self.footer_pensierini_input.setMinimumHeight(28)
+        # Si espande in orizzontale per riempire tutto lo spazio del footer
+        self.footer_pensierini_input.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            self.footer_pensierini_input.sizePolicy().verticalPolicy(),
+        )
         self.footer_pensierini_input.setStyleSheet(
             """
-            QLineEdit {
+            QTextEdit {
                 background: rgba(255, 255, 255, 0.95);
                 border: 1px solid #dee2e6;
                 border-radius: 6px;
@@ -4215,14 +4445,29 @@ class MainWindow(QMainWindow):
                 font-size: 12px;
                 color: #495057;
             }
-            QLineEdit:focus {
+            QTextEdit:focus {
                 border-color: #4a90e2;
                 background: rgba(255, 255, 255, 1.0);
             }
         """
         )
         # Connetti il tasto Invio per inviare il pensierino
-        self.footer_pensierini_input.returnPressed.connect(self.send_footer_pensierino)
+        self.footer_pensierini_input.send_requested.connect(
+            self.send_footer_pensierino
+        )
+
+        # Pulsante "Cassetta degli attrezzi" a sinistra del campo pensierino,
+        # testo su più righe (una parola per riga) centrato.
+        self.toggle_tools_button = QPushButton("🔧\nCassetta\ndegli\nattrezzi")
+        self.toggle_tools_button.setObjectName("toggle_tools_button")
+        self.toggle_tools_button.setCheckable(True)
+        self.toggle_tools_button.setMinimumHeight(32)
+        self.toggle_tools_button.setStyleSheet(
+            "QPushButton#toggle_tools_button { text-align: center; }"
+        )
+        self.toggle_tools_button.clicked.connect(self.toggle_tools_panel)
+        pensierini_footer_layout.addWidget(self.toggle_tools_button)
+
         pensierini_footer_layout.addWidget(self.footer_pensierini_input)
 
         # Pulsante invio per pensierini
@@ -4251,50 +4496,51 @@ class MainWindow(QMainWindow):
         """
         )
         self.footer_send_pensierino_button.clicked.connect(self.send_footer_pensierino)
-        pensierini_footer_layout.addWidget(self.footer_send_pensierino_button)
 
-        # Pulsante ascolto continuo con parola d'ordine: dì la parola chiave
-        # seguita dal testo per inserirlo nel campo pensierino a mani libere
-        self.wake_word_button = QPushButton("🎙️ Parola d'ordine")
+        # Graffetta a destra di "Invia": allega documenti come in una email.
+        # Comportamento intelligente per tipo di file:
+        # - Se inserisci un qualsiasi audio io te lo trascrivo automaticamente offline
+        # - Se inserisci un PDF lo mostro nell'Area di Lavoro per analizzarlo insieme
+        self.attach_button = QPushButton("📎 Allega")
+        self.attach_button.setToolTip(
+            "Allega documenti:\n"
+            "• Se inserisci un qualsiasi audio io te lo trascrivo automaticamente offline\n"
+            "• Se inserisci un PDF lo mostro nell'Area di Lavoro per analizzarlo insieme"
+        )
+        self.attach_button.setMinimumWidth(84)
+        self.attach_button.setMinimumHeight(28)
+        self.attach_button.setStyleSheet(
+            """
+            QPushButton {
+                background: rgba(255, 255, 255, 0.95);
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: bold;
+                color: #495057;
+                padding: 4px 8px;
+            }
+            QPushButton:hover { border-color: #4a90e2; background: #f1f7ff; }
+            QPushButton:pressed { background: #e2ecff; }
+        """
+        )
+        self.attach_button.clicked.connect(self.attach_documents)
+
+        # Pulsante ascolto continuo con parola d'ordine (ora comandato dalle
+        # Impostazioni → Voce). Resta come contenitore di stato ma non è
+        # mostrato nel footer, quindi lo teniamo nascosto con parent la finestra.
+        self.wake_word_button = QPushButton("🎙️ Parola d'ordine", self)
         self.wake_word_button.setCheckable(True)
-        self.wake_word_button.setMinimumHeight(28)
         self.wake_word_button.setToolTip(
             "Ascolto continuo: pronuncia la parola d'ordine seguita dal testo\n"
             "per inserirlo nel campo pensierino. Termina con 'invia' per\n"
-            "inviarlo subito. Parola configurabile in Opzioni → Generale."
+            "inviarlo subito. Parola configurabile in Impostazioni → Voce."
         )
         self.wake_word_button.clicked.connect(self.toggle_wake_word_listening)
-        pensierini_footer_layout.addWidget(self.wake_word_button)
+        self.wake_word_button.hide()
 
-        # Pulsante cancella testo (spostato dal pannello principale)
-        self.clear_input_button = QPushButton("🧽 Cancella testo")
-        self.clear_input_button.setMinimumHeight(28)
-        self.clear_input_button.setMinimumWidth(100)
-        self.clear_input_button.setStyleSheet(
-            """
-            QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #f8f9fa, stop:1 #e9ecef);
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                padding: 4px 8px;
-                font-size: 10px;
-                color: #495057;
-            }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #e9ecef, stop:1 #dee2e6);
-            }
-            QPushButton:pressed {
-                background: #dee2e6;
-            }
-        """
-        )
-        self.clear_input_button.clicked.connect(self.clear_input_text)
-        pensierini_footer_layout.addWidget(self.clear_input_button)
-
-        # Pulsante cancella tutto (spostato dal pannello principale)
-        self.clear_all_button = QPushButton("🗑️ Cancella tutto")
+        # Pulsante cancella pensierini (input + colonne, con conferma)
+        self.clear_all_button = QPushButton("🗑️ Cancella pensierini")
         self.clear_all_button.setMinimumHeight(28)
         self.clear_all_button.setMinimumWidth(100)
         self.clear_all_button.setStyleSheet(
@@ -4320,60 +4566,43 @@ class MainWindow(QMainWindow):
         self.clear_all_button.clicked.connect(
             self.clear_all_pensierini_with_confirmation
         )
-        pensierini_footer_layout.addWidget(self.clear_all_button)
 
-        # Aggiungi il layout pensierini al footer
-        footer_layout.addLayout(pensierini_footer_layout)
+        # Riga superiore: Invia + graffetta; sotto: Cancella pensierini
+        send_top_row = QHBoxLayout()
+        send_top_row.setSpacing(4)
+        send_top_row.addWidget(self.footer_send_pensierino_button)
+        send_top_row.addWidget(self.attach_button)
 
-        # Pulsante per mostrare/nascondere il pannello strumenti (spostato più a destra)
-        self.toggle_tools_button = QPushButton("🔧 Cassetta degli attrezzi")
-        self.toggle_tools_button.setObjectName("toggle_tools_button")
-        self.toggle_tools_button.setCheckable(True)
-        self.toggle_tools_button.setMinimumHeight(32)  # Altezza ridotta per il footer
-        self.toggle_tools_button.clicked.connect(self.toggle_tools_panel)
-        footer_layout.addWidget(self.toggle_tools_button)
+        send_column_layout = QVBoxLayout()
+        send_column_layout.setSpacing(4)
+        send_column_layout.addLayout(send_top_row)
+        send_column_layout.addWidget(self.clear_all_button)
+        pensierini_footer_layout.addLayout(send_column_layout)
 
-        footer_layout.addStretch()  # Spazio centrale
+        # Aggiungi il layout pensierini (espandibile) al footer
+        footer_layout.addLayout(pensierini_footer_layout, 1)
 
-        # Orario a sinistra
-        footer_layout.addWidget(self.left_time_label)
-
-        # Click status label moved here from left side
-        footer_layout.addWidget(self.click_status_label)
-
-        # Pulsante webcam aggiunto qui
-        footer_layout.addWidget(self.webcam_button)
-
-        # === GUIDA RAPIDA IN BASSO A DESTRA ===
-        self.quick_help_button = QPushButton("❓ Guida")
-        self.quick_help_button.setMinimumHeight(28)
-        self.quick_help_button.setMinimumWidth(70)
-        self.quick_help_button.setStyleSheet(
-            """
-            QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #17a2b8, stop:1 #138496);
-                border: 1px solid #117a8b;
-                border-radius: 6px;
-                padding: 4px 8px;
-                font-size: 11px;
-                font-weight: bold;
-                color: white;
-            }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #138496, stop:1 #117a8b);
-            }
-            QPushButton:pressed {
-                background: #117a8b;
-            }
-        """
+        # Orologio analogico in alto, e SOTTO l'orario numerico con data breve
+        # ed estesa e la forma discorsiva. "Clicca su un elemento" è nel piè
+        # di pagina in fondo.
+        self.analog_clock = AnalogClock(size=66)
+        self.left_time_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        time_column_layout = QVBoxLayout()
+        time_column_layout.setSpacing(2)
+        time_column_layout.addWidget(
+            self.analog_clock, 0, Qt.AlignmentFlag.AlignHCenter
         )
-        self.quick_help_button.setToolTip("Mostra guida rapida dell'applicazione")
-        self.quick_help_button.clicked.connect(self.show_quick_help)
-        footer_layout.addWidget(self.quick_help_button)
+        time_column_layout.addWidget(self.left_time_label)
+        footer_layout.addLayout(time_column_layout)
 
         main_layout.addLayout(footer_layout)
+
+        # === PIÈ DI PAGINA: barra di stato a tutta larghezza ===
+        # Mostra messaggi veloci (caricamenti, cosa si è cliccato o premuto, ecc.)
+        footer_status_bar = QHBoxLayout()
+        footer_status_bar.setContentsMargins(6, 2, 6, 2)
+        footer_status_bar.addWidget(self.click_status_label, 1)
+        main_layout.addLayout(footer_status_bar)
 
         # Install event filter to capture mouse clicks
         QTimer.singleShot(100, self._install_event_filters)
@@ -5534,6 +5763,68 @@ class MainWindow(QMainWindow):
         logging.info(
             "Funzione add_text_from_input_area non disponibile - sezione pensierini rimossa"
         )
+
+    def _collect_work_area_text(self):
+        """Raccoglie il testo dei pensierini presenti nell'Area di Lavoro (B)."""
+        testi = []
+        layout = getattr(self, "work_area_layout", None)
+        if layout is None:
+            return ""
+        for i in range(layout.count()):
+            item = layout.itemAt(i)
+            w = item.widget() if item is not None else None
+            if w is None:
+                continue
+            label = getattr(w, "text_label", None)
+            if label is not None and hasattr(label, "text"):
+                t = label.text().strip()
+                if t:
+                    testi.append(t)
+            elif hasattr(w, "toPlainText"):
+                t = w.toPlainText().strip()
+                if t:
+                    testi.append(t)
+        return "\n".join(testi)
+
+    def request_information_gesture(self):
+        """Richiesta di informazione attivata dal gesto 'O' sull'Area di Lavoro.
+
+        Raccoglie il contenuto dell'Area di Lavoro (B) e chiede all'AI di
+        fornire informazioni; la risposta compare nella Lavagna AI (C).
+        """
+        contenuto = self._collect_work_area_text()
+        if hasattr(self, "status_label") and self.status_label is not None:
+            self.status_label.setText("Status: ℹ️ Richiesta informazione (gesto 'O')")
+
+        if not contenuto:
+            QMessageBox.information(
+                self,
+                "Richiesta informazione",
+                "Metti dei pensierini nell'Area di Lavoro (B) e ripeti il gesto 'O'\n"
+                "(indice e pollice a cerchio) per ricevere informazioni.",
+            )
+            return
+
+        prompt = (
+            "Fornisci informazioni utili e una spiegazione sintetica su quanto "
+            "segue:\n" + contenuto
+        )
+
+        if getattr(self, "ollama_bridge", None) and self.ollama_bridge.checkConnection():
+            try:
+                model = get_setting("ai.selected_ai_model", "gemma:2b")
+                self.ollama_bridge.sendPrompt(prompt, model)
+                print("🤖 Richiesta informazione inviata all'AI dal gesto 'O'")
+            except Exception as e:
+                logging.warning(f"Errore invio richiesta informazione: {e}")
+        else:
+            QMessageBox.information(
+                self,
+                "Richiesta informazione",
+                "Contenuto dell'Area di Lavoro:\n\n"
+                + contenuto
+                + "\n\n(AI non disponibile: avvia Ollama per ricevere una risposta.)",
+            )
 
     def handle_ai_button(self):
         """Gestisce la funzione AI: invia richiesta a Ollama e mostra risposta."""
@@ -8281,10 +8572,257 @@ ESEMPI:
         try:
             dialog = SettingsDialog(self)
             dialog.exec()
-        except Exception:
+        except Exception as e:
+            self.add_message(f"Errore nell'apertura delle impostazioni: {e}", "error")
             QMessageBox.critical(
-                self, "Errore", "Errore nell'apertura delle impostazioni: {e}"
+                self, "Errore", f"Errore nell'apertura delle impostazioni: {e}"
             )
+
+    # === Messaggi rapidi nel footer e registro messaggi/errori ===
+    def set_status_message(self, text):
+        """Mostra un messaggio veloce nel footer (es. caricamento, click)."""
+        if hasattr(self, "click_status_label") and self.click_status_label is not None:
+            self.click_status_label.setText(text)
+
+    def add_message(self, text, level="info"):
+        """Registra un messaggio/errore mostrabile dal pulsante 'Messaggi'."""
+        from datetime import datetime
+
+        entry = {
+            "time": datetime.now().strftime("%H:%M:%S"),
+            "level": level,
+            "text": str(text),
+        }
+        if not hasattr(self, "app_messages"):
+            self.app_messages = []
+        self.app_messages.append(entry)
+        # Riflette anche nello stato rapido del footer
+        icona = {"error": "❌", "warning": "⚠️", "info": "ℹ️"}.get(level, "ℹ️")
+        self.set_status_message(f"{icona} {text}")
+        # Evidenzia il pulsante Messaggi se ci sono errori
+        if level == "error" and hasattr(self, "messages_button"):
+            self.messages_button.setText(f"✉️ Messaggi ({sum(1 for m in self.app_messages if m['level'] == 'error')})")
+
+    def show_messages_dialog(self):
+        """Mostra il registro dei messaggi/errori dell'applicazione."""
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QPushButton
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("✉️ Messaggi")
+        dialog.resize(560, 400)
+        layout = QVBoxLayout(dialog)
+
+        view = QTextEdit()
+        view.setReadOnly(True)
+        if self.app_messages:
+            righe = [
+                f"[{m['time']}] {m['level'].upper()}: {m['text']}"
+                for m in self.app_messages
+            ]
+            view.setPlainText("\n".join(righe))
+        else:
+            view.setPlainText("Nessun messaggio.")
+        layout.addWidget(view)
+
+        clear_btn = QPushButton("🗑️ Svuota")
+        def _clear():
+            self.app_messages.clear()
+            view.setPlainText("Nessun messaggio.")
+            if hasattr(self, "messages_button"):
+                self.messages_button.setText("✉️ Messaggi")
+        clear_btn.clicked.connect(_clear)
+        layout.addWidget(clear_btn)
+
+        close_btn = QPushButton("Chiudi")
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+        dialog.exec()
+
+    def attach_documents(self):
+        """Allega documenti come in un'email, con comportamento per tipo di file.
+
+        - Se inserisci un qualsiasi audio io te lo trascrivo automaticamente offline
+          (trascrizione locale con Vosk, nessun invio a server esterni).
+        - Se inserisci un PDF lo mostro nell'Area di Lavoro (B) così possiamo
+          analizzarlo insieme.
+        - Gli altri file vengono aggiunti come pensierini nella colonna A.
+        """
+        from PyQt6.QtWidgets import QFileDialog
+        import os
+
+        files, _ = QFileDialog.getOpenFileNames(
+            self, "Allega documenti", "", "Tutti i file (*.*)"
+        )
+        if not files:
+            return
+
+        audio_ext = {".wav", ".mp3", ".ogg", ".flac", ".m4a", ".aac", ".opus", ".wma"}
+        image_ext = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".gif", ".webp"}
+        for path in files:
+            ext = os.path.splitext(path)[1].lower()
+            nome = os.path.basename(path)
+            try:
+                if ext in audio_ext:
+                    # Se inserisci un qualsiasi audio io te lo trascrivo
+                    # automaticamente offline
+                    self._transcribe_audio_offline(path)
+                elif ext == ".pdf":
+                    # Se inserisci un PDF lo mostro nell'Area di Lavoro per
+                    # analizzarlo insieme
+                    self._show_pdf_in_work_area(path)
+                elif ext in image_ext:
+                    # Immagine: OCR locale (modelli Tesseract ita+eng)
+                    self._ocr_image_offline(path)
+                elif DraggableTextWidget and hasattr(self, "pensierini_layout"):
+                    widget = DraggableTextWidget(f"📎 {nome}", self.settings)
+                    self.pensierini_layout.addWidget(widget)
+                    self.set_status_message(f"📎 Allegato: {nome}")
+            except Exception as e:
+                self.add_message(f"Errore allegando {nome}: {e}", "error")
+
+    def _ocr_image_offline(self, path):
+        """Estrae il testo da un'immagine con OCR locale e lo aggiunge come pensierino."""
+        import os
+
+        nome = os.path.basename(path)
+        self.set_status_message(f"🔎 OCR offline di '{nome}'...")
+        try:
+            from core.document_tools import ocr_image
+
+            testo = ocr_image(path)
+        except Exception as e:
+            self.add_message(f"OCR non disponibile per '{nome}': {e}", "error")
+            return
+        if not testo:
+            self.set_status_message(f"🔎 '{nome}': nessun testo riconosciuto")
+            return
+        try:
+            if DraggableTextWidget and hasattr(self, "pensierini_layout"):
+                widget = DraggableTextWidget(f"🔎 {nome}:\n{testo}", self.settings)
+                self.pensierini_layout.addWidget(widget)
+        except Exception as e:
+            self.add_message(f"Errore inserendo l'OCR: {e}", "error")
+        self.set_status_message(f"✅ OCR di '{nome}' completato")
+        self.add_message(f"OCR di '{nome}' completato", "info")
+
+    def _transcribe_audio_offline(self, path):
+        """Avvia la trascrizione offline (Vosk) di un file audio allegato."""
+        import os
+
+        nome = os.path.basename(path)
+        self.set_status_message(f"🎙️ Trascrizione offline di '{nome}'...")
+        self.add_message(f"Avvio trascrizione offline di '{nome}'", "info")
+
+        try:
+            from Artificial_Intelligence.Riconoscimento_Vocale.managers.speech_recognition_manager import (
+                AudioFileTranscriptionThread,
+            )
+        except ImportError as e:
+            self.add_message(f"Modulo di trascrizione non disponibile: {e}", "error")
+            return
+
+        # Converte in WAV 16kHz mono se necessario (mp3, ogg, ...)
+        wav_path = self._ensure_wav_16k_mono(path)
+        if wav_path is None:
+            return
+
+        vosk_model = self.settings.get("vosk_model", "vosk-model-small-it-0.22")
+        if not vosk_model or vosk_model == "auto":
+            vosk_model = "vosk-model-small-it-0.22"
+        vosk_model = self._resolve_vosk_model(vosk_model)
+        if vosk_model is None:
+            self.add_message(
+                "Nessun modello Vosk installato: scaricalo da Impostazioni → Download.",
+                "error",
+            )
+            return
+
+        thread = AudioFileTranscriptionThread(wav_path, vosk_model)
+        thread.transcription_progress.connect(self.set_status_message)
+        thread.transcription_completed.connect(
+            lambda text, n=nome: self._on_audio_transcribed(n, text)
+        )
+        thread.transcription_error.connect(
+            lambda err: self.add_message(f"Trascrizione: {err}", "error")
+        )
+        # Mantiene un riferimento per evitare la garbage collection
+        if not hasattr(self, "_transcription_threads"):
+            self._transcription_threads = []
+        self._transcription_threads.append(thread)
+        thread.start()
+
+    def _on_audio_transcribed(self, nome, text):
+        """Inserisce il testo trascritto come pensierino nella colonna A."""
+        text = (text or "").strip()
+        if not text:
+            self.set_status_message(f"🎙️ '{nome}': nessun parlato riconosciuto")
+            return
+        try:
+            if DraggableTextWidget and hasattr(self, "pensierini_layout"):
+                widget = DraggableTextWidget(f"🎙️ {nome}: {text}", self.settings)
+                self.pensierini_layout.addWidget(widget)
+        except Exception as e:
+            self.add_message(f"Errore inserendo la trascrizione: {e}", "error")
+        self.set_status_message(f"✅ Trascrizione di '{nome}' completata")
+        self.add_message(f"Trascrizione di '{nome}' completata", "info")
+
+    def _ensure_wav_16k_mono(self, path):
+        """Restituisce un WAV mono 16kHz; converte con pydub se necessario."""
+        import os
+
+        if path.lower().endswith(".wav"):
+            return path  # la trascrizione gestisce mono/sample-rate
+        try:
+            import tempfile
+            from pydub import AudioSegment
+
+            seg = AudioSegment.from_file(path)
+            seg = seg.set_channels(1).set_frame_rate(16000)
+            tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+            seg.export(tmp.name, format="wav")
+            return tmp.name
+        except Exception as e:
+            self.add_message(
+                f"Impossibile convertire l'audio '{os.path.basename(path)}': {e}. "
+                "Serve ffmpeg per i formati non-WAV.",
+                "error",
+            )
+            return None
+
+    def _show_pdf_in_work_area(self, path):
+        """Mostra un PDF allegato nell'Area di Lavoro (B) per analizzarlo insieme.
+
+        Estrae il testo con PyMuPDF; se il PDF è scansionato usa l'OCR locale.
+        """
+        import os
+
+        nome = os.path.basename(path)
+        self.set_status_message(f"📄 Lettura PDF '{nome}'...")
+        testo = ""
+        try:
+            from core.document_tools import extract_pdf_text
+
+            testo = extract_pdf_text(path)
+        except Exception as e:
+            self.add_message(f"Impossibile leggere il PDF '{nome}': {e}", "error")
+
+        contenuto = f"📄 {nome}"
+        if testo:
+            anteprima = testo if len(testo) <= 4000 else testo[:4000] + "\n[...]"
+            contenuto = f"📄 {nome}\n\n{anteprima}"
+        try:
+            if DraggableTextWidget and hasattr(self, "work_area_layout"):
+                widget = DraggableTextWidget(contenuto, self.settings)
+                setattr(widget, "attached_file_path", path)
+                self.work_area_layout.addWidget(widget)
+                self.set_status_message(f"📄 PDF '{nome}' aperto in Area di Lavoro")
+                self.add_message(f"PDF '{nome}' mostrato in Area di Lavoro", "info")
+            else:
+                self.add_message(
+                    "Area di Lavoro non disponibile per mostrare il PDF.", "error"
+                )
+        except Exception as e:
+            self.add_message(f"Errore mostrando il PDF '{nome}': {e}", "error")
 
     def update_status_label(self):
         """Metodo deprecato - lo status è ora gestito dal pulsante log."""
@@ -8506,6 +9044,27 @@ def main():
         app.setOrganizationName("DSA Aircraft")
         print("QApplication created successfully")
 
+        # Login all'avvio (disattivabile con Impostazioni → Bypass login)
+        bypass_login = settings.get("startup", {}).get("bypass_login", False)
+        if not bypass_login:
+            try:
+                from Autenticazione_e_Accesso.login_dialog import LoginDialog
+            except ImportError:
+                from assistente_dsa.Autenticazione_e_Accesso.login_dialog import (
+                    LoginDialog,
+                )
+            login_dialog = LoginDialog()
+            result = login_dialog.exec()
+            if (
+                result != LoginDialog.DialogCode.Accepted.value
+                or login_dialog.authenticated_user is None
+            ):
+                print("🔐 Login annullato: chiusura applicazione")
+                sys.exit(0)
+            print(
+                f"🔐 Accesso effettuato: {login_dialog.authenticated_user['username']}"
+            )
+
         # Imposta icona se disponibile
         icon_path = "ICO-fonts-wallpaper/ICONA.ico"
         if os.path.exists(icon_path):
@@ -8515,10 +9074,10 @@ def main():
             logger.info("Icona caricata: {icon_path}")
 
         print("About to create MainWindow...")
-        # Crea e mostra finestra principale (Aircraft)
+        # Crea e mostra finestra principale (Aircraft) a schermo intero
         window = MainWindow()
         print("MainWindow created successfully")
-        window.show()
+        window.showMaximized()
 
         logger.info("✓ Aircraft avviata con successo")
         print("✅ Aircraft - Schermata principale avviata!")

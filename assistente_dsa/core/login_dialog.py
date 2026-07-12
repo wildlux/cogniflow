@@ -183,10 +183,16 @@ class LoginDialog(QDialog):
         - Imposta il focus sul campo password
         """
         try:
-            from assistente_dsa.core.auth_module import auth_manager, AUTH_AVAILABLE
+            from assistente_dsa.Autenticazione_e_Accesso.auth_manager import (
+                auth_manager,
+                AUTH_AVAILABLE,
+            )
         except ImportError:
             try:
-                from auth_module import auth_manager, AUTH_AVAILABLE
+                from Autenticazione_e_Accesso.auth_manager import (
+                    auth_manager,
+                    AUTH_AVAILABLE,
+                )
             except ImportError:
                 self.status_label.setText("❌ Sistema di autenticazione non disponibile")
                 self.status_label.setStyleSheet("color: #f44336; font-size: 12px;")

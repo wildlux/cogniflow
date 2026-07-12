@@ -120,7 +120,7 @@ class SimpleAuthManager:
 
         # Supporta sia hash vecchio che nuovo per retrocompatibilità
         password_hash = user["password_hash"]
-        if password_hash.startswith("$"):  # Nuovo formato con salt
+        if "$" in password_hash:  # Nuovo formato "salt$hash"
             if not self._verify_password_secure(password, password_hash):
                 rate_limiter.record_failure(f"auth_{username}")
                 return None

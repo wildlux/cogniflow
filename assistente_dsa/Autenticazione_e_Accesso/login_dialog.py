@@ -6,13 +6,27 @@ from typing import cast
 # Contains the login dialog class
 
 try:
-    from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QFormLayout, QLineEdit, QPushButton
+    from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QFormLayout, QLineEdit, QPushButton, QCheckBox
     from PyQt6.QtCore import Qt, QTimer
-    from PyQt6.QtGui import QPixmap, QIcon
+    from PyQt6.QtGui import QPixmap, QIcon, QColor, QPalette
     pyqt_available = True
 except ImportError:
     pyqt_available = False
     print("PyQt6 not available - Login dialog will not function")
+
+
+def _force_button_text_color(button, hex_color):
+    """Forza il colore del testo del pulsante anche via palette.
+
+    Con alcuni stili nativi la proprietà ``color`` del foglio di stile viene
+    ignorata per i QPushButton e il testo resta nero: impostare il ruolo
+    ButtonText della palette garantisce il colore corretto in ogni caso.
+    """
+    color = QColor(hex_color)
+    palette = button.palette()
+    palette.setColor(QPalette.ColorRole.ButtonText, color)
+    palette.setColor(QPalette.ColorRole.Text, color)
+    button.setPalette(palette)
 
 
 class LoginDialog(QDialog):
@@ -20,7 +34,7 @@ class LoginDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("🔐 DSA Assistant - Login")
         self.setModal(True)
-        self.setFixedSize(450, 350)  # Increased size to accommodate logo
+        self.setMinimumSize(460, 470)  # Spazio per checkbox e pulsanti
         self.authenticated_user = None
 
         layout = QVBoxLayout(self)
@@ -62,14 +76,39 @@ class LoginDialog(QDialog):
         form_layout.addRow("🔒 Password:", self.password_input)
         layout.addLayout(form_layout)
 
+        # Checkbox "Salva ID e Password" per ricordare le credenziali
+        self.remember_checkbox = QCheckBox("💾 Salva ID e Password")
+        self.remember_checkbox.setStyleSheet("margin: 4px 2px; font-size: 12px;")
+        self.remember_checkbox.setToolTip(
+            "Se attivo, memorizza username e password (in forma cifrata su questo\n"
+            "computer) e li precompila al prossimo avvio."
+        )
+        layout.addWidget(self.remember_checkbox)
+
         buttons_layout = QVBoxLayout()
-        self.login_button = QPushButton("🔐 Login")
-        self.login_button.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; border: none; border-radius: 5px; padding: 10px; font-size: 14px; font-weight: bold; margin: 5px; } QPushButton:hover { background-color: #45a049; }")
+        self.login_button = QPushButton("🔐  Login")
+        self.login_button.setMinimumHeight(44)
+        self.login_button.setStyleSheet(
+            "QPushButton { background-color: #2e7d32; color: #ffffff; border: none;"
+            " border-radius: 5px; padding: 10px; font-size: 15px; font-weight: bold;"
+            " margin: 5px; }"
+            " QPushButton:hover { background-color: #256628; }"
+            " QPushButton:pressed { background-color: #1b5e20; }"
+        )
+        _force_button_text_color(self.login_button, "#ffffff")
         self.login_button.clicked.connect(self.attempt_login)
         buttons_layout.addWidget(self.login_button)
 
-        self.cancel_button = QPushButton("❌ Annulla")
-        self.cancel_button.setStyleSheet("QPushButton { background-color: #f44336; color: white; border: none; border-radius: 5px; padding: 10px; font-size: 14px; font-weight: bold; margin: 5px; } QPushButton:hover { background-color: #da190b; }")
+        self.cancel_button = QPushButton("❌  Annulla")
+        self.cancel_button.setMinimumHeight(44)
+        self.cancel_button.setStyleSheet(
+            "QPushButton { background-color: #c62828; color: #ffffff; border: none;"
+            " border-radius: 5px; padding: 10px; font-size: 15px; font-weight: bold;"
+            " margin: 5px; }"
+            " QPushButton:hover { background-color: #a71c1c; }"
+            " QPushButton:pressed { background-color: #8e1616; }"
+        )
+        _force_button_text_color(self.cancel_button, "#ffffff")
         self.cancel_button.clicked.connect(self.reject)
         buttons_layout.addWidget(self.cancel_button)
         layout.addLayout(buttons_layout)
@@ -90,6 +129,57 @@ class LoginDialog(QDialog):
         forgot_password_label.linkActivated.connect(self.show_password_reset)
         layout.addWidget(forgot_password_label)
 
+        # Precompila con le credenziali salvate, se presenti
+        self._load_remembered_credentials()
+
+    def _remember_file(self):
+        return os.path.join(os.path.dirname(__file__), "Save", "AUTH", ".remember")
+
+    def _load_remembered_credentials(self):
+        """Carica username/password salvati e precompila i campi."""
+        try:
+            path = self._remember_file()
+            if not os.path.exists(path):
+                return
+            with open(path, "r", encoding="utf-8") as f:
+                raw = f.read()
+            try:
+                from security_utils import encryptor
+            except ImportError:
+                from .security_utils import encryptor
+            import json as _json
+            data = _json.loads(encryptor.decrypt(raw))
+            self.username_input.setText(data.get("username", ""))
+            self.password_input.setText(data.get("password", ""))
+            self.remember_checkbox.setChecked(True)
+        except Exception as e:
+            print(f"Impossibile caricare le credenziali salvate: {e}")
+
+    def _update_remembered_credentials(self, username, password):
+        """Salva o rimuove le credenziali in base allo stato della checkbox."""
+        path = self._remember_file()
+        try:
+            if self.remember_checkbox.isChecked():
+                try:
+                    from security_utils import encryptor
+                except ImportError:
+                    from .security_utils import encryptor
+                import json as _json
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                blob = encryptor.encrypt(
+                    _json.dumps({"username": username, "password": password})
+                )
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(blob)
+                try:
+                    os.chmod(path, 0o600)
+                except OSError:
+                    pass
+            elif os.path.exists(path):
+                os.remove(path)
+        except Exception as e:
+            print(f"Impossibile salvare le credenziali: {e}")
+
     def attempt_login(self):
         username = self.username_input.text().strip()
         password = self.password_input.text().strip()
@@ -100,13 +190,23 @@ class LoginDialog(QDialog):
             return
 
         try:
-            from auth_manager import AUTH_AVAILABLE, auth_manager
+            try:
+                from assistente_dsa.Autenticazione_e_Accesso.auth_manager import (
+                    AUTH_AVAILABLE,
+                    auth_manager,
+                )
+            except ImportError:
+                from Autenticazione_e_Accesso.auth_manager import (
+                    AUTH_AVAILABLE,
+                    auth_manager,
+                )
             if AUTH_AVAILABLE and auth_manager:
                 user = auth_manager.authenticate(username, password)
                 if user:
                     self.status_label.setText(f"✅ Benvenuto, {user['full_name']}!")
                     self.status_label.setStyleSheet("color: #4CAF50; font-size: 12px;")
                     self.authenticated_user = user
+                    self._update_remembered_credentials(username, password)
                     QTimer.singleShot(1000, self.accept)
                 else:
                     self.status_label.setText("❌ Credenziali non valide")

@@ -1,9 +1,18 @@
 import os, json
 from typing import cast, Any
 
+# Percorso del file impostazioni condiviso con main_03_configurazione_e_opzioni.
+# __file__ è .../assistente_dsa/core/config_module.py: servono tre livelli
+# di dirname per risalire alla radice del progetto (Cogniflow), dove si trova
+# la cartella Save. Con due soli livelli si puntava a una cartella inesistente
+# (assistente_dsa/Save/...) e si ricadeva sempre sui default.
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+SETTINGS_FILE = os.path.join(_PROJECT_ROOT, "Save", "SETUP_TOOLS_&_Data", "settings.json")
+
+
 def load_settings():
     """Load settings from file or return defaults"""
-    settings_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "SETUP_TOOLS_&_Data", "settings.json")
+    settings_file = SETTINGS_FILE
 
     if os.path.exists(settings_file):
         try:
@@ -59,7 +68,7 @@ def set_setting(key: str, value):
     current[keys[-1]] = value
 
     # Save to file
-    settings_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Save", "SETUP_TOOLS_&_Data", "settings.json")
+    settings_file = SETTINGS_FILE
     os.makedirs(os.path.dirname(settings_file), exist_ok=True)
     with open(settings_file, "w", encoding="utf-8") as f:
         json.dump(settings, f, indent=2, ensure_ascii=False)

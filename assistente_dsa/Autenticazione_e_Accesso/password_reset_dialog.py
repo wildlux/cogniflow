@@ -13,10 +13,25 @@ try:
         QPushButton, QMessageBox, QHBoxLayout, QProgressBar
     )
     from PyQt6.QtCore import Qt, QTimer
+    from PyQt6.QtGui import QColor, QPalette
     pyqt_available = True
 except ImportError:
     pyqt_available = False
     print("PyQt6 not available - Password reset dialog will not function")
+
+
+def _force_button_text_color(button, hex_color="#ffffff"):
+    """Forza il colore del testo del pulsante via palette.
+
+    Con alcuni stili nativi la proprietà ``color`` del foglio di stile viene
+    ignorata per i QPushButton e il testo resta nero.
+    """
+    color = QColor(hex_color)
+    palette = button.palette()
+    palette.setColor(QPalette.ColorRole.ButtonText, color)
+    palette.setColor(QPalette.ColorRole.Text, color)
+    button.setPalette(palette)
+    button.setMinimumHeight(42)
 
 
 class PasswordResetDialog(QDialog):
@@ -76,7 +91,8 @@ class PasswordResetDialog(QDialog):
         layout.addLayout(form_layout)
 
         send_button = QPushButton("📤 Invia Codice")
-        send_button.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; border: none; border-radius: 5px; padding: 10px; font-size: 12px; font-weight: bold; margin: 5px; } QPushButton:hover { background-color: #45a049; }")
+        send_button.setStyleSheet("QPushButton { background-color: #2e7d32; color: #ffffff; border: none; border-radius: 5px; padding: 10px; font-size: 13px; font-weight: bold; margin: 5px; } QPushButton:hover { background-color: #256628; }")
+        _force_button_text_color(send_button)
         send_button.clicked.connect(self.send_reset_code)
         layout.addWidget(send_button)
 
@@ -101,7 +117,8 @@ class PasswordResetDialog(QDialog):
         buttons_layout.addWidget(resend_button)
 
         verify_button = QPushButton("✅ Verifica Codice")
-        verify_button.setStyleSheet("QPushButton { background-color: #2196F3; color: white; border: none; border-radius: 5px; padding: 10px; font-size: 12px; font-weight: bold; margin: 5px; } QPushButton:hover { background-color: #1976D2; }")
+        verify_button.setStyleSheet("QPushButton { background-color: #1565c0; color: #ffffff; border: none; border-radius: 5px; padding: 10px; font-size: 13px; font-weight: bold; margin: 5px; } QPushButton:hover { background-color: #0d47a1; }")
+        _force_button_text_color(verify_button)
         verify_button.clicked.connect(self.verify_code)
         buttons_layout.addWidget(verify_button)
 
@@ -129,7 +146,8 @@ class PasswordResetDialog(QDialog):
         layout.addLayout(form_layout)
 
         reset_button = QPushButton("🔄 Reset Password")
-        reset_button.setStyleSheet("QPushButton { background-color: #FF9800; color: white; border: none; border-radius: 5px; padding: 10px; font-size: 12px; font-weight: bold; margin: 5px; } QPushButton:hover { background-color: #F57C00; }")
+        reset_button.setStyleSheet("QPushButton { background-color: #e65100; color: #ffffff; border: none; border-radius: 5px; padding: 10px; font-size: 13px; font-weight: bold; margin: 5px; } QPushButton:hover { background-color: #bf360c; }")
+        _force_button_text_color(reset_button)
         reset_button.clicked.connect(self.reset_password)
         layout.addWidget(reset_button)
 

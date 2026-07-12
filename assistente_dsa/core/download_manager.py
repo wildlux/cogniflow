@@ -2,8 +2,8 @@
 """Gestore download in background per modelli e componenti opzionali.
 
 Singleton condiviso da tutta l'applicazione: i download proseguono anche se
-la finestra Opzioni viene chiusa e l'app resta utilizzabile nel frattempo.
-La scheda Opzioni → 📥 Download è solo una vista su questo gestore.
+la finestra Impostazioni viene chiusa e l'app resta utilizzabile nel frattempo.
+La scheda Impostazioni → 📥 Download è solo una vista su questo gestore.
 """
 
 import logging
@@ -26,7 +26,7 @@ VOSK_MODELS_DIR = os.path.join(
 )
 
 # Catalogo dei componenti scaricabili (estendibile: aggiungere una voce qui
-# la fa comparire automaticamente in Opzioni → 📥 Download)
+# la fa comparire automaticamente in Impostazioni → 📥 Download)
 CATALOG = {
     "vosk-model-small-it-0.22": {
         "label": "🎤 Voce italiano leggero (~50 MB)",

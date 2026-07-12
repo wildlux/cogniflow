@@ -56,6 +56,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.settings = load_settings()
 
+        self.setWindowTitle("⚙️ Impostazioni")
         self.setModal(True)
 
         # Imposta sfondo bianco per tutto il dialog
@@ -75,7 +76,7 @@ class SettingsDialog(QDialog):
                 background-color: white;
                 color: black;
                 border: 1px solid #cccccc;
-                padding: 8px 16px;
+                padding: 8px 10px;
             }
             QTabBar::tab:selected {
                 background-color: #f0f0f0;
@@ -124,8 +125,14 @@ class SettingsDialog(QDialog):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
 
-        # Tab widget per organizzare le impostazioni
+        # Tab widget per organizzare le impostazioni: tutte le schede visibili
+        # senza frecce di scorrimento (si ridimensionano per stare nella barra).
         self.tab_widget = QTabWidget()
+        self.tab_widget.setUsesScrollButtons(False)
+        self.tab_widget.tabBar().setExpanding(True)
+        self.tab_widget.setElideMode(Qt.TextElideMode.ElideNone)
+        # Larghezza minima adeguata a mostrare tutte le schede
+        self.setMinimumWidth(820)
 
         # Crea i vari tab
         self.setup_general_tab()
@@ -204,10 +211,54 @@ class SettingsDialog(QDialog):
         )
         wake_layout.addWidget(self.wake_word_edit)
         voice_layout.addLayout(wake_layout)
+
+        # Pulsante per attivare/disattivare l'ascolto continuo (parola d'ordine),
+        # spostato qui dal footer della finestra principale.
+        self.wake_word_toggle_button = QPushButton("🎙️ Attiva ascolto continuo")
+        self.wake_word_toggle_button.setCheckable(True)
+        self.wake_word_toggle_button.setToolTip(
+            "Ascolto continuo: pronuncia la parola d'ordine seguita dal testo\n"
+            "per inserirlo nel campo pensierino. Termina con 'invia' per\n"
+            "inviarlo subito."
+        )
+        self.wake_word_toggle_button.clicked.connect(self._toggle_wake_word_from_settings)
+        voice_layout.addWidget(self.wake_word_toggle_button)
+        self._sync_wake_word_toggle()
+
         layout.addWidget(voice_group)
         layout.addStretch()
 
         self.tab_widget.addTab(widget, "Generale")
+
+    def _main_window(self):
+        """Restituisce la finestra principale se disponibile come parent."""
+        parent = self.parent()
+        if parent is not None and hasattr(parent, "toggle_wake_word_listening"):
+            return parent
+        return None
+
+    def _sync_wake_word_toggle(self):
+        """Allinea l'aspetto del pulsante allo stato di ascolto della finestra."""
+        win = self._main_window()
+        listening = bool(
+            win
+            and hasattr(win, "wake_word_button")
+            and win.wake_word_button.isChecked()
+        )
+        self.wake_word_toggle_button.setChecked(listening)
+        self.wake_word_toggle_button.setText(
+            "🎙️ Ascolto continuo attivo" if listening else "🎙️ Attiva ascolto continuo"
+        )
+        self.wake_word_toggle_button.setEnabled(win is not None)
+
+    def _toggle_wake_word_from_settings(self):
+        """Attiva/disattiva l'ascolto continuo sulla finestra principale."""
+        win = self._main_window()
+        if win is None:
+            self.wake_word_toggle_button.setChecked(False)
+            return
+        win.toggle_wake_word_listening()
+        self._sync_wake_word_toggle()
 
     def setup_startup_tab(self):
         """Configura il tab avvio applicazione."""
