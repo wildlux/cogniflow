@@ -323,52 +323,8 @@ class VideoThread(QThread):
                 # Logica di rilevamento faccia, mani, gesti ed espressioni
                 # ==========================================================
 
-                # Mostra sempre lo stato dei rilevamenti
-                status_text = ""
-                if self.face_detection_enabled:
-                    status_text += "Faccia: ON  "
-                else:
-                    status_text += "Faccia: OFF  "
-
-                if self.hand_detection_enabled:
-                    if (
-                        self.left_hand_tracking_enabled
-                        and self.right_hand_tracking_enabled
-                    ):
-                        status_text += "Mani: SX+DX  "
-                    elif self.left_hand_tracking_enabled:
-                        status_text += "Mani: SX  "
-                    elif self.right_hand_tracking_enabled:
-                        status_text += "Mani: DX  "
-                    else:
-                        status_text += "Mani: OFF  "
-                else:
-                    status_text += "Mani: OFF  "
-
-                if self.gesture_recognition_enabled:
-                    status_text += "Gesti: ON  "
-                else:
-                    status_text += "Gesti: OFF  "
-
-                if self.facial_expression_enabled:
-                    status_text += "Espressioni: ON  "
-                else:
-                    status_text += "Espressioni: OFF  "
-
-                if self.human_detection_enabled:
-                    status_text += "Umani: ON"
-                else:
-                    status_text += "Umani: OFF"
-
-                cv2.putText(
-                    frame,
-                    status_text,
-                    (10, frame.shape[0] - 20),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.6,
-                    (255, 255, 255),
-                    2,
-                )
+                # Nota: l'overlay di stato (Faccia/Mani/Gesti/Espressioni/Umani)
+                # è stato rimosso dal frame: le funzioni sono attive comunque.
 
                 # Applica i rilevamenti nell'ordine corretto
                 if self.face_detection_enabled:
@@ -871,15 +827,6 @@ class VideoThread(QThread):
 
         h, w = frame.shape[:2]
         if not result.hand_landmarks:
-            cv2.putText(
-                frame,
-                "Nessuna mano rilevata",
-                (10, 60),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
-                (255, 200, 0),
-                2,
-            )
             return frame
 
         def dist2(pts, i, j):
@@ -1062,15 +1009,7 @@ class VideoThread(QThread):
                 2,
             )
         else:
-            cv2.putText(
-                frame,
-                "Nessuna mano rilevata",
-                (10, 60),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 255, 0),
-                2,
-            )
+            pass
 
         return frame
 
@@ -1995,15 +1934,7 @@ class VideoThread(QThread):
                     2,
                 )
             else:
-                cv2.putText(
-                    frame,
-                    "Nessuna mano rilevata (MP-style)",
-                    (10, 60),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (0, 255, 255),
-                    2,
-                )
+                pass
 
             return frame
 
@@ -2171,15 +2102,7 @@ class VideoThread(QThread):
                     2,
                 )
             else:
-                cv2.putText(
-                    frame,
-                    "Nessuna mano rilevata (MP-style)",
-                    (10, 60),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (0, 255, 255),
-                    2,
-                )
+                pass
 
             return frame
 
@@ -2915,15 +2838,7 @@ class VideoThread(QThread):
                 2,
             )
         else:
-            cv2.putText(
-                frame,
-                "Nessuna mano rilevata",
-                (10, 90),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (255, 165, 0),
-                2,
-            )
+            pass
 
     def handle_advanced_hand_interaction(
         self, frame, hand_x, hand_y, hand_w, hand_h, hand_info

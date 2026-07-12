@@ -26,6 +26,7 @@ from PyQt6.QtCore import (
     QObject,
     QPoint,
     QPointF,
+    QRect,
 )
 from PyQt6.QtGui import (
     QFontDatabase,
@@ -37,6 +38,7 @@ from PyQt6.QtGui import (
     QPainter,
     QPen,
     QMouseEvent,
+    QImage,
 )
 from PyQt6.QtWidgets import (
     QApplication,
@@ -2115,19 +2117,29 @@ class FooterPensierinoEdit(QTextEdit):
 
     send_requested = pyqtSignal()
 
-    def __init__(self, *args, min_lines=1, max_lines=12, **kwargs):
+    def __init__(self, *args, min_lines=1, max_lines=12, expand_to_fill=False, **kwargs):
         super().__init__(*args, **kwargs)
         self._min_lines = min_lines
         self._max_lines = max_lines
-        self.setSizePolicy(
-            self.sizePolicy().horizontalPolicy(),
-            QSizePolicy.Policy.Preferred,
-        )
-        self.document().documentLayout().documentSizeChanged.connect(
-            lambda _=None: self._adjust_height()
-        )
-        self.textChanged.connect(self._adjust_height)
-        self._adjust_height()
+        self._expand_to_fill = expand_to_fill
+        if expand_to_fill:
+            # Riempie tutto lo spazio disponibile del contenitore
+            self.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+            )
+            self.setMinimumHeight(
+                int(min_lines * self._line_px() + self._chrome_px())
+            )
+        else:
+            self.setSizePolicy(
+                self.sizePolicy().horizontalPolicy(),
+                QSizePolicy.Policy.Preferred,
+            )
+            self.document().documentLayout().documentSizeChanged.connect(
+                lambda _=None: self._adjust_height()
+            )
+            self.textChanged.connect(self._adjust_height)
+            self._adjust_height()
 
     def _line_px(self):
         return max(1, self.fontMetrics().lineSpacing())
@@ -2161,13 +2173,20 @@ class FooterPensierinoEdit(QTextEdit):
 class AnalogClock(QWidget):
     """Orologio analogico che si aggiorna ogni secondo."""
 
+    clicked = pyqtSignal()
+
     def __init__(self, parent=None, size=140):
         super().__init__(parent)
         self.setFixedSize(size, size)
-        self.setToolTip("Orologio")
+        self.setToolTip("Clicca per sentire l'ora")
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self._timer = QTimer(self)
         self._timer.timeout.connect(self.update)
         self._timer.start(1000)
+
+    def mousePressEvent(self, event):
+        self.clicked.emit()
+        event.accept()
 
     def paintEvent(self, event):
         from datetime import datetime
@@ -2214,6 +2233,317 @@ class AnalogClock(QWidget):
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor("#e53935"))
         painter.drawEllipse(QPointF(0, 0), 4, 4)
+
+
+class HandwritingCanvas(QWidget):
+    """Superficie di disegno: si disegna solo tenendo premuto il tasto 'D'.
+
+    Supporta pennelli di vario spessore, colori e forme (matita a mano libera,
+    linea, rettangolo, ellisse, gomma). Con la tavoletta grafica lo spessore
+    della matita segue la pressione.
+    """
+
+    def __init__(self, parent=None, width=720, height=300):
+        super().__init__(parent)
+        self.setMinimumSize(width, height)
+        self.setCursor(Qt.CursorShape.CrossCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        # Tracciamento del mouse: con 'D' premuto si disegna anche solo muovendo
+        # il cursore (utile col touchpad, senza dover tenere premuto un pulsante).
+        self.setMouseTracking(True)
+        self.image = QImage(width, height, QImage.Format.Format_RGB32)
+        self.image.fill(Qt.GlobalColor.white)
+
+        self.pen_color = QColor("#1a1a1a")
+        self.pen_width = 3
+        self.tool = "pencil"  # pencil, line, rect, ellipse, eraser
+
+        self._last = None
+        self._start = None
+        self._preview_end = None
+        self._draw_enabled = False  # True mentre si tiene premuto 'D'
+
+    # --- Configurazione strumenti ---
+    def set_color(self, color):
+        self.pen_color = QColor(color)
+
+    def set_width(self, width):
+        self.pen_width = int(width)
+
+    def set_tool(self, tool):
+        self.tool = tool
+
+    def _make_pen(self, width=None):
+        colore = QColor("#ffffff") if self.tool == "eraser" else self.pen_color
+        spessore = width if width is not None else self.pen_width
+        if self.tool == "eraser":
+            spessore = max(spessore, self.pen_width) * 4
+        return QPen(
+            colore, spessore,
+            Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin,
+        )
+
+    # --- Abilitazione con il tasto 'D' ---
+    def enterEvent(self, event):
+        self.setFocus()
+        super().enterEvent(event)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_D:
+            self._draw_enabled = True
+            self._last = None  # nuovo tratto pulito quando si preme D
+        else:
+            super().keyPressEvent(event)
+
+    def leaveEvent(self, event):
+        # Interrompe il tratto quando il cursore esce dall'area
+        self._last = None
+        super().leaveEvent(event)
+
+    def keyReleaseEvent(self, event):
+        if event.key() == Qt.Key.Key_D and not event.isAutoRepeat():
+            self._draw_enabled = False
+            self._last = None
+            self._start = None
+            self._preview_end = None
+            self.update()
+        else:
+            super().keyReleaseEvent(event)
+
+    # --- Disegno ---
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.drawImage(0, 0, self.image)
+        # Anteprima della forma mentre la si traccia
+        if self.tool in ("line", "rect", "ellipse") and self._start and self._preview_end:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setPen(self._make_pen())
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            self._paint_shape(painter, self._start, self._preview_end)
+
+    def _paint_shape(self, painter, a, b):
+        if self.tool == "line":
+            painter.drawLine(a, b)
+        elif self.tool == "rect":
+            painter.drawRect(QRect(a, b).normalized())
+        elif self.tool == "ellipse":
+            painter.drawEllipse(QRect(a, b).normalized())
+
+    def resizeEvent(self, event):
+        if self.width() > self.image.width() or self.height() > self.image.height():
+            nuova = QImage(
+                max(self.width(), self.image.width()),
+                max(self.height(), self.image.height()),
+                QImage.Format.Format_RGB32,
+            )
+            nuova.fill(Qt.GlobalColor.white)
+            painter = QPainter(nuova)
+            painter.drawImage(0, 0, self.image)
+            painter.end()
+            self.image = nuova
+        super().resizeEvent(event)
+
+    def _draw_to(self, point, width=None):
+        if self._last is None:
+            self._last = point
+            return
+        painter = QPainter(self.image)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(self._make_pen(width))
+        painter.drawLine(self._last, point)
+        painter.end()
+        self._last = point
+        self.update()
+
+    def mousePressEvent(self, event):
+        if not self._draw_enabled:
+            return
+        point = event.position().toPoint()
+        if self.tool in ("pencil", "eraser"):
+            self._last = point
+        else:
+            self._start = point
+            self._preview_end = point
+
+    def mouseMoveEvent(self, event):
+        if not self._draw_enabled:
+            return
+        point = event.position().toPoint()
+        if self.tool in ("pencil", "eraser"):
+            # Con 'D' premuto disegna sia trascinando col pulsante sinistro
+            # (mouse/touchpad) sia semplicemente muovendo il cursore.
+            self._draw_to(point)
+        elif self._start is not None:
+            self._preview_end = point
+            self.update()
+
+    def mouseReleaseEvent(self, event):
+        if not self._draw_enabled:
+            return
+        point = event.position().toPoint()
+        if self.tool in ("pencil", "eraser"):
+            self._last = None
+        elif self._start is not None:
+            painter = QPainter(self.image)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setPen(self._make_pen())
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            self._paint_shape(painter, self._start, point)
+            painter.end()
+            self._start = None
+            self._preview_end = None
+            self.update()
+
+    def tabletEvent(self, event):
+        # Con la tavoletta la matita segue la pressione; richiede sempre 'D'
+        if not self._draw_enabled or self.tool not in ("pencil", "eraser"):
+            event.accept()
+            return
+        point = event.position().toPoint()
+        t = event.type()
+        if t == QEvent.Type.TabletPress:
+            self._last = point
+        elif t == QEvent.Type.TabletMove:
+            self._draw_to(point, width=max(1.0, event.pressure() * 6.0))
+        elif t == QEvent.Type.TabletRelease:
+            self._last = None
+        event.accept()
+
+    def clear(self):
+        self.image.fill(Qt.GlobalColor.white)
+        self.update()
+
+
+class DrawingWidget(QWidget):
+    """Canvas di disegno con barra strumenti: colori, pennelli e forme."""
+
+    def __init__(self, parent=None, width=720, height=280, compact=False):
+        super().__init__(parent)
+        from PyQt6.QtWidgets import QComboBox
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+
+        self.canvas = HandwritingCanvas(width=width, height=height)
+
+        toolbar = QHBoxLayout()
+        toolbar.setSpacing(3)
+
+        # Colori rapidi
+        for nome, hexc in (
+            ("Nero", "#1a1a1a"), ("Rosso", "#e53935"),
+            ("Blu", "#1565c0"), ("Verde", "#2e7d32"), ("Arancio", "#e65100"),
+        ):
+            b = QPushButton()
+            b.setFixedSize(22, 22)
+            b.setStyleSheet(
+                f"background:{hexc}; border:1px solid #999; border-radius:4px;"
+            )
+            b.setToolTip(f"Colore: {nome}")
+            b.clicked.connect(lambda _=False, c=hexc: self.canvas.set_color(c))
+            toolbar.addWidget(b)
+        color_btn = QPushButton("🎨")
+        color_btn.setFixedWidth(30)
+        color_btn.setToolTip("Scegli un altro colore")
+        color_btn.clicked.connect(self._pick_color)
+        toolbar.addWidget(color_btn)
+
+        toolbar.addSpacing(8)
+
+        # Strumenti / forme
+        for label, tool, tip in (
+            ("✏️", "pencil", "Matita (mano libera)"),
+            ("➖", "line", "Linea"),
+            ("▭", "rect", "Rettangolo"),
+            ("⬭", "ellipse", "Ellisse"),
+            ("🧽", "eraser", "Gomma"),
+        ):
+            b = QPushButton(label)
+            b.setFixedWidth(32)
+            b.setToolTip(tip)
+            b.clicked.connect(lambda _=False, t=tool: self.canvas.set_tool(t))
+            toolbar.addWidget(b)
+
+        toolbar.addSpacing(8)
+
+        # Spessore pennello
+        self.width_combo = QComboBox()
+        for wpx in (2, 3, 5, 8, 12, 18):
+            self.width_combo.addItem(f"{wpx}px", wpx)
+        self.width_combo.setCurrentIndex(1)
+        self.width_combo.setToolTip("Spessore del pennello")
+        self.width_combo.currentIndexChanged.connect(
+            lambda _i: self.canvas.set_width(self.width_combo.currentData())
+        )
+        toolbar.addWidget(self.width_combo)
+
+        toolbar.addStretch()
+        hint = QLabel("Tieni premuto  D  per disegnare")
+        hint.setStyleSheet("color:#888; font-size:10px;")
+        toolbar.addWidget(hint)
+
+        layout.addLayout(toolbar)
+        layout.addWidget(self.canvas, 1)
+
+    def _pick_color(self):
+        from PyQt6.QtWidgets import QColorDialog
+
+        c = QColorDialog.getColor(self.canvas.pen_color, self, "Scegli colore")
+        if c.isValid():
+            self.canvas.set_color(c.name())
+
+    def clear(self):
+        self.canvas.clear()
+
+
+class HandwritingTabletDialog(QDialog):
+    """Tavoletta per esercitarsi a scrivere il proprio nome/cognome a mano."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("✍️ Tavoletta - scrittura a mano libera")
+        self.resize(780, 480)
+        self.saved_path = None
+
+        layout = QVBoxLayout(self)
+        info = QLabel(
+            "Scrivi o disegna a mano libera (mouse o tavoletta grafica). "
+            "Tieni premuto il tasto D per disegnare; scegli colore, pennello e forma "
+            "dalla barra strumenti."
+        )
+        info.setWordWrap(True)
+        layout.addWidget(info)
+
+        self.drawing = DrawingWidget(width=720, height=320)
+        self.canvas = self.drawing.canvas
+        self.canvas.setStyleSheet("border: 1px solid #adb5bd; border-radius: 6px;")
+        layout.addWidget(self.drawing, 1)
+
+        buttons = QHBoxLayout()
+        clear_btn = QPushButton("🧽 Pulisci")
+        clear_btn.clicked.connect(self.canvas.clear)
+        save_btn = QPushButton("💾 Salva immagine")
+        save_btn.clicked.connect(self._save_image)
+        close_btn = QPushButton("Chiudi")
+        close_btn.clicked.connect(self.accept)
+        buttons.addWidget(clear_btn)
+        buttons.addWidget(save_btn)
+        buttons.addStretch()
+        buttons.addWidget(close_btn)
+        layout.addLayout(buttons)
+
+    def _save_image(self):
+        from PyQt6.QtWidgets import QFileDialog
+
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Salva la tua scrittura", "scrittura.png", "Immagine PNG (*.png)"
+        )
+        if path:
+            if not path.lower().endswith(".png"):
+                path += ".png"
+            self.canvas.image.save(path, "PNG")
+            self.saved_path = path
 
 
 class MainWindow(QMainWindow):
@@ -2264,40 +2594,79 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(1000, lambda: self.log_ui_metrics("INITIAL_SETUP"))
 
     def update_project_name_input_style(self):
-        """Aggiorna lo stile del campo nome progetto in base al contenuto."""
-        if self.project_name_input.text().strip():
-            # Campo con contenuto: placeholder diverso e sfondo semi-trasparente
-            self.project_name_input.setPlaceholderText("Inserisci nome progetto")
-            self.project_name_input.setStyleSheet(
-                """
-                QLineEdit {
-                    background: rgba(40, 167, 69, 0.1);
-                    border: 1px solid #28a745;
-                    border-radius: 4px;
-                    padding: 4px 8px;
-                    color: #155724;
-                    font-weight: bold;
-                }
-            """
+        """Deprecato: il campo nome progetto è stato rimosso."""
+        return
+
+    def toggle_input_mode(self):
+        """Alterna l'input tra tastiera (testo) e canvas (scrittura/disegno a mano)."""
+        if not hasattr(self, "footer_input_stack"):
+            return
+        if self.footer_input_stack.currentIndex() == 0:
+            self.footer_input_stack.setCurrentIndex(1)  # canvas
+            self.toggle_input_mode_button.setText("⌨️ Testo")
+            self.set_status_message(
+                "🖊️ Modalità scrittura/disegno a mano: invia per convertirla in testo"
             )
         else:
-            # Campo vuoto: placeholder originale e sfondo normale
-            self.project_name_input.setPlaceholderText("Nome progetto...")
-            self.project_name_input.setStyleSheet(
-                """
-                QLineEdit {
-                    background: rgba(255, 255, 255, 0.95);
-                    border: 1px solid #dee2e6;
-                    border-radius: 4px;
-                    padding: 4px 8px;
-                    color: #495057;
-                }
-            """
-            )
+            self.footer_input_stack.setCurrentIndex(0)  # testo
+            self.toggle_input_mode_button.setText("🖊️ Canvas")
+            self.set_status_message("⌨️ Modalità tastiera")
+
+    def _send_canvas_pensierino(self):
+        """Invia il contenuto del canvas: l'OCR locale lo converte in testo pulito."""
+        import os
+        import tempfile
+
+        from UI.draggable_text_widget import DraggableTextWidget as _DTW
+
+        canvas = self.footer_canvas
+        tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+        canvas.image.save(tmp.name, "PNG")
+
+        self.set_status_message("🔎 Conversione della scrittura in testo (OCR)...")
+        testo = ""
+        try:
+            from core.document_tools import ocr_image
+
+            testo = ocr_image(tmp.name)
+        except Exception as e:
+            self.add_message(f"OCR non disponibile: {e}", "error")
+
+        if testo:
+            if _DTW and hasattr(self, "pensierini_layout"):
+                self.pensierini_layout.addWidget(_DTW(testo, self.settings))
+            self.set_status_message(f"✅ Scrittura convertita in testo: {testo[:40]}")
+            self.add_message("Scrittura a mano convertita in testo (OCR)", "info")
+        else:
+            # Nessun testo (probabilmente un disegno): salva l'immagine e la referenzia
+            try:
+                scribbles = "Save/scritture_a_mano"
+                os.makedirs(scribbles, exist_ok=True)
+                from datetime import datetime
+
+                nome = f"scrittura_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                dest = os.path.join(scribbles, nome)
+                canvas.image.save(dest, "PNG")
+                if _DTW and hasattr(self, "pensierini_layout"):
+                    self.pensierini_layout.addWidget(
+                        _DTW(f"🖊️ Disegno: {nome}", self.settings)
+                    )
+                self.set_status_message(f"🖊️ Disegno salvato: {nome}")
+            except Exception as e:
+                self.add_message(f"Errore salvando il disegno: {e}", "error")
+        canvas.clear()
 
     def send_footer_pensierino(self):
         """Invia un pensierino dalla sezione footer alla colonna A (pensierini)."""
         try:
+            # Modalità canvas: converte la scrittura a mano in testo (OCR)
+            if (
+                hasattr(self, "footer_input_stack")
+                and self.footer_input_stack.currentIndex() == 1
+            ):
+                self._send_canvas_pensierino()
+                return
+
             # Ottieni il testo dal campo footer
             text = self.footer_pensierini_input.toPlainText().strip()
 
@@ -2946,7 +3315,7 @@ class MainWindow(QMainWindow):
 
         # Menu semplificato: solo Trascrizione e Materie
         # (Utilità e IoT rimossi; AI e Media rimosso in precedenza)
-        self.transcription_btn = QPushButton("🎤  Trascrizione")
+        self.transcription_btn = QPushButton("✍️  Tavoletta")
         self.transcription_btn.setCheckable(True)
         self.transcription_btn.setStyleSheet(menu_button_style)
 
@@ -2993,18 +3362,25 @@ class MainWindow(QMainWindow):
         return main_widget
 
     def create_transcription_tab(self):
-        """Crea la scheda Trascrizione con stile unificato"""
+        """Crea la scheda Tavoletta: esercizio di scrittura a mano libera.
+
+        Le funzioni Voce/Audio/OCR sono state incorporate nel pulsante "Allega".
+        """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setSpacing(6)  # Spaziatura unificata
-        layout.setContentsMargins(12, 12, 12, 12)  # Margini unificati
+        layout.setSpacing(8)
+        layout.setContentsMargins(12, 12, 12, 12)
 
-        layout.addWidget(self.voice_button)
-        layout.addWidget(self.audio_transcription_button)
-        layout.addWidget(self.ocr_button)
+        descrizione = QLabel(
+            "✍️ Esercitati con la scrittura a mano libera usando una tavoletta grafica."
+        )
+        descrizione.setWordWrap(True)
+        descrizione.setStyleSheet("color: #495057; font-size: 12px;")
+        layout.addWidget(descrizione)
+
         layout.addWidget(self.graphics_tablet_button)
 
-        layout.addStretch()  # Spazio flessibile unificato
+        layout.addStretch()
         return widget
 
     def create_ai_media_tab(self):
@@ -3135,9 +3511,12 @@ class MainWindow(QMainWindow):
         self.ocr_button.setMinimumWidth(140)
         self.ocr_button.clicked.connect(self.handle_ocr_button)
 
-        self.graphics_tablet_button = QPushButton("🎨 Tavoletta")
+        self.graphics_tablet_button = QPushButton("✍️ Apri tavoletta")
         self.graphics_tablet_button.setObjectName("graphics_tablet_button")
         self.graphics_tablet_button.setMinimumWidth(140)
+        self.graphics_tablet_button.setToolTip(
+            "Esercizio di scrittura a mano libera con tavoletta grafica"
+        )
         self.graphics_tablet_button.clicked.connect(self.handle_graphics_tablet_button)
 
         # Crea pulsanti AI e media
@@ -3216,7 +3595,7 @@ class MainWindow(QMainWindow):
 
             # Aggiorna il testo del pulsante
             if hasattr(self, "toggle_tools_button"):
-                self.toggle_tools_button.setText("🔧\nCassetta\ndegli\nattrezzi")
+                self.toggle_tools_button.setText("🔧 Strumenti")
 
             # Salva nelle preferenze
             self.settings["ui"] = self.settings.get("ui", {})
@@ -3236,7 +3615,7 @@ class MainWindow(QMainWindow):
 
             # Aggiorna il testo del pulsante
             if hasattr(self, "toggle_tools_button"):
-                self.toggle_tools_button.setText("🔧\nCassetta\ndegli\nattrezzi")
+                self.toggle_tools_button.setText("🔧 Strumenti")
 
             # Salva nelle preferenze
             self.settings["ui"] = self.settings.get("ui", {})
@@ -3727,6 +4106,57 @@ class MainWindow(QMainWindow):
         "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
         "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
     ]
+    _GIORNI_IT = [
+        "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica",
+    ]
+
+    def _speak(self, text):
+        """Pronuncia il testo ad alta voce in italiano, senza bloccare la UI.
+
+        Interrompe l'eventuale frase precedente per evitare sovrapposizioni.
+        """
+        import shutil
+        import subprocess
+
+        # Ferma una lettura precedente ancora in corso
+        prev = getattr(self, "_tts_process", None)
+        if prev is not None and prev.poll() is None:
+            try:
+                prev.terminate()
+            except Exception:
+                pass
+
+        try:
+            exe = shutil.which("espeak-ng") or shutil.which("espeak")
+            if exe:
+                self._tts_process = subprocess.Popen(
+                    [exe, "-v", "it", "-s", "150", text],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                return
+        except Exception as e:
+            self.add_message(f"Sintesi vocale non disponibile: {e}", "warning")
+
+    def speak_current_time(self):
+        """Dice ad alta voce solo l'ora corrente, es. 'Sono le ore 23:08'."""
+        from datetime import datetime
+
+        now = datetime.now()
+        frase = f"Sono le ore {now.hour}:{now.minute:02d}"
+        self.set_status_message(f"🔊 {frase}")
+        self._speak(frase)
+
+    def speak_current_date(self):
+        """Dice ad alta voce la data corrente, es. 'Oggi è Domenica 12 Luglio 2026'."""
+        from datetime import datetime
+
+        now = datetime.now()
+        giorno = self._GIORNI_IT[now.weekday()]
+        mese = self._MESI_IT[now.month - 1]
+        frase = f"Oggi è {giorno} {now.day} {mese} {now.year}"
+        self.set_status_message(f"🔊 {frase}")
+        self._speak(frase)
 
     def _update_time_labels(self):
         """Aggiorna l'orario: ora numerica sotto l'orologio, data breve ed estesa."""
@@ -3876,13 +4306,8 @@ class MainWindow(QMainWindow):
         self.messages_button.clicked.connect(self.show_messages_dialog)
         top_layout.addWidget(self.messages_button)
 
-        top_layout.addStretch()
-        self.project_name_input = QLineEdit()
-        self.project_name_input.setPlaceholderText("Nome progetto...")
-        self.project_name_input.textChanged.connect(
-            self.update_project_name_input_style
-        )
-        top_layout.addWidget(self.project_name_input)
+        # Il campo "Nome progetto" è stato rimosso: il nome viene dedotto dal
+        # contenuto al momento del salvataggio (finestra "Salva con nome").
         top_layout.addStretch()
 
         self.save_button = QPushButton("💾 Salva")
@@ -3901,11 +4326,11 @@ class MainWindow(QMainWindow):
         self.webcam_button = QPushButton("📹")
         self.webcam_button.setObjectName("webcam_button")
         self.webcam_button.setCheckable(True)
-        self.webcam_button.setMinimumHeight(28)
-        self.webcam_button.setFixedWidth(48)
+        self.webcam_button.setMinimumHeight(50)
+        self.webcam_button.setFixedWidth(72)
         self.webcam_button.clicked.connect(self.toggle_webcam)
         self.webcam_button.setToolTip("Attiva/disattiva webcam in modalità speculare")
-        webcam_font_size = self.settings.get("fonts", {}).get("main_font_size", 13) - 1
+        webcam_font_size = self.settings.get("fonts", {}).get("main_font_size", 13) + 8
         self.webcam_button.setStyleSheet(
             f"""
             QPushButton#webcam_button {{
@@ -4127,9 +4552,12 @@ class MainWindow(QMainWindow):
         self.ocr_button.clicked.connect(self.handle_ocr_button)
         transcription_layout.addWidget(self.ocr_button)
 
-        self.graphics_tablet_button = QPushButton("🎨 Tavoletta")
+        self.graphics_tablet_button = QPushButton("✍️ Apri tavoletta")
         self.graphics_tablet_button.setObjectName("graphics_tablet_button")
         self.graphics_tablet_button.setMinimumWidth(140)
+        self.graphics_tablet_button.setToolTip(
+            "Esercizio di scrittura a mano libera con tavoletta grafica"
+        )
         self.graphics_tablet_button.clicked.connect(self.handle_graphics_tablet_button)
         transcription_layout.addWidget(self.graphics_tablet_button)
 
@@ -4367,7 +4795,7 @@ class MainWindow(QMainWindow):
         # Update button states
         if hasattr(self, "toggle_tools_button"):
             self.toggle_tools_button.setChecked(tools_visible)
-            self.toggle_tools_button.setText("🔧\nCassetta\ndegli\nattrezzi")
+            self.toggle_tools_button.setText("🔧 Strumenti")
 
         # Add vertical splitter to main layout
         main_layout.addWidget(vertical_splitter, 1)
@@ -4424,8 +4852,10 @@ class MainWindow(QMainWindow):
         pensierini_footer_layout = QHBoxLayout()
         pensierini_footer_layout.setSpacing(8)
 
-        # Campo di testo multiriga che si espande verso l'alto col contenuto
-        self.footer_pensierini_input = FooterPensierinoEdit(min_lines=1, max_lines=12)
+        # Campo di testo ampio che riempie lo spazio disponibile del footer
+        self.footer_pensierini_input = FooterPensierinoEdit(
+            min_lines=6, max_lines=20, expand_to_fill=True
+        )
         self.footer_pensierini_input.setPlaceholderText(
             "💭 Scrivi pensierino rapido..."
         )
@@ -4456,19 +4886,36 @@ class MainWindow(QMainWindow):
             self.send_footer_pensierino
         )
 
-        # Pulsante "Cassetta degli attrezzi" a sinistra del campo pensierino,
-        # testo su più righe (una parola per riga) centrato.
-        self.toggle_tools_button = QPushButton("🔧\nCassetta\ndegli\nattrezzi")
+        # Canvas alternativo: scrivere/disegnare a mano invece di digitare.
+        # Con il pulsante "Testo/Canvas" si passa dall'uno all'altro; inviando
+        # il canvas, l'AI (OCR locale) converte la scrittura in testo pulito.
+        self.footer_drawing = DrawingWidget(width=200, height=100)
+        self.footer_drawing.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
+        # Riferimento diretto al canvas per OCR/salvataggio
+        self.footer_canvas = self.footer_drawing.canvas
+
+        from PyQt6.QtWidgets import QStackedWidget
+
+        self.footer_input_stack = QStackedWidget()
+        self.footer_input_stack.addWidget(self.footer_pensierini_input)  # 0 = testo
+        self.footer_input_stack.addWidget(self.footer_drawing)  # 1 = canvas
+        # Riempie tutto lo spazio libero del footer (orizzontale e verticale)
+        self.footer_input_stack.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
+        self.footer_input_stack.setMinimumHeight(150)
+
+        # Pulsante "Strumenti" (ex Cassetta degli attrezzi): collocato nella
+        # colonna a destra, sotto "Canvas".
+        self.toggle_tools_button = QPushButton("🔧 Strumenti")
         self.toggle_tools_button.setObjectName("toggle_tools_button")
         self.toggle_tools_button.setCheckable(True)
-        self.toggle_tools_button.setMinimumHeight(32)
-        self.toggle_tools_button.setStyleSheet(
-            "QPushButton#toggle_tools_button { text-align: center; }"
-        )
+        self.toggle_tools_button.setMinimumHeight(28)
         self.toggle_tools_button.clicked.connect(self.toggle_tools_panel)
-        pensierini_footer_layout.addWidget(self.toggle_tools_button)
 
-        pensierini_footer_layout.addWidget(self.footer_pensierini_input)
+        pensierini_footer_layout.addWidget(self.footer_input_stack, 1)
 
         # Pulsante invio per pensierini
         self.footer_send_pensierino_button = QPushButton("📤 Invia")
@@ -4567,7 +5014,32 @@ class MainWindow(QMainWindow):
             self.clear_all_pensierini_with_confirmation
         )
 
-        # Riga superiore: Invia + graffetta; sotto: Cancella pensierini
+        # Pulsante per passare da input testo a canvas (scrittura/disegno a mano)
+        self.toggle_input_mode_button = QPushButton("🖊️ Canvas")
+        self.toggle_input_mode_button.setMinimumHeight(28)
+        self.toggle_input_mode_button.setToolTip(
+            "Passa da tastiera a scrittura/disegno a mano.\n"
+            "Inviando il canvas, l'AI (OCR locale) converte la tua scrittura in "
+            "testo pulito per prendere appunti più facilmente."
+        )
+        self.toggle_input_mode_button.setStyleSheet(
+            """
+            QPushButton {
+                background: rgba(255, 255, 255, 0.95);
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: bold;
+                color: #495057;
+                padding: 4px 8px;
+            }
+            QPushButton:hover { border-color: #4a90e2; background: #f1f7ff; }
+            QPushButton:pressed { background: #e2ecff; }
+        """
+        )
+        self.toggle_input_mode_button.clicked.connect(self.toggle_input_mode)
+
+        # Riga superiore: Invia + graffetta; sotto: Canvas e Cancella pensierini
         send_top_row = QHBoxLayout()
         send_top_row.setSpacing(4)
         send_top_row.addWidget(self.footer_send_pensierino_button)
@@ -4576,6 +5048,8 @@ class MainWindow(QMainWindow):
         send_column_layout = QVBoxLayout()
         send_column_layout.setSpacing(4)
         send_column_layout.addLayout(send_top_row)
+        send_column_layout.addWidget(self.toggle_input_mode_button)
+        send_column_layout.addWidget(self.toggle_tools_button)  # Strumenti sotto Canvas
         send_column_layout.addWidget(self.clear_all_button)
         pensierini_footer_layout.addLayout(send_column_layout)
 
@@ -4586,7 +5060,15 @@ class MainWindow(QMainWindow):
         # ed estesa e la forma discorsiva. "Clicca su un elemento" è nel piè
         # di pagina in fondo.
         self.analog_clock = AnalogClock(size=66)
+        # Click sull'orologio: dice l'ora ad alta voce
+        self.analog_clock.clicked.connect(self.speak_current_time)
         self.left_time_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        # Click sulla data/orario: dice la data ad alta voce
+        self.left_time_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.left_time_label.setToolTip("Clicca per sentire la data")
+        self.left_time_label.mousePressEvent = (
+            lambda event: self.speak_current_date()
+        )
         time_column_layout = QVBoxLayout()
         time_column_layout.setSpacing(2)
         time_column_layout.addWidget(
@@ -8264,65 +8746,85 @@ ESEMPI:
         except Exception:
             logging.error("Errore pulizia area: {e}")
 
+    def _suggest_project_name(self, project_data):
+        """Deduce un nome per il progetto dal contenuto (primo testo utile)."""
+        import re
+
+        testo = ""
+        for chiave in ("workspace", "pensierini"):
+            for elem in project_data.get(chiave, []):
+                t = (elem.get("text") or "").strip()
+                if t:
+                    testo = t
+                    break
+            if testo:
+                break
+        if not testo:
+            return f"progetto_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        # Prime parole, ripulite per un nome file valido
+        parole = re.sub(r"[^\w\s-]", "", testo).split()
+        nome = "_".join(parole[:5]) or "progetto"
+        return nome[:50]
+
     def save_project(self):
-        """Salva il progetto corrente (colonne 1 e 2)."""
-        # Prevent multiple saves by disabling the button
+        """Salva il progetto: chiede dove salvarlo e deduce il nome dal contenuto."""
+        from PyQt6.QtWidgets import QFileDialog
+
         self.save_button.setEnabled(False)
         self.save_button.setText("💾 Salvataggio...")
 
         try:
-            # Ottieni il nome del progetto
-            project_name = self.project_name_input.text().strip()
-            if not project_name:
-                project_name = "progetto_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-
-            # Crea directory progetti se non esiste
-            projects_dir = "Save/mia_dispenda_progetti"
-            if not os.path.exists(projects_dir):
-                os.makedirs(projects_dir, exist_ok=True)
-
-            # Prepara dati da salvare
+            # Prepara i dati da salvare (colonne A e B)
             project_data = {
                 "metadata": {
-                    "name": project_name,
+                    "name": "",
                     "created": datetime.now().isoformat(),
                     "version": "1.0",
                 },
-                "pensierini": [],  # Colonna 1
-                "workspace": [],  # Colonna 2
+                "pensierini": [],
+                "workspace": [],
             }
 
-            # Salva pensierini dalla colonna 1
             for i in range(self.pensierini_layout.count()):
                 item = self.pensierini_layout.itemAt(i)
-                if item:
-                    widget = item.widget()
-                    if widget and hasattr(widget, "text_label"):
-                        text_label = getattr(widget, "text_label", None)
-                        if text_label and hasattr(text_label, "text"):
-                            text = text_label.text()
-                            if text.strip():
-                                project_data["pensierini"].append(
-                                    {"text": text, "order": i}
-                                )
+                widget = item.widget() if item else None
+                text_label = getattr(widget, "text_label", None) if widget else None
+                if text_label is not None and text_label.text().strip():
+                    project_data["pensierini"].append(
+                        {"text": text_label.text(), "order": i}
+                    )
 
-            # Salva workspace dalla colonna 2
             for i in range(self.work_area_layout.count()):
                 item = self.work_area_layout.itemAt(i)
-                if item:
-                    widget = item.widget()
-                    if widget and hasattr(widget, "text_label"):
-                        text_label = getattr(widget, "text_label", None)
-                        if text_label and hasattr(text_label, "text"):
-                            text = text_label.text()
-                            if text.strip():
-                                project_data["workspace"].append(
-                                    {"text": text, "order": i}
-                                )
+                widget = item.widget() if item else None
+                text_label = getattr(widget, "text_label", None) if widget else None
+                if text_label is not None and text_label.text().strip():
+                    project_data["workspace"].append(
+                        {"text": text_label.text(), "order": i}
+                    )
 
-            # Salva file
-            filename = "{project_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            filepath = os.path.join(projects_dir, filename)
+            # Nome dedotto dal contenuto (proposto come nome file predefinito)
+            nome_suggerito = self._suggest_project_name(project_data)
+
+            projects_dir = "Save/mia_dispenda_progetti"
+            os.makedirs(projects_dir, exist_ok=True)
+            default_path = os.path.join(projects_dir, f"{nome_suggerito}.json")
+
+            # Chiede all'utente come/dove salvare
+            filepath, _ = QFileDialog.getSaveFileName(
+                self,
+                "Salva progetto",
+                default_path,
+                "Progetto CogniFlow (*.json)",
+            )
+            if not filepath:
+                return  # annullato
+            if not filepath.lower().endswith(".json"):
+                filepath += ".json"
+
+            # Il nome del progetto è dedotto dal file scelto
+            project_name = os.path.splitext(os.path.basename(filepath))[0]
+            project_data["metadata"]["name"] = project_name
 
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(project_data, f, indent=2, ensure_ascii=False)
@@ -8330,21 +8832,21 @@ ESEMPI:
             QMessageBox.information(
                 self,
                 "Salvataggio Completato",
-                "Progetto '{project_name}' salvato con successo!\n\n"
-                "File: {filename}\n"
-                "Pensierini: {len(project_data['pensierini'])}\n"
-                "Workspace: {len(project_data['workspace'])}",
+                f"Progetto '{project_name}' salvato con successo!\n\n"
+                f"File: {os.path.basename(filepath)}\n"
+                f"Pensierini: {len(project_data['pensierini'])}\n"
+                f"Workspace: {len(project_data['workspace'])}",
             )
+            self.set_status_message(f"💾 Progetto salvato: {project_name}")
+            logging.info(f"Progetto salvato: {filepath}")
 
-            logging.info("Progetto salvato: {filepath}")
-
-        except Exception:
+        except Exception as e:
+            self.add_message(f"Errore durante il salvataggio: {e}", "error")
             QMessageBox.critical(
-                self, "Errore Salvataggio", "Errore durante il salvataggio:\n{str(e)}"
+                self, "Errore Salvataggio", f"Errore durante il salvataggio:\n{e}"
             )
-            logging.error("Errore salvataggio progetto: {e}")
+            logging.error(f"Errore salvataggio progetto: {e}")
         finally:
-            # Re-enable the button
             self.save_button.setEnabled(True)
             self.save_button.setText("💾 Salva")
 
@@ -8484,13 +8986,11 @@ ESEMPI:
             if not project_data:
                 raise ValueError("File progetto vuoto o corrotto")
 
-            # Imposta nome progetto
+            # Nome progetto (mostrato nello stato, il campo dedicato è stato rimosso)
             project_name = project_data.get("metadata", {}).get(
                 "name", "Progetto Caricato"
             )
-            self.project_name_input.setText(project_name)
-            # Aggiorna lo stile del campo nome progetto
-            self.update_project_name_input_style()
+            self.set_status_message(f"📂 Progetto caricato: {project_name}")
 
             # Pulisci colonne esistenti
             self._clear_columns()
@@ -8927,18 +9427,11 @@ ESEMPI:
         )
 
     def handle_graphics_tablet_button(self):
-        """Gestisce il pulsante Tavoletta grafica - Funzionalità in sviluppo."""
-        QMessageBox.information(
-            self,
-            "🎨 Tavoletta grafica",
-            "🖼️ Funzionalità Tavoletta Grafica in Sviluppo\n\n"
-            "🎨 Questa sezione sarà dedicata a:\n"
-            "• Disegno digitale interattivo\n"
-            "• Editing immagini avanzato\n"
-            "• Strumenti artistici digitali\n"
-            "• Creazione grafica professionale\n\n"
-            "⚠️ Funzionalità attualmente in fase di implementazione",
-        )
+        """Apre la tavoletta per la scrittura a mano libera."""
+        dialog = HandwritingTabletDialog(self)
+        dialog.exec()
+        if getattr(dialog, "saved_path", None):
+            self.set_status_message(f"✍️ Scrittura salvata: {dialog.saved_path}")
 
     def handle_screen_share_button(self):
         """Gestisce il pulsante Condividi schermo - Funzionalità in sviluppo."""
