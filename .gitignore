@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Modelli vocali scaricabili (usa Opzioni → 📥 Download nell'app)
+assistente_dsa/Artificial_Intelligence/Riconoscimento_Vocale/models/vosk_models/
+
+# Dati utente e credenziali - MAI su git
+**/Save/AUTH/
+**/Save/LOG/
+**/Save/LOGS/
+/Save/
+.env
+*.env
+!.env.example
+
+# Cache e temporanei
+cache/
+*.cache
+*.log
+vlm_integration_test_report.txt
+
+# Backup e archivi locali
+ZIP_originale/
+backup_unused_files/
+
+# IDE e impostazioni locali
+.vscode/
+.idea/
+.claude/

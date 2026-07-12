@@ -1,0 +1,173 @@
+{
+  "installed_models": [
+    {
+      "name": "llava:7b",
+      "description": "Modello vision-language per riconoscimento immagini",
+      "category": "vision",
+      "use_cases": ["Riconoscimento immagini", "Descrizione scene", "Analisi documenti"],
+      "status": "installed"
+    },
+    {
+      "name": "Esperto_Python:latest",
+      "description": "Modello specializzato in Python e programmazione",
+      "category": "coding",
+      "use_cases": ["Generazione codice Python", "Debug", "Spiegazione algoritmi"],
+      "status": "installed"
+    },
+    {
+      "name": "davidanderson01/craftx:latest",
+      "description": "Modello versatile per compiti generali",
+      "category": "general",
+      "use_cases": ["Conversazione", "Analisi testi", "Supporto generale"],
+      "status": "installed"
+    },
+    {
+      "name": "yodamaleducato:latest",
+      "description": "Modello specializzato in italiano",
+      "category": "language",
+      "use_cases": ["Conversazione in italiano", "Traduzioni", "Contenuti italiani"],
+      "status": "installed"
+    },
+    {
+      "name": "Tonystark:latest",
+      "description": "Modello ispirato a Tony Stark/Jarvis",
+      "category": "assistant",
+      "use_cases": ["Assistente virtuale", "Conversazione tecnica", "Supporto"],
+      "status": "installed"
+    },
+    {
+      "name": "fotiecodes/jarvis:3b",
+      "description": "Modello Jarvis da 3B parametri",
+      "category": "assistant",
+      "use_cases": ["Assistente virtuale", "Automazione", "Supporto tecnico"],
+      "status": "installed"
+    },
+    {
+      "name": "maestroyoda:latest",
+      "description": "Modello con stile Yoda",
+      "category": "fun",
+      "use_cases": ["Conversazione divertente", "Stile unico", "Intrattenimento"],
+      "status": "installed"
+    },
+    {
+      "name": "supermariobros:latest",
+      "description": "Modello con tema Super Mario",
+      "category": "fun",
+      "use_cases": ["Conversazione tematica", "Intrattenimento", "Gaming"],
+      "status": "installed"
+    },
+    {
+      "name": "tinyllama:latest",
+      "description": "Modello leggero e veloce",
+      "category": "lightweight",
+      "use_cases": ["Test", "Sviluppo", "Dispositivi limitati"],
+      "status": "installed"
+    },
+    {
+      "name": "gemma:2b",
+      "description": "Modello Google Gemma da 2B parametri",
+      "category": "general",
+      "use_cases": ["Conversazione", "Analisi", "Ricerca"],
+      "status": "installed"
+    },
+    {
+      "name": "llama3.2:latest",
+      "description": "Ultima versione di Llama 3.2",
+      "category": "general",
+      "use_cases": ["Conversazione avanzata", "Analisi", "Creatività"],
+      "status": "installed"
+    },
+    {
+      "name": "felcon/llama-caude:latest",
+      "description": "Modello Llama specializzato",
+      "category": "general",
+      "use_cases": ["Conversazione", "Analisi", "Supporto"],
+      "status": "installed"
+    },
+    {
+      "name": "granite-code:3b",
+      "description": "Modello Granite per generazione codice",
+      "category": "coding",
+      "use_cases": ["Generazione codice", "Debug", "Documentazione"],
+      "status": "installed"
+    },
+    {
+      "name": "codegemma:2b",
+      "description": "Modello CodeGemma da 2B parametri",
+      "category": "coding",
+      "use_cases": ["Generazione codice", "Completamento", "Spiegazione"],
+      "status": "installed"
+    },
+    {
+      "name": "qwen2.5-coder:latest",
+      "description": "Modello Qwen2.5 specializzato in coding",
+      "category": "coding",
+      "use_cases": ["Generazione codice avanzata", "Debug complesso", "Architettura"],
+      "status": "installed"
+    },
+    {
+      "name": "qwen2.5-coder:3b",
+      "description": "Versione 3B di Qwen2.5 Coder",
+      "category": "coding",
+      "use_cases": ["Generazione codice", "Ottimizzazione", "Review"],
+      "status": "installed"
+    },
+    {
+      "name": "cas/nous-hermes-2-mistral-7b-dpo:latest",
+      "description": "Modello Nous Hermes basato su Mistral",
+      "category": "general",
+      "use_cases": ["Conversazione", "Ragionamento", "Analisi"],
+      "status": "installed"
+    },
+    {
+      "name": "GandalfBaum/mistralDAN:latest",
+      "description": "Modello MistralDAN",
+      "category": "general",
+      "use_cases": ["Conversazione", "Supporto", "Analisi"],
+      "status": "installed"
+    },
+    {
+      "name": "deepseek-r1:7b",
+      "description": "Modello DeepSeek R1 da 7B parametri",
+      "category": "general",
+      "use_cases": ["Ragionamento avanzato", "Analisi", "Ricerca"],
+      "status": "installed"
+    },
+    {
+      "name": "ollama:latest",
+      "description": "Modello base di Ollama",
+      "category": "general",
+      "use_cases": ["Test", "Base", "Sviluppo"],
+      "status": "installed"
+    },
+    {
+      "name": "gemma3:1b",
+      "description": "Modello Google Gemma3 da 1B parametri",
+      "category": "lightweight",
+      "use_cases": ["Test", "Dispositivi mobili", "Risposte rapide"],
+      "status": "installed"
+    }
+  ],
+  "categories": {
+    "vision": ["llava:7b"],
+    "coding": ["Esperto_Python:latest", "granite-code:3b", "codegemma:2b", "qwen2.5-coder:latest", "qwen2.5-coder:3b"],
+    "general": ["davidanderson01/craftx:latest", "gemma:2b", "llama3.2:latest", "felcon/llama-caude:latest", "cas/nous-hermes-2-mistral-7b-dpo:latest", "GandalfBaum/mistralDAN:latest", "deepseek-r1:7b", "ollama:latest"],
+    "language": ["yodamaleducato:latest"],
+    "assistant": ["Tonystark:latest", "fotiecodes/jarvis:3b"],
+    "fun": ["maestroyoda:latest", "supermariobros:latest"],
+    "lightweight": ["tinyllama:latest", "gemma3:1b"]
+  },
+  "recommended_for_dsa": {
+    "vision": "llava:7b",
+    "coding": "qwen2.5-coder:latest",
+    "general": "llama3.2:latest",
+    "italian": "yodamaleducato:latest",
+    "assistant": "fotiecodes/jarvis:3b",
+    "lightweight": "gemma3:1b"
+  },
+  "system_info": {
+    "total_models": 21,
+    "last_updated": "2025-01-08",
+    "ollama_version": "latest"
+  }
+}

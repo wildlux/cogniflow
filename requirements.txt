@@ -1,0 +1,48 @@
+# DSA Assistant - Requirements
+# Core dependencies
+PyQt6>=6.5.0
+psutil>=5.9.0
+requests>=2.31.0
+
+# AI and ML
+# ollama (external service, not pip installable)
+
+# Image processing
+Pillow>=10.0.0
+opencv-python>=4.8.0
+# pytesseract (external, requires tesseract-ocr system package)
+
+# Audio processing
+# vosk (external model files required)
+# pyaudio (system dependencies required)
+
+# Security and cryptography
+cryptography>=41.0.0
+
+# Development and testing
+pytest>=7.4.0
+flake8>=6.0.0
+mypy>=1.5.0
+
+# Optional but recommended
+typing-extensions>=4.7.0
+
+# Optional: MediaPipe services (richiede sistema specifico)
+flask>=2.0.0
+httpx>=0.25.0
+
+# MediaPipe - INSTALLAZIONE MANUALE RICHIESTA
+# ============================================
+# MediaPipe non può essere installato via pip su tutti i sistemi
+# a causa di dipendenze specifiche OS e compilazione richiesta.
+#
+# Per installare MediaPipe:
+# 1. Verifica requisiti sistema: https://developers.google.com/mediapipe/framework/getting_started/install
+# 2. Installa dipendenze OS necessarie
+# 3. Compila da sorgente o usa wheel precompilato se disponibile
+# 4. Repository: https://github.com/google-ai-edge/mediapipe
+#
+# Comando alternativo (se disponibile):
+# pip install mediapipe
+#
+# Nota: Il codice gestisce automaticamente l'assenza di MediaPipe

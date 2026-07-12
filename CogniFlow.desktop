@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=CogniFlow
+GenericName=Assistente DSA
+Comment=Organizzatore di idee con controllo a gesti e voce
+Exec=/home/wildlux/Desktop/COgniflow/avvia_cogniflow.sh
+Path=/home/wildlux/Desktop/COgniflow
+Icon=/home/wildlux/Desktop/COgniflow/assistente_dsa/ICO-fonts-wallpaper/ICONA.png
+Terminal=false
+Categories=Education;Accessibility;
+Keywords=DSA;dislessia;pensierini;gesti;webcam;accessibilità;
+StartupNotify=true
