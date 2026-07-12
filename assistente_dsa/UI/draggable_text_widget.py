@@ -82,35 +82,15 @@ class DraggableTextWidget(QFrame):
 
         button_layout = QVBoxLayout()
 
-        # Read button (now visible with orange color)
-        self.read_button = QPushButton("💬🔊")
+        # Pulsante unico Play/Pausa per la lettura ad alta voce (TTS)
+        self.read_button = QPushButton("▶️")
         self.read_button.setFixedSize(*BUTTON_DEFAULT_SIZE)
         self.read_button.setToolTip("Leggi ad alta voce")
-        self.read_button.clicked.connect(self.start_reading)
+        self.read_button.clicked.connect(self.toggle_reading)
         self.read_button.setStyleSheet(
             "background-color: #ff6600; color: white; border: 2px solid #ffaa00;"
         )
         self.read_button.show()
-
-        # Pause button (now visible with orange color)
-        self.pause_button = QPushButton("⏸️")
-        self.pause_button.setFixedSize(*BUTTON_DEFAULT_SIZE)
-        self.pause_button.setToolTip("Pausa")
-        self.pause_button.clicked.connect(self.pause_reading)
-        self.pause_button.setStyleSheet(
-            "background-color: #ff6600; color: white; border: 2px solid #ffaa00;"
-        )
-        self.pause_button.show()
-
-        # Stop button (now visible with orange color)
-        self.stop_button = QPushButton("⏹️")
-        self.stop_button.setFixedSize(*BUTTON_DEFAULT_SIZE)
-        self.stop_button.setToolTip("Ferma")
-        self.stop_button.clicked.connect(self.stop_reading)
-        self.stop_button.setStyleSheet(
-            "background-color: #ff6600; color: white; border: 2px solid #ffaa00;"
-        )
-        self.stop_button.show()
 
         self.edit_button = QPushButton("✏️")
         self.edit_button.setFixedSize(*BUTTON_DEFAULT_SIZE)
@@ -123,11 +103,12 @@ class DraggableTextWidget(QFrame):
         self.delete_button.clicked.connect(self.delete_self)
 
         button_layout.addWidget(self.read_button)
-        button_layout.addWidget(self.pause_button)
-        button_layout.addWidget(self.stop_button)
         button_layout.addWidget(self.edit_button)
         button_layout.addWidget(self.delete_button)
         layout.addLayout(button_layout)
+
+        self._tts_proc = None
+        self._tts_timer = None
 
         self.setAcceptDrops(True)
         self.start_pos = None
@@ -167,7 +148,7 @@ class DraggableTextWidget(QFrame):
             self,
             "Modifica Testo",
             "Modifica il contenuto del widget:",
-            self.text_label.text(),
+            self.plain_text(),
         )
         if ok and new_text.strip():
             self.text_label.setText(new_text.strip())
@@ -178,6 +159,16 @@ class DraggableTextWidget(QFrame):
         if a0 and a0.button() == Qt.MouseButton.LeftButton:
             self.start_pos = a0.pos()
         super().mousePressEvent(a0)
+
+    def _begin_drag(self):
+        """Avvia il trascinamento di questo pensierino verso un'altra colonna."""
+        drag = QDrag(self)
+        mime = QMimeData()
+        mime.setText(self.text_label.text())
+        mime.setData("application/x-draggable-widget", b"widget")
+        drag.setMimeData(mime)
+        drag.setPixmap(self.grab())
+        drag.exec(Qt.DropAction.CopyAction | Qt.DropAction.MoveAction)
 
     def mouseMoveEvent(self, a0):
         """Gestisce il movimento del mouse per il trascinamento."""
@@ -191,21 +182,10 @@ class DraggableTextWidget(QFrame):
             if current_pos.x() >= 0 and current_pos.y() >= 0:
                 distance = (current_pos - self.start_pos).manhattanLength()
                 if distance > DRAG_DISTANCE_THRESHOLD:
-                    # Annulla eventuali timer di click se attivi
                     if hasattr(self, "_click_timer") and self._click_timer.isActive():
                         self._click_timer.stop()
-
-                    drag = QDrag(self)
-                    mime = QMimeData()
-                    mime.setText(self.text_label.text())
-                    mime.setData("application/x-draggable-widget", b"widget")
-                    drag.setMimeData(mime)
-                    drag.setPixmap(self.grab())
-                    result = drag.exec(Qt.DropAction.MoveAction)
-                    if result == Qt.DropAction.MoveAction:
-                        # Non eliminare mai il widget originale - lascia sempre una copia
-                        # Il widget originale rimane al suo posto, viene solo creato un nuovo widget nella destinazione
-                        pass
+                    self.start_pos = None
+                    self._begin_drag()
         super().mouseMoveEvent(a0)
 
     def delete_self(self):
@@ -214,93 +194,98 @@ class DraggableTextWidget(QFrame):
         self.setParent(None)
         self.deleteLater()
 
-    def start_reading(self):
-        """Avvia la lettura del testo."""
+    def plain_text(self):
+        """Restituisce il solo testo leggibile, senza eventuale markup HTML
+        (i pensierini formattati contengono HTML per colori/dimensioni)."""
+        raw = self.text_label.text()
+        if "<" in raw and ">" in raw:
+            from PyQt6.QtGui import QTextDocument
+
+            doc = QTextDocument()
+            doc.setHtml(raw)
+            return doc.toPlainText().strip()
+        return raw
+
+    def toggle_reading(self):
+        """Un solo pulsante Play/Pausa: avvia o ferma la lettura ad alta voce."""
         if self.is_reading:
+            self._stop_reading()
+        else:
+            self._start_reading()
+
+    def _start_reading(self):
+        """Legge il testo (solo testo, non l'HTML) in modo non bloccante."""
+        import shutil
+        import subprocess
+
+        text = self.plain_text().strip()
+        if not text:
+            return
+
+        exe = shutil.which("espeak-ng") or shutil.which("espeak")
+        if not exe:
+            # Fallback: pyttsx3 (bloccante) se espeak non è disponibile
+            try:
+                if self.tts_engine is None:
+                    self.tts_engine = pyttsx3.init()
+                self.tts_engine.say(text)
+                self.tts_engine.runAndWait()
+            except Exception:
+                pass
             return
 
         try:
-            if self.tts_engine is None:
-                self.tts_engine = pyttsx3.init()
-
-            self.is_reading = True
-            self.is_paused = False
-
-            # Keep all buttons visible with orange color and enable pause/stop when reading
-            self.read_button.show()
-            self.pause_button.show()
-            self.stop_button.show()
-
-            # Abilita i pulsanti di pausa e stop durante la lettura
-            self.pause_button.setEnabled(True)
-            self.stop_button.setEnabled(True)
-            self.pause_button.setStyleSheet(
-                "background-color: #ff6600; color: white; border: 2px solid #ffaa00;"
+            self._tts_proc = subprocess.Popen(
+                [exe, "-v", "it", "-s", "150", text],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
-            self.stop_button.setStyleSheet(
-                "background-color: #ff6600; color: white; border: 2px solid #ffaa00;"
-            )
-
-            # Start reading
-            text_to_read = self.text_label.text()
-            self.tts_engine.say(text_to_read)
-            self.tts_engine.runAndWait()
-
-            # Reset when finished
-            self.reset_reading_buttons()
-
         except Exception:
-            QMessageBox.warning(
-                self, "Errore Lettura", "Errore durante la lettura: {str(e)}"
-            )
-            self.reset_reading_buttons()
-
-    def pause_reading(self):
-        """Mette in pausa o riprende la lettura."""
-        if self.tts_engine is None:
             return
 
-        if self.is_paused:
-            # Resume reading
-            self.tts_engine.runAndWait()
-            self.pause_button.setText("⏸️")
-            self.pause_button.setToolTip("Pausa")
-            self.is_paused = False
-        else:
-            # Pause reading
-            self.tts_engine.stop()
-            self.pause_button.setText("▶️")
-            self.pause_button.setToolTip("Riprendi")
-            self.is_paused = True
+        self.is_reading = True
+        self.read_button.setText("⏸️")
+        self.read_button.setToolTip("Pausa/Ferma la lettura")
+
+        from PyQt6.QtCore import QTimer
+
+        self._tts_timer = QTimer(self)
+        self._tts_timer.timeout.connect(self._check_reading_done)
+        self._tts_timer.start(300)
+
+    def _check_reading_done(self):
+        if self._tts_proc is None or self._tts_proc.poll() is not None:
+            self._stop_reading()
+
+    def _stop_reading(self):
+        """Ferma la lettura e ripristina il pulsante su Play."""
+        if self._tts_proc is not None and self._tts_proc.poll() is None:
+            try:
+                self._tts_proc.terminate()
+            except Exception:
+                pass
+        self._tts_proc = None
+        if self._tts_timer is not None:
+            self._tts_timer.stop()
+            self._tts_timer = None
+        if self.tts_engine:
+            try:
+                self.tts_engine.stop()
+            except Exception:
+                pass
+        self.is_reading = False
+        self.read_button.setText("▶️")
+        self.read_button.setToolTip("Leggi ad alta voce")
+
+    # Retrocompatibilità con eventuali chiamate esterne
+    def start_reading(self):
+        self._start_reading()
 
     def stop_reading(self):
-        """Ferma la lettura e ricomincia dall'inizio."""
-        if self.tts_engine:
-            self.tts_engine.stop()
-        self.reset_reading_buttons()
+        self._stop_reading()
 
     def reset_reading_buttons(self):
-        """Resetta i pulsanti di lettura allo stato iniziale."""
-        self.is_reading = False
-        self.is_paused = False
-
-        # Mantieni tutti i pulsanti sempre visibili con colore arancione
-        self.read_button.show()
-        self.pause_button.show()
-        self.stop_button.show()
-
-        # Disabilita i pulsanti di pausa e stop quando non si sta leggendo
-        self.pause_button.setEnabled(False)
-        self.stop_button.setEnabled(False)
-        self.pause_button.setText("⏸️")
-        self.pause_button.setToolTip("Pausa (disabilitato)")
-
-        # Aggiorna lo stile per mostrare lo stato disabilitato
-        disabled_style = (
-            "background-color: #ffaa00; color: #666; border: 2px solid #ffcc00;"
-        )
-        self.pause_button.setStyleSheet(disabled_style)
-        self.stop_button.setStyleSheet(disabled_style)
+        self._stop_reading()
 
     def toggle_selection(self):
         """Alterna lo stato di selezione del widget."""
@@ -712,6 +697,19 @@ class DraggableTextWidget(QFrame):
             ):
                 self._label_click_start = event.pos()
                 return False  # Non consumare l'evento
+
+            elif (
+                event.type() == event.Type.MouseMove
+                and (event.buttons() & Qt.MouseButton.LeftButton)
+                and hasattr(self, "_label_click_start")
+            ):
+                # Trascinamento avviato sopra il testo: avvia il drag del pensierino
+                distance = (event.pos() - self._label_click_start).manhattanLength()
+                if distance > DRAG_DISTANCE_THRESHOLD:
+                    delattr(self, "_label_click_start")
+                    self._begin_drag()
+                    return True  # consuma: stiamo trascinando
+                return False
 
             elif (
                 event.type() == event.Type.MouseButtonRelease

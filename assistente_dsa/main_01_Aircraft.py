@@ -39,6 +39,9 @@ from PyQt6.QtGui import (
     QPen,
     QMouseEvent,
     QImage,
+    QTextCharFormat,
+    QTextCursor,
+    QBrush,
 )
 from PyQt6.QtWidgets import (
     QApplication,
@@ -1632,8 +1635,16 @@ class WorkAreaWidget(QWidget):
                 or mime_data.hasFormat("application/x-draggable-widget")
             ):
                 a0.acceptProposedAction()
-                # Accetta sia MoveAction che CopyAction
-                a0.setDropAction(Qt.DropAction.CopyAction)
+
+    def dragMoveEvent(self, a0):
+        """Necessario perché Qt consenta il drop durante il movimento."""
+        if a0 is not None and hasattr(a0, "mimeData"):
+            mime_data = a0.mimeData()
+            if mime_data and (
+                mime_data.hasText()
+                or mime_data.hasFormat("application/x-draggable-widget")
+            ):
+                a0.acceptProposedAction()
 
     def dropEvent(self, a0):
         """Gestisce il drop creando un nuovo widget trascinabile."""
@@ -1687,10 +1698,21 @@ class PensieriniWidget(QWidget):
                 ):
                     if hasattr(a0, "acceptProposedAction"):
                         a0.acceptProposedAction()
-                    if hasattr(a0, "setDropAction"):
-                        a0.setDropAction(Qt.DropAction.CopyAction)
         except Exception:
             logging.error("Errore in dragEnterEvent: {e}")
+
+    def dragMoveEvent(self, a0):
+        """Necessario perché Qt consenta il drop durante il movimento."""
+        try:
+            if a0 and hasattr(a0, "mimeData") and a0.mimeData():
+                mime_data = a0.mimeData()
+                if mime_data and (
+                    mime_data.hasText()
+                    or mime_data.hasFormat("application/x-draggable-widget")
+                ):
+                    a0.acceptProposedAction()
+        except Exception:
+            pass
 
     def dropEvent(self, a0):
         """Gestisce il drop controllando se esiste già un widget con lo stesso testo."""
@@ -2443,8 +2465,17 @@ class DrawingWidget(QWidget):
             b.setToolTip(f"Colore: {nome}")
             b.clicked.connect(lambda _=False, c=hexc: self.canvas.set_color(c))
             toolbar.addWidget(b)
+        # Stile che sovrascrive il padding globale (8px 16px) che farebbe
+        # sparire l'icona nei pulsanti stretti.
+        tool_btn_style = (
+            "QPushButton { padding:2px 0px; min-height:24px; font-size:14px;"
+            " background:#ffffff; color:#2c3e50; border:1px solid #ccc;"
+            " border-radius:4px; }"
+            "QPushButton:hover { background:#eef4ff; border-color:#4a90e2; }"
+        )
         color_btn = QPushButton("🎨")
-        color_btn.setFixedWidth(30)
+        color_btn.setFixedWidth(34)
+        color_btn.setStyleSheet(tool_btn_style)
         color_btn.setToolTip("Scegli un altro colore")
         color_btn.clicked.connect(self._pick_color)
         toolbar.addWidget(color_btn)
@@ -2460,7 +2491,8 @@ class DrawingWidget(QWidget):
             ("🧽", "eraser", "Gomma"),
         ):
             b = QPushButton(label)
-            b.setFixedWidth(32)
+            b.setFixedWidth(36)
+            b.setStyleSheet(tool_btn_style)
             b.setToolTip(tip)
             b.clicked.connect(lambda _=False, t=tool: self.canvas.set_tool(t))
             toolbar.addWidget(b)
@@ -2495,6 +2527,111 @@ class DrawingWidget(QWidget):
 
     def clear(self):
         self.canvas.clear()
+
+
+class RichTextInputWidget(QWidget):
+    """Mini WordPad: campo di testo con barra per formattare il testo selezionato
+    (grassetto, corsivo, sottolineato, dimensione, colore)."""
+
+    def __init__(self, editor, parent=None):
+        super().__init__(parent)
+        self.editor = editor
+        self.editor.setAcceptRichText(True)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+
+        toolbar = QHBoxLayout()
+        toolbar.setSpacing(3)
+
+        def _btn(label, tip, slot, checkable=False, width=34, bold=False, italic=False):
+            b = QPushButton(label)
+            b.setToolTip(tip)
+            b.setFixedWidth(width)
+            b.setCheckable(checkable)
+            extra = ""
+            if bold:
+                extra += "font-weight:bold;"
+            if italic:
+                extra += "font-style:italic;"
+            # Padding piccolo per non far sparire il testo (lo stile globale usa
+            # padding 8px 16px, troppo grande per questi pulsanti stretti).
+            b.setStyleSheet(
+                "QPushButton {"
+                " background:#ffffff; color:#2c3e50;"
+                " border:1px solid #ccc; border-radius:4px;"
+                " padding:2px 0px; min-height:24px; font-size:13px;" + extra + " }"
+                "QPushButton:hover { background:#eef4ff; border-color:#4a90e2; }"
+                "QPushButton:checked { background:#d6e6ff; border-color:#2196f3;"
+                " color:#1565c0; }"
+            )
+            b.clicked.connect(slot)
+            toolbar.addWidget(b)
+            return b
+
+        self.bold_btn = _btn("B", "Grassetto", self._toggle_bold, checkable=True, bold=True)
+        self.italic_btn = _btn("I", "Corsivo", self._toggle_italic, checkable=True, italic=True)
+        self.underline_btn = _btn("U", "Sottolineato", self._toggle_underline, checkable=True)
+        toolbar.addSpacing(8)
+        _btn("A−", "Rimpicciolisci", lambda: self._change_size(-2), width=40)
+        _btn("A+", "Ingrandisci", lambda: self._change_size(+2), width=40)
+        toolbar.addSpacing(8)
+        color_btn = QPushButton("🎨 Colore")
+        color_btn.setToolTip("Colore del testo selezionato")
+        color_btn.setStyleSheet(
+            "QPushButton { padding:2px 8px; min-height:24px; color:#2c3e50;"
+            " background:#ffffff; border:1px solid #ccc; border-radius:4px; }"
+            "QPushButton:hover { background:#eef4ff; border-color:#4a90e2; }"
+        )
+        color_btn.clicked.connect(self._pick_color)
+        toolbar.addWidget(color_btn)
+        toolbar.addStretch()
+
+        layout.addLayout(toolbar)
+        layout.addWidget(self.editor, 1)
+
+    def _apply(self, fmt):
+        cursor = self.editor.textCursor()
+        cursor.mergeCharFormat(fmt)  # applica alla selezione
+        self.editor.mergeCurrentCharFormat(fmt)  # e al testo che verrà digitato
+        self.editor.setFocus()
+
+    def _toggle_bold(self):
+        fmt = QTextCharFormat()
+        fmt.setFontWeight(
+            QFont.Weight.Bold if self.bold_btn.isChecked() else QFont.Weight.Normal
+        )
+        self._apply(fmt)
+
+    def _toggle_italic(self):
+        fmt = QTextCharFormat()
+        fmt.setFontItalic(self.italic_btn.isChecked())
+        self._apply(fmt)
+
+    def _toggle_underline(self):
+        fmt = QTextCharFormat()
+        fmt.setFontUnderline(self.underline_btn.isChecked())
+        self._apply(fmt)
+
+    def _change_size(self, delta):
+        current = self.editor.currentCharFormat().fontPointSize()
+        if not current or current <= 0:
+            current = self.editor.font().pointSizeF()
+        if not current or current <= 0:
+            current = 12.0
+        fmt = QTextCharFormat()
+        fmt.setFontPointSize(max(6.0, current + delta))
+        self._apply(fmt)
+
+    def _pick_color(self):
+        from PyQt6.QtWidgets import QColorDialog
+
+        c = QColorDialog.getColor(QColor("#000000"), self, "Colore del testo")
+        if c.isValid():
+            fmt = QTextCharFormat()
+            fmt.setForeground(QBrush(c))
+            self._apply(fmt)
 
 
 class HandwritingTabletDialog(QDialog):
@@ -2544,6 +2681,82 @@ class HandwritingTabletDialog(QDialog):
                 path += ".png"
             self.canvas.image.save(path, "PNG")
             self.saved_path = path
+
+
+class TreeGraphWidget(QWidget):
+    """Disegna un riassunto come albero/grafo di nodi con i punti chiave.
+
+    Riceve una struttura annidata: {"text": str, "children": [ ... ]}.
+    """
+
+    NODE_W = 170
+    NODE_H = 46
+    H_GAP = 26
+    V_GAP = 56
+    _COLORS = ["#1565c0", "#2e7d32", "#e65100", "#6a1b9a", "#00838f", "#ad1457"]
+
+    def __init__(self, root, parent=None):
+        super().__init__(parent)
+        self.root = root
+        self._leaf = 0
+        self._max_depth = 0
+        self._assign(self.root, 0)
+        cols = max(1, self._leaf)
+        self._w = int(cols * (self.NODE_W + self.H_GAP) + self.H_GAP)
+        self._h = int((self._max_depth + 1) * (self.NODE_H + self.V_GAP) + self.V_GAP)
+        self.setMinimumSize(self._w, self._h)
+        self.setStyleSheet("background: #ffffff;")
+
+    def _assign(self, node, depth):
+        self._max_depth = max(self._max_depth, depth)
+        node["_depth"] = depth
+        children = node.get("children", [])
+        if not children:
+            node["_col"] = self._leaf
+            self._leaf += 1
+            return node["_col"]
+        cols = [self._assign(c, depth + 1) for c in children]
+        node["_col"] = sum(cols) / len(cols)
+        return node["_col"]
+
+    def _node_rect(self, node):
+        x = int(self.H_GAP + node["_col"] * (self.NODE_W + self.H_GAP))
+        y = int(self.V_GAP + node["_depth"] * (self.NODE_H + self.V_GAP))
+        return QRect(x, y, self.NODE_W, self.NODE_H)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.fillRect(self.rect(), QColor("#ffffff"))
+        self._paint_edges(painter, self.root)
+        self._paint_nodes(painter, self.root, 0)
+
+    def _paint_edges(self, painter, node):
+        pr = self._node_rect(node)
+        painter.setPen(QPen(QColor("#90a4ae"), 2))
+        for c in node.get("children", []):
+            cr = self._node_rect(c)
+            painter.drawLine(pr.center().x(), pr.bottom(), cr.center().x(), cr.top())
+            self._paint_edges(painter, c)
+
+    def _paint_nodes(self, painter, node, depth):
+        rect = self._node_rect(node)
+        fill = QColor(self._COLORS[depth % len(self._COLORS)])
+        painter.setBrush(fill)
+        painter.setPen(QPen(fill.darker(120), 1))
+        painter.drawRoundedRect(rect, 8, 8)
+        painter.setPen(QColor("#ffffff"))
+        f = painter.font()
+        f.setPointSize(10 if depth == 0 else 9)
+        f.setBold(depth == 0)
+        painter.setFont(f)
+        painter.drawText(
+            rect.adjusted(6, 2, -6, -2),
+            int(Qt.AlignmentFlag.AlignCenter) | int(Qt.TextFlag.TextWordWrap),
+            node.get("text", ""),
+        )
+        for c in node.get("children", []):
+            self._paint_nodes(painter, c, depth + 1)
 
 
 class MainWindow(QMainWindow):
@@ -2598,19 +2811,25 @@ class MainWindow(QMainWindow):
         return
 
     def toggle_input_mode(self):
-        """Alterna l'input tra tastiera (testo) e canvas (scrittura/disegno a mano)."""
+        """Alterna l'input tra tastiera (testo) e canvas (scrittura/disegno a mano).
+
+        Se erano visibili gli Strumenti, tornando a Testo/Canvas li nasconde.
+        """
         if not hasattr(self, "footer_input_stack"):
             return
-        if self.footer_input_stack.currentIndex() == 0:
+        if hasattr(self, "toggle_tools_button"):
+            self.toggle_tools_button.setChecked(False)
+        # Se non siamo su canvas -> vai a canvas; altrimenti torna al testo
+        if self.footer_input_stack.currentIndex() == 1:
+            self.footer_input_stack.setCurrentIndex(0)  # testo
+            self.toggle_input_mode_button.setText("🖊️ Canvas")
+            self.set_status_message("⌨️ Modalità tastiera")
+        else:
             self.footer_input_stack.setCurrentIndex(1)  # canvas
             self.toggle_input_mode_button.setText("⌨️ Testo")
             self.set_status_message(
                 "🖊️ Modalità scrittura/disegno a mano: invia per convertirla in testo"
             )
-        else:
-            self.footer_input_stack.setCurrentIndex(0)  # testo
-            self.toggle_input_mode_button.setText("🖊️ Canvas")
-            self.set_status_message("⌨️ Modalità tastiera")
 
     def _send_canvas_pensierino(self):
         """Invia il contenuto del canvas: l'OCR locale lo converte in testo pulito."""
@@ -2715,6 +2934,14 @@ class MainWindow(QMainWindow):
                     )
                     return
 
+                # Se l'utente chiede un riassunto ad albero/grafo con i punti
+                # chiave, istruisce l'AI a restituire un elenco gerarchico che
+                # verrà disegnato come mappa nella Lavagna AI (colonna C).
+                prompt_da_inviare = ai_prompt
+                if self._is_graph_request(ai_prompt):
+                    prompt_da_inviare = self._graph_prompt(ai_prompt)
+                    self.set_status_message("🗺️ Creo una mappa ad albero dei punti chiave...")
+
                 # Invia la richiesta all'AI
                 print(f"🤖 Rilevato trigger AI '{ai_trigger}', invio prompt: {ai_prompt[:50]}...")
 
@@ -2729,7 +2956,7 @@ class MainWindow(QMainWindow):
                     try:
                         # Invia la richiesta all'AI usando il metodo corretto
                         model = get_setting("ai.selected_ai_model", "gemma:2b")
-                        self.ollama_bridge.sendPrompt(ai_prompt, model)
+                        self.ollama_bridge.sendPrompt(prompt_da_inviare, model)
                         from PyQt6.QtWidgets import QMessageBox
                         QMessageBox.information(
                             self,
@@ -2755,11 +2982,23 @@ class MainWindow(QMainWindow):
                 self.footer_pensierini_input.clear()
                 return
 
-            # Crea il nuovo widget pensierino
+            # Crea il nuovo widget pensierino (conserva la formattazione del
+            # mini WordPad se presente: colori, dimensioni, grassetto...)
             from UI.draggable_text_widget import DraggableTextWidget
 
             if DraggableTextWidget:
-                widget = DraggableTextWidget(text, self.settings)
+                contenuto = text
+                try:
+                    html = self.footer_pensierini_input.toHtml()
+                    if 'style="' in html or "<span" in html:
+                        # Estrae il frammento del corpo per un HTML più pulito
+                        import re
+
+                        m = re.search(r"<body[^>]*>(.*)</body>", html, re.DOTALL)
+                        contenuto = m.group(1).strip() if m else html
+                except Exception:
+                    contenuto = text
+                widget = DraggableTextWidget(contenuto, self.settings)
 
                 # Aggiungi alla colonna A (pensierini)
                 if (
@@ -3313,46 +3552,25 @@ class MainWindow(QMainWindow):
             }
         """
 
-        # Menu semplificato: solo Trascrizione e Materie
-        # (Utilità e IoT rimossi; AI e Media rimosso in precedenza)
-        self.transcription_btn = QPushButton("✍️  Tavoletta")
-        self.transcription_btn.setCheckable(True)
-        self.transcription_btn.setStyleSheet(menu_button_style)
-
+        # Menu semplificato: solo Materie (Tavoletta rimossa: la scrittura a
+        # mano è disponibile dal pulsante "Canvas" nel footer)
         self.subjects_btn = QPushButton("📚  Materie")
         self.subjects_btn.setCheckable(True)
         self.subjects_btn.setStyleSheet(menu_button_style)
 
-        # Disponi i pulsanti in una singola colonna (menu verticale)
-        grid_layout.addWidget(self.transcription_btn, 0, 0)
-        grid_layout.addWidget(self.subjects_btn, 1, 0)
-        grid_layout.setRowStretch(2, 1)
+        grid_layout.addWidget(self.subjects_btn, 0, 0)
+        grid_layout.setRowStretch(1, 1)
 
         # Stacked widget per il contenuto a destra
         self.tools_stack = QStackedWidget()
-
-        # Crea i contenuti
-        transcription_tab = self.create_transcription_tab()
         subjects_tab = self.create_subjects_tab()
-
-        # Aggiungi i contenuti allo stack
-        self.tools_stack.addWidget(transcription_tab)
         self.tools_stack.addWidget(subjects_tab)
 
-        # Metodo per gestire il cambio di tab
         def switch_to_tab(index):
-            buttons = [self.transcription_btn, self.subjects_btn]
-            for b in buttons:
-                b.setChecked(False)
-            if 0 <= index < len(buttons):
-                buttons[index].setChecked(True)
-            self.tools_stack.setCurrentIndex(index)
+            self.subjects_btn.setChecked(True)
+            self.tools_stack.setCurrentIndex(0)
 
-        # Collega i pulsanti al metodo di cambio
-        self.transcription_btn.clicked.connect(lambda: switch_to_tab(0))
-        self.subjects_btn.clicked.connect(lambda: switch_to_tab(1))
-
-        # Seleziona il primo pulsante per default
+        self.subjects_btn.clicked.connect(lambda: switch_to_tab(0))
         switch_to_tab(0)
 
         # Aggiungi al layout principale
@@ -3576,58 +3794,23 @@ class MainWindow(QMainWindow):
         self.collab_button.clicked.connect(self.handle_collab_button)
 
     def toggle_tools_panel(self):
-        """Mostra/nasconde il pannello degli strumenti"""
-        # Log metriche PRIMA del toggle
-        self.log_ui_metrics("BEFORE_TOGGLE")
-
-        if self.tools_group.isVisible():
-            # Nasconde la sezione unificata strumenti
-            self.tools_group.setVisible(False)
-
-            # Ricalcola le proporzioni con 2 sezioni
-            current_sizes = self.vertical_splitter.sizes()
-            main_content_size = current_sizes[0]  # Contenuto principale
-            tools_size = current_sizes[1]  # Sezione strumenti
-
-            # Tutto lo spazio va al contenuto principale
-            total_available = main_content_size + tools_size
-            self.vertical_splitter.setSizes([total_available, 0])
-
-            # Aggiorna il testo del pulsante
+        """Mostra gli Strumenti nell'area comune del footer (al posto di
+        Testo/Canvas); premuto di nuovo torna al testo."""
+        if not hasattr(self, "footer_input_stack") or self._tools_page_index is None:
+            return
+        stack = self.footer_input_stack
+        if stack.currentIndex() == self._tools_page_index:
+            stack.setCurrentIndex(0)  # torna al testo
             if hasattr(self, "toggle_tools_button"):
-                self.toggle_tools_button.setText("🔧 Strumenti")
-
-            # Salva nelle preferenze
-            self.settings["ui"] = self.settings.get("ui", {})
-            self.settings["ui"]["tools_panel_visible"] = False
+                self.toggle_tools_button.setChecked(False)
+            if hasattr(self, "toggle_input_mode_button"):
+                self.toggle_input_mode_button.setText("🖊️ Canvas")
+            self.set_status_message("⌨️ Area testo")
         else:
-            # Mostra la sezione unificata strumenti
-            self.tools_group.setVisible(True)
-
-            # Ricalcola le proporzioni con 2 sezioni
-            current_sizes = self.vertical_splitter.sizes()
-            main_content_size = current_sizes[0]  # Contenuto principale
-
-            # Distribuisci spazio: main 70%, tools 30%
-            main_new = int(main_content_size * 0.7)
-            tools_new = main_content_size - main_new
-            self.vertical_splitter.setSizes([main_new, tools_new])
-
-            # Aggiorna il testo del pulsante
+            stack.setCurrentIndex(self._tools_page_index)  # mostra Strumenti
             if hasattr(self, "toggle_tools_button"):
-                self.toggle_tools_button.setText("🔧 Strumenti")
-
-            # Salva nelle preferenze
-            self.settings["ui"] = self.settings.get("ui", {})
-            self.settings["ui"]["tools_panel_visible"] = True
-
-        # Log metriche DOPO il toggle
-        QTimer.singleShot(100, lambda: self.log_ui_metrics("AFTER_TOGGLE"))
-
-        # Salva le impostazioni
-        from .main_03_configurazione_e_opzioni import save_settings
-
-        save_settings(self.settings)
+                self.toggle_tools_button.setChecked(True)
+            self.set_status_message("🔧 Strumenti nell'area comune")
 
     def set_safe_font(self):
         """Imposta un font sicuro e standard per evitare artefatti di rendering, usando le preferenze utente."""
@@ -4208,12 +4391,91 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"Errore effetto specchio: {e}")
 
+    # Marcatore inserito nel prompt per riconoscere le richieste di mappa ad albero
+    GRAPH_MARKER = "[[GRAFO_ALBERO]]"
+
+    def _is_graph_request(self, text):
+        """True se l'utente chiede un riassunto/mappa ad albero o grafo."""
+        t = (text or "").lower()
+        forme = (
+            "grafo", "albero", "mappa", "mind map", "mindmap",
+            "schema", "diagramma", "mappa concett",
+        )
+        if any(k in t for k in forme):
+            return True
+        return "riassunt" in t and ("punt" in t or "chiave" in t or "concett" in t)
+
+    def _graph_prompt(self, user_text):
+        """Costruisce il prompt che chiede all'AI un elenco gerarchico."""
+        return (
+            "Crea un riassunto schematico ad ALBERO dei punti chiave.\n"
+            "Rispondi ESCLUSIVAMENTE con un elenco puntato annidato: usa il trattino "
+            "'-' e 2 spazi di indentazione per ogni livello di profondità, dal "
+            "concetto generale ai dettagli. Massimo 4 livelli. Il primo elemento è "
+            "l'argomento principale. Niente introduzioni né spiegazioni: solo l'elenco.\n\n"
+            f"Argomento/Contenuto:\n{user_text}\n\n{self.GRAPH_MARKER}"
+        )
+
+    def _parse_outline_to_tree(self, text):
+        """Trasforma un elenco puntato annidato in una struttura ad albero."""
+        import re
+
+        root = {"text": "🗺️ Riassunto", "children": []}
+        stack = [(-1, root)]
+        for raw in text.splitlines():
+            if not raw.strip():
+                continue
+            stripped = raw.lstrip(" \t")
+            indent = len(raw) - len(stripped)
+            content = re.sub(
+                r"^[\-\*•·▪◦●○►▶–—\d\.\)]+\s*", "", stripped
+            ).strip()
+            if not content:
+                continue
+            node = {"text": content, "children": []}
+            while stack and stack[-1][0] >= indent:
+                stack.pop()
+            parent = stack[-1][1] if stack else root
+            parent["children"].append(node)
+            stack.append((indent, node))
+        # Se c'è un solo figlio, usalo come radice (l'argomento principale)
+        if len(root["children"]) == 1:
+            return root["children"][0]
+        return root
+
+    def show_tree_in_details(self, root):
+        """Mostra la mappa ad albero nella Lavagna AI (colonna C)."""
+        from PyQt6.QtWidgets import QLabel, QScrollArea
+
+        self._clear_details()
+        titolo = QLabel("🗺️ Mappa ad albero dei punti chiave")
+        titolo.setStyleSheet("font-weight: bold; color: #37474f; padding: 4px;")
+        self.details_layout.addWidget(titolo)
+
+        tree = TreeGraphWidget(root)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(False)
+        scroll.setWidget(tree)
+        self.details_layout.addWidget(scroll, 1)
+
     def _on_ai_response_received(self, prompt, response):
         """Gestisce la risposta ricevuta da Ollama."""
         try:
             # Riabilita il pulsante di riformulazione se era disabilitato
             if hasattr(self, "rephrase_button"):
                 self.rephrase_button.setEnabled(True)
+
+            # Richiesta di mappa/albero: rendi graficamente i punti chiave
+            if self.GRAPH_MARKER in (prompt or ""):
+                try:
+                    tree = self._parse_outline_to_tree(response)
+                    self.show_tree_in_details(tree)
+                    return
+                except Exception as e:
+                    logging.error(f"Errore nel rendering dell'albero: {e}")
+                    # In caso di problema mostra comunque il testo
+                    self.show_text_in_details(response)
+                    return
 
             # Controlla se è una risposta di riformulazione
             if "Riformula intensamente" in prompt or "Riformulazione intensa" in prompt:
@@ -4765,36 +5027,22 @@ class MainWindow(QMainWindow):
         """
         )
 
-        # ROW 1: Main content (columns A, B, C)
+        # ROW 1: Main content (columns A, B, C) — occupa tutta l'altezza:
+        # la cassetta degli attrezzi ora vive nell'area comune del footer.
         vertical_splitter.addWidget(self.main_splitter)
-
-        # Create unified tools section
-        unified_tools_section = self.create_unified_tools_section()
-
-        # ROW 2: Tools section
-        vertical_splitter.addWidget(unified_tools_section)
-
-        # Save reference to vertical_splitter
         self.vertical_splitter = vertical_splitter
-        self.tools_group = unified_tools_section  # For toggle compatibility
+
+        # Costruisce il contenuto degli strumenti (verrà mostrato nell'area
+        # comune del footer, al posto di Testo/Canvas, cliccando "Strumenti").
+        self.tools_content_widget = self.create_unified_tools_section_content()
 
         # Set minimum window size
         self.setMinimumSize(1000, 850)
 
-        # Check preferences for initial tools panel state
-        tools_visible = self.settings.get("ui", {}).get("tools_panel_visible", True)
+        vertical_splitter.setSizes([800])
 
-        if tools_visible:
-            vertical_splitter.setSizes([500, 300])  # Main content, tools
-        else:
-            vertical_splitter.setSizes([800, 0])  # Main content only
-
-        # Set initial visibility states
-        self.tools_group.setVisible(tools_visible)
-
-        # Update button states
         if hasattr(self, "toggle_tools_button"):
-            self.toggle_tools_button.setChecked(tools_visible)
+            self.toggle_tools_button.setChecked(False)
             self.toggle_tools_button.setText("🔧 Strumenti")
 
         # Add vertical splitter to main layout
@@ -4898,9 +5146,18 @@ class MainWindow(QMainWindow):
 
         from PyQt6.QtWidgets import QStackedWidget
 
+        # Il campo testo è avvolto in un mini WordPad (barra di formattazione)
+        self.footer_richtext = RichTextInputWidget(self.footer_pensierini_input)
+
         self.footer_input_stack = QStackedWidget()
-        self.footer_input_stack.addWidget(self.footer_pensierini_input)  # 0 = testo
+        self.footer_input_stack.addWidget(self.footer_richtext)  # 0 = testo (WordPad)
         self.footer_input_stack.addWidget(self.footer_drawing)  # 1 = canvas
+        # 2 = Strumenti (cassetta degli attrezzi) nell'area comune
+        if getattr(self, "tools_content_widget", None) is not None:
+            self.footer_input_stack.addWidget(self.tools_content_widget)
+            self._tools_page_index = 2
+        else:
+            self._tools_page_index = None
         # Riempie tutto lo spazio libero del footer (orizzontale e verticale)
         self.footer_input_stack.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -6340,9 +6597,13 @@ class MainWindow(QMainWindow):
 
             # Mostra richiesta nell'area risultati
 
-            # Invia richiesta a Ollama con modello di default
+            # Invia richiesta a Ollama con modello di default; se è una
+            # richiesta di mappa/albero, la trasforma in elenco gerarchico.
             default_model = "gemma:2b"  # Modello raccomandato
-            self.ollama_bridge.sendPrompt(text, default_model)
+            prompt_da_inviare = (
+                self._graph_prompt(text) if self._is_graph_request(text) else text
+            )
+            self.ollama_bridge.sendPrompt(prompt_da_inviare, default_model)
 
             # Log dell'invio richiesta
             logging.info(
