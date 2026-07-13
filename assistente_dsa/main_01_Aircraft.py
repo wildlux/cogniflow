@@ -2306,8 +2306,8 @@ class HandwritingCanvas(QWidget):
         self.tool = tool
 
     def set_visual_opacity(self, value):
-        """Imposta la trasparenza del foglio a schermo (0.15..1.0)."""
-        self.visual_opacity = max(0.15, min(1.0, float(value)))
+        """Imposta la trasparenza del foglio a schermo (0.05..1.0)."""
+        self.visual_opacity = max(0.05, min(1.0, float(value)))
         self.update()
 
     # --- Penna "in aria" (punta seguita dalla webcam) ---
@@ -2393,6 +2393,12 @@ class HandwritingCanvas(QWidget):
             painter.setOpacity(self.visual_opacity)
         painter.drawImage(0, 0, self.image)
         painter.setOpacity(1.0)
+        # Foglio trasparente: bordo tratteggiato per vedere dove finisce
+        if self.visual_opacity < 1.0:
+            bordo = QPen(QColor(120, 120, 120, 160), 1, Qt.PenStyle.DashLine)
+            painter.setPen(bordo)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRect(self.rect().adjusted(0, 0, -1, -1))
         # Anteprima della forma mentre la si traccia
         if self.tool in ("line", "rect", "ellipse") and self._start and self._preview_end:
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -2586,7 +2592,7 @@ class DrawingWidget(QWidget):
         ghost_label.setToolTip("Trasparenza del foglio")
         toolbar.addWidget(ghost_label)
         self.opacity_slider = QSlider(Qt.Orientation.Horizontal)
-        self.opacity_slider.setRange(15, 100)
+        self.opacity_slider.setRange(5, 100)
         self.opacity_slider.setValue(100)
         self.opacity_slider.setFixedWidth(70)
         self.opacity_slider.setToolTip(
@@ -4267,6 +4273,13 @@ class MainWindow(QMainWindow):
             drawing.hint_label.setText(
                 "✋ Impugna la penna e alza l'indice per aprire/chiudere l'inchiostro"
             )
+        # Foglio quasi trasparente in automatico: per scrivere "in aria"
+        # bisogna vedere la propria mano attraverso il canvas. Alla chiusura
+        # della webcam il valore scelto dall'utente viene ripristinato.
+        if drawing is not None and hasattr(drawing, "opacity_slider"):
+            if drawing.opacity_slider.value() > 40:
+                self._saved_canvas_opacity = drawing.opacity_slider.value()
+                drawing.opacity_slider.setValue(30)
         print("📹 Webcam integrata attiva: mano chiusa = click, aperta = rilascia")
 
     def _stop_hand_mouse(self):
@@ -4297,6 +4310,11 @@ class MainWindow(QMainWindow):
         drawing = getattr(self, "footer_drawing", None)
         if drawing is not None and hasattr(drawing, "hint_label"):
             drawing.hint_label.setText("Tieni premuto  D  per disegnare")
+        # Ripristina la trasparenza del foglio scelta prima della webcam
+        saved_opacity = getattr(self, "_saved_canvas_opacity", None)
+        if saved_opacity is not None and drawing is not None:
+            drawing.opacity_slider.setValue(saved_opacity)
+            self._saved_canvas_opacity = None
         print("📹 Webcam integrata disattivata")
 
     def _on_main_webcam_frame(self, pixmap):
@@ -4334,7 +4352,9 @@ class MainWindow(QMainWindow):
         # Anti-rimbalzo: l'indice deve restare alzato/abbassato per qualche
         # frame prima che il cambio di stato apra/chiuda il rubinetto
         if not hasattr(self, "_pen_index_state"):
-            self._pen_index_state = bool(index_up)
+            # Stato di partenza: indice abbassato (impugnatura), così anche
+            # un'alzata già in corso al primo frame conta come comando
+            self._pen_index_state = False
             self._pen_index_streak = 0
             self._canvas_ink_on = False
         if bool(index_up) != self._pen_index_state:
@@ -4354,7 +4374,29 @@ class MainWindow(QMainWindow):
         else:
             self._pen_index_streak = 0
 
-        canvas.air_pen_point(nx, ny, True, getattr(self, "_canvas_ink_on", False))
+        # Mapping spaziale: l'inchiostro appare DOVE si vede la mano.
+        # Il video di sfondo copre tutto il centralWidget, quindi la punta
+        # nel frame (normalizzata) corrisponde allo stesso punto della
+        # finestra; si scrive nella porzione di video coperta dal foglio
+        # (reso trasparente in modalità webcam). Fuori dal foglio la penna
+        # non c'è: cursore nascosto e tratto chiuso.
+        central = self.centralWidget()
+        if central is None:
+            return
+        frame_pt = QPoint(
+            int(nx * max(1, central.width() - 1)),
+            int(ny * max(1, central.height() - 1)),
+        )
+        local = canvas.mapFrom(central, frame_pt)
+        if not canvas.rect().contains(local):
+            canvas.air_pen_point(0.0, 0.0, False)
+            return
+        canvas.air_pen_point(
+            local.x() / max(1, canvas.width() - 1),
+            local.y() / max(1, canvas.height() - 1),
+            True,
+            getattr(self, "_canvas_ink_on", False),
+        )
 
     def _set_webcam_panels_transparent(self, enabled):
         """Rende i pannelli semitrasparenti per vedere il video di sfondo.
@@ -4431,6 +4473,16 @@ class MainWindow(QMainWindow):
             if scroll.viewport() is not None:
                 scroll.viewport().setAutoFillBackground(False)
             apply(scroll.widget(), "background: rgba(255, 255, 255, 0.25);")
+
+        # Contenitori del footer (pila di input, canvas e WordPad): lo stile
+        # globale li dipinge con un gradiente opaco che coprirebbe il video.
+        # Trasparenti, il cursore della trasparenza del foglio mostra davvero
+        # la webcam (e la propria mano) ATTRAVERSO il canvas.
+        for name in ("footer_input_stack", "footer_drawing", "footer_richtext"):
+            apply(getattr(self, name, None), "background: transparent;")
+        canvas = getattr(self, "footer_canvas", None)
+        if canvas is not None:
+            apply(canvas, "background: transparent;")
 
         # Campo di scrittura del footer: trasparente anche lui, così si vede
         # il video sotto. Il testo resta leggibile grazie al bordino nero
