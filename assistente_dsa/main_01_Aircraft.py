@@ -2279,11 +2279,21 @@ class HandwritingCanvas(QWidget):
         self.pen_color = QColor("#1a1a1a")
         self.pen_width = 3
         self.tool = "pencil"  # pencil, line, rect, ellipse, eraser
+        # Trasparenza SOLO visiva: l'immagine di lavoro resta RGB su fondo
+        # bianco (niente canale alfa in più), quindi salvataggi, OCR e invio
+        # non cambiano. A schermo il foglio lascia intravedere lo sfondo.
+        self.visual_opacity = 1.0
 
         self._last = None
         self._start = None
         self._preview_end = None
         self._draw_enabled = False  # True mentre si tiene premuto 'D'
+
+        # Penna "in aria" (webcam): ultimo punto del tratto, posizione del
+        # cursore mostrato sul canvas e stato del rubinetto dell'inchiostro
+        self._air_last = None
+        self._air_pos = None
+        self._air_inking = False
 
     # --- Configurazione strumenti ---
     def set_color(self, color):
@@ -2294,6 +2304,47 @@ class HandwritingCanvas(QWidget):
 
     def set_tool(self, tool):
         self.tool = tool
+
+    def set_visual_opacity(self, value):
+        """Imposta la trasparenza del foglio a schermo (0.15..1.0)."""
+        self.visual_opacity = max(0.15, min(1.0, float(value)))
+        self.update()
+
+    # --- Penna "in aria" (punta seguita dalla webcam) ---
+    def air_pen_point(self, nx, ny, visible, inking=True):
+        """Riceve la punta della penna dalla webcam e disegna sul canvas.
+
+        Coordinate normalizzate (0..1) mappate sull'area del canvas.
+        ``visible``: la punta è inquadrata (il cursore viene mostrato).
+        ``inking``: il "rubinetto" dell'inchiostro è aperto e la punta
+        traccia; se chiuso, il cursore si muove senza scrivere.
+        Non richiede il tasto 'D': la penna fisica È il comando.
+        """
+        if not visible:
+            self._air_last = None
+            if self._air_pos is not None:
+                self._air_pos = None
+                self.update()
+            return
+        point = QPoint(
+            int(nx * max(1, self.width() - 1)),
+            int(ny * max(1, self.height() - 1)),
+        )
+        self._air_pos = point
+        self._air_inking = bool(inking)
+        if not inking:
+            # Rubinetto chiuso: la punta si vede ma non lascia inchiostro
+            self._air_last = None
+        elif self._air_last is None:
+            self._air_last = point
+        else:
+            painter = QPainter(self.image)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setPen(self._make_pen())
+            painter.drawLine(self._air_last, point)
+            painter.end()
+            self._air_last = point
+        self.update()
 
     def _make_pen(self, width=None):
         colore = QColor("#ffffff") if self.tool == "eraser" else self.pen_color
@@ -2338,13 +2389,27 @@ class HandwritingCanvas(QWidget):
     # --- Disegno ---
     def paintEvent(self, event):
         painter = QPainter(self)
+        if self.visual_opacity < 1.0:
+            painter.setOpacity(self.visual_opacity)
         painter.drawImage(0, 0, self.image)
+        painter.setOpacity(1.0)
         # Anteprima della forma mentre la si traccia
         if self.tool in ("line", "rect", "ellipse") and self._start and self._preview_end:
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setPen(self._make_pen())
             painter.setBrush(Qt.BrushStyle.NoBrush)
             self._paint_shape(painter, self._start, self._preview_end)
+        # Cursore della penna "in aria": pieno = inchiostro aperto (scrive),
+        # vuoto = rubinetto chiuso (la punta si muove senza tracciare).
+        # Visibile anche con il foglio trasparente: è disegnato sopra.
+        if self._air_pos is not None:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setPen(QPen(QColor("#e91e63"), 2))
+            if self._air_inking:
+                painter.setBrush(QBrush(self.pen_color))
+            else:
+                painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawEllipse(self._air_pos, 8, 8)
 
     def _paint_shape(self, painter, a, b):
         if self.tool == "line":
@@ -2513,13 +2578,97 @@ class DrawingWidget(QWidget):
         )
         toolbar.addWidget(self.width_combo)
 
+        toolbar.addSpacing(8)
+
+        # Trasparenza del foglio: effetto solo visivo, il disegno viene
+        # sempre salvato/inviato su sfondo bianco.
+        ghost_label = QLabel("👻")
+        ghost_label.setToolTip("Trasparenza del foglio")
+        toolbar.addWidget(ghost_label)
+        self.opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.opacity_slider.setRange(15, 100)
+        self.opacity_slider.setValue(100)
+        self.opacity_slider.setFixedWidth(70)
+        self.opacity_slider.setToolTip(
+            "Trasparenza del foglio (solo a schermo: l'immagine resta "
+            "su sfondo bianco quando la salvi o la invii)"
+        )
+        self.opacity_slider.valueChanged.connect(
+            lambda v: self.canvas.set_visual_opacity(v / 100.0)
+        )
+        toolbar.addWidget(self.opacity_slider)
+
+        toolbar.addSpacing(8)
+
+        # Penna "in aria": la webcam segue la punta colorata di una penna
+        # fisica. Punta in basso e visibile = disegna; punta nascosta
+        # (penna girata o coperta) = sollevata dal foglio.
+        self._pen_tracker = None
+        self.air_pen_button = QPushButton("🖊️ Aria")
+        self.air_pen_button.setCheckable(True)
+        self.air_pen_button.setFixedWidth(60)
+        self.air_pen_button.setStyleSheet(tool_btn_style)
+        self.air_pen_button.setToolTip(
+            "Disegna in aria con una penna vera: la webcam ne segue la punta "
+            "colorata (tienila rivolta verso il basso). Nascondi la punta per "
+            "sollevare la penna dal foglio. Non usare insieme allo sfondo "
+            "webcam: la telecamera serve a una funzione alla volta."
+        )
+        self.air_pen_button.toggled.connect(self._toggle_air_pen)
+        toolbar.addWidget(self.air_pen_button)
+
+        self.air_color_combo = QComboBox()
+        for nome, chiave in (
+            ("Punta blu", "blu"), ("Punta verde", "verde"),
+            ("Punta rossa", "rosso"), ("Punta gialla", "giallo"),
+        ):
+            self.air_color_combo.addItem(nome, chiave)
+        self.air_color_combo.setToolTip(
+            "Colore della punta/cappuccio della penna che la webcam deve seguire"
+        )
+        self.air_color_combo.currentIndexChanged.connect(
+            lambda _i: self._set_air_pen_color()
+        )
+        toolbar.addWidget(self.air_color_combo)
+
         toolbar.addStretch()
-        hint = QLabel("Tieni premuto  D  per disegnare")
-        hint.setStyleSheet("color:#888; font-size:10px;")
-        toolbar.addWidget(hint)
+        self.hint_label = QLabel("Tieni premuto  D  per disegnare")
+        self.hint_label.setStyleSheet("color:#888; font-size:10px;")
+        toolbar.addWidget(self.hint_label)
 
         layout.addLayout(toolbar)
         layout.addWidget(self.canvas, 1)
+
+    def _toggle_air_pen(self, checked):
+        """Avvia/ferma il tracciamento della penna via webcam."""
+        if not checked:
+            if self._pen_tracker is not None:
+                self._pen_tracker.stop()
+                self._pen_tracker = None
+            self.canvas.air_pen_point(0.0, 0.0, False)
+            self.hint_label.setText("Tieni premuto  D  per disegnare")
+            return
+        try:
+            from Artificial_Intelligence.Video.pen_tracker import PenTrackerThread
+        except ImportError:
+            try:
+                from assistente_dsa.Artificial_Intelligence.Video.pen_tracker import (
+                    PenTrackerThread,
+                )
+            except ImportError as e:
+                self.hint_label.setText(f"Penna in aria non disponibile: {e}")
+                self.air_pen_button.setChecked(False)
+                return
+        self._pen_tracker = PenTrackerThread(
+            color=self.air_color_combo.currentData() or "blu"
+        )
+        self._pen_tracker.pen_position.connect(self.canvas.air_pen_point)
+        self._pen_tracker.status.connect(self.hint_label.setText)
+        self._pen_tracker.start()
+
+    def _set_air_pen_color(self):
+        if self._pen_tracker is not None:
+            self._pen_tracker.color = self.air_color_combo.currentData() or "blu"
 
     def _pick_color(self):
         from PyQt6.QtWidgets import QColorDialog
@@ -4098,6 +4247,10 @@ class MainWindow(QMainWindow):
         vt.change_pixmap_signal.connect(self._on_main_webcam_frame)
         vt.hand_position_signal.connect(self.hand_mouse.on_hand_position)
         vt.gesture_detected_signal.connect(self.hand_mouse.on_gesture)
+        # Scrittura sul canvas impugnando una penna vera: l'indice della mano
+        # segue la punta; alzare l'indice apre/chiude l'inchiostro digitale
+        if hasattr(vt, "pen_tip_signal"):
+            vt.pen_tip_signal.connect(self._on_pen_tip)
         vt.status_signal.connect(lambda s: logging.info(f"Webcam: {s}"))
 
         self.video_thread_main = vt
@@ -4107,6 +4260,13 @@ class MainWindow(QMainWindow):
         self.webcam_button.setText("📹")
         self.webcam_button.setChecked(True)
         self.webcam_active = True
+        # Suggerimento sul canvas: con la webcam attiva si scrive con la penna
+        self._canvas_ink_on = False
+        drawing = getattr(self, "footer_drawing", None)
+        if drawing is not None and hasattr(drawing, "hint_label"):
+            drawing.hint_label.setText(
+                "✋ Impugna la penna e alza l'indice per aprire/chiudere l'inchiostro"
+            )
         print("📹 Webcam integrata attiva: mano chiusa = click, aperta = rilascia")
 
     def _stop_hand_mouse(self):
@@ -4129,6 +4289,14 @@ class MainWindow(QMainWindow):
         self.webcam_button.setText("📹")
         self.webcam_button.setChecked(False)
         self.webcam_active = False
+        # Penna in aria: cursore via e rubinetto chiuso
+        self._canvas_ink_on = False
+        canvas = getattr(self, "footer_canvas", None)
+        if canvas is not None:
+            canvas.air_pen_point(0.0, 0.0, False)
+        drawing = getattr(self, "footer_drawing", None)
+        if drawing is not None and hasattr(drawing, "hint_label"):
+            drawing.hint_label.setText("Tieni premuto  D  per disegnare")
         print("📹 Webcam integrata disattivata")
 
     def _on_main_webcam_frame(self, pixmap):
@@ -4137,6 +4305,56 @@ class MainWindow(QMainWindow):
             self.video_bg_label.setPixmap(pixmap)
         if self.hand_mouse is not None:
             self.hand_mouse.set_frame_size(pixmap.width(), pixmap.height())
+
+    # Frame consecutivi con lo stato dell'indice cambiato prima di accettarlo:
+    # filtra i tremolii del rilevamento ed evita aperture/chiusure accidentali
+    PEN_TOGGLE_FRAMES = 6
+
+    def _on_pen_tip(self, nx, ny, index_up):
+        """Scrittura "in aria" sul canvas del footer impugnando una penna.
+
+        La punta dell'indice della mano primaria fa da punta della penna.
+        ALZARE l'indice (mentre si impugna la penna) apre/chiude il
+        "rubinetto" dell'inchiostro: aperto = la punta traccia, chiuso = il
+        cursore si muove senza scrivere. Vale solo sul canvas del footer.
+        """
+        canvas = getattr(self, "footer_canvas", None)
+        stack = getattr(self, "footer_input_stack", None)
+        if canvas is None or stack is None:
+            return
+        # Solo quando è visibile la pagina canvas (non testo né strumenti)
+        if stack.currentIndex() != 1:
+            canvas.air_pen_point(0.0, 0.0, False)
+            return
+        if nx < 0 or ny < 0:  # mano non inquadrata: penna sollevata
+            self._pen_index_streak = 0
+            canvas.air_pen_point(0.0, 0.0, False)
+            return
+
+        # Anti-rimbalzo: l'indice deve restare alzato/abbassato per qualche
+        # frame prima che il cambio di stato apra/chiuda il rubinetto
+        if not hasattr(self, "_pen_index_state"):
+            self._pen_index_state = bool(index_up)
+            self._pen_index_streak = 0
+            self._canvas_ink_on = False
+        if bool(index_up) != self._pen_index_state:
+            self._pen_index_streak += 1
+            if self._pen_index_streak >= self.PEN_TOGGLE_FRAMES:
+                self._pen_index_state = bool(index_up)
+                self._pen_index_streak = 0
+                if self._pen_index_state:  # è l'ALZATA che aziona il rubinetto
+                    self._canvas_ink_on = not self._canvas_ink_on
+                    drawing = getattr(self, "footer_drawing", None)
+                    if drawing is not None and hasattr(drawing, "hint_label"):
+                        drawing.hint_label.setText(
+                            "🖋️ Inchiostro APERTO: la punta scrive"
+                            if self._canvas_ink_on
+                            else "✋ Inchiostro chiuso: alza l'indice per scrivere"
+                        )
+        else:
+            self._pen_index_streak = 0
+
+        canvas.air_pen_point(nx, ny, True, getattr(self, "_canvas_ink_on", False))
 
     def _set_webcam_panels_transparent(self, enabled):
         """Rende i pannelli semitrasparenti per vedere il video di sfondo.
@@ -4162,6 +4380,7 @@ class MainWindow(QMainWindow):
                 scroll = getattr(self, name, None)
                 if scroll is not None and scroll.viewport() is not None:
                     scroll.viewport().setAutoFillBackground(True)
+            self._set_footer_text_outline(False)
             return
 
         def apply(widget, style, append=False):
@@ -4212,6 +4431,41 @@ class MainWindow(QMainWindow):
             if scroll.viewport() is not None:
                 scroll.viewport().setAutoFillBackground(False)
             apply(scroll.widget(), "background: rgba(255, 255, 255, 0.25);")
+
+        # Campo di scrittura del footer: trasparente anche lui, così si vede
+        # il video sotto. Il testo resta leggibile grazie al bordino nero
+        # attorno ai caratteri (vedi _set_footer_text_outline).
+        apply(
+            getattr(self, "footer_pensierini_input", None),
+            "QTextEdit { background: rgba(255, 255, 255, 0.12);"
+            " border: 1px solid rgba(0, 0, 0, 0.35); border-radius: 6px;"
+            " padding: 4px 8px; font-size: 12px; }"
+            "QTextEdit:focus { border-color: #4a90e2; }",
+        )
+        self._set_footer_text_outline(True)
+
+    def _set_footer_text_outline(self, enabled):
+        """Aggiunge/toglie un bordino nero attorno ai caratteri del footer.
+
+        Con lo sfondo trasparente il testo chiaro (es. bianco) sparirebbe su
+        uno sfondo chiaro: il contorno lo rende leggibile su qualsiasi cosa
+        ci sia dietro. È solo visivo: l'invio usa toPlainText e i formati
+        salvati non cambiano.
+        """
+        editor = getattr(self, "footer_pensierini_input", None)
+        if editor is None:
+            return
+        pen = (
+            QPen(QColor("#000000"), 1.0)
+            if enabled
+            else QPen(Qt.PenStyle.NoPen)
+        )
+        fmt = QTextCharFormat()
+        fmt.setTextOutline(pen)
+        cursor = QTextCursor(editor.document())
+        cursor.select(QTextCursor.SelectionType.Document)
+        cursor.mergeCharFormat(fmt)
+        editor.mergeCurrentCharFormat(fmt)
 
     def resizeEvent(self, a0):
         """Mantiene lo sfondo video esteso a tutta la finestra."""

@@ -125,6 +125,10 @@ class VideoThread(QThread):
     status_signal = pyqtSignal(str)
     hand_position_signal = pyqtSignal(int, int)  # x, y coordinates
     gesture_detected_signal = pyqtSignal(str)  # gesture type
+    # Punta dell'indice della mano primaria: (x, y) normalizzati 0..1 e
+    # True se l'indice è alzato. Usato per scrivere sul canvas impugnando
+    # una penna vera: l'indice alzato apre/chiude l'inchiostro.
+    pen_tip_signal = pyqtSignal(float, float, bool)
     human_detected_signal = pyqtSignal(
         list
     )  # list of human bounding boxes [(x,y,w,h), ...]
@@ -877,6 +881,7 @@ class VideoThread(QThread):
                     "pts": pts,
                     "center": (cx, cy),
                     "gesture": gesture,
+                    "index_up": fingers["indice"],
                 }
             )
 
@@ -940,8 +945,20 @@ class VideoThread(QThread):
                 2,
             )
 
+        if primary is None:
+            # Mano non inquadrata: la penna sparisce dal canvas (tratto chiuso)
+            self.pen_tip_signal.emit(-1.0, -1.0, False)
+
         if primary is not None:
             self.hand_position_signal.emit(*primary["center"])
+            # Punta dell'indice (landmark 8): fa da punta della penna quando
+            # si scrive "in aria" sul canvas impugnando una penna vera
+            tip = primary["pts"][8]
+            self.pen_tip_signal.emit(
+                min(1.0, max(0.0, tip[0] / w)),
+                min(1.0, max(0.0, tip[1] / h)),
+                primary["index_up"],
+            )
             if primary["gesture"]:
                 self.gesture_detected_signal.emit(primary["gesture"])
                 labels = {

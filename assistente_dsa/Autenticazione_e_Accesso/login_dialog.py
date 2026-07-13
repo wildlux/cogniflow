@@ -99,6 +99,25 @@ class LoginDialog(QDialog):
         self.login_button.clicked.connect(self.attempt_login)
         buttons_layout.addWidget(self.login_button)
 
+        # Accesso con il viso: opzione secondaria pensata per chi non può
+        # usare la tastiera. La telecamera si accende solo dopo consenso.
+        self.face_login_button = QPushButton("📷  Accedi con il viso")
+        self.face_login_button.setMinimumHeight(44)
+        self.face_login_button.setStyleSheet(
+            "QPushButton { background-color: #1565c0; color: #ffffff; border: none;"
+            " border-radius: 5px; padding: 10px; font-size: 15px; font-weight: bold;"
+            " margin: 5px; }"
+            " QPushButton:hover { background-color: #0d47a1; }"
+            " QPushButton:pressed { background-color: #0a3880; }"
+        )
+        _force_button_text_color(self.face_login_button, "#ffffff")
+        self.face_login_button.setToolTip(
+            "Entra guardando la webcam (serve aver registrato il viso da un\n"
+            "accesso precedente). La telecamera si accende solo se accetti."
+        )
+        self.face_login_button.clicked.connect(self.attempt_face_login)
+        buttons_layout.addWidget(self.face_login_button)
+
         self.cancel_button = QPushButton("❌  Annulla")
         self.cancel_button.setMinimumHeight(44)
         self.cancel_button.setStyleSheet(
@@ -118,6 +137,34 @@ class LoginDialog(QDialog):
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.status_label)
 
+        # === Controllo librerie prima dell'avvio ===
+        # Riepilogo cliccabile: mostra/nasconde l'elenco dettagliato.
+        self.deps_summary_button = QPushButton("🧩 Controllo librerie in corso…")
+        self.deps_summary_button.setFlat(True)
+        self.deps_summary_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.deps_summary_button.setStyleSheet(
+            "QPushButton { border: none; background: transparent; color: #666;"
+            " font-size: 12px; margin: 2px; text-align: center; }"
+            "QPushButton:hover { color: #2196F3; }"
+        )
+        self.deps_summary_button.clicked.connect(self._toggle_deps_details)
+        layout.addWidget(self.deps_summary_button)
+
+        self.deps_details_label = QLabel("")
+        self.deps_details_label.setStyleSheet(
+            "font-size: 11px; color: #444; background: #f7f7f7;"
+            " border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px;"
+        )
+        self.deps_details_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.deps_details_label.setVisible(False)
+        layout.addWidget(self.deps_details_label)
+
+        # Esegue il controllo appena il dialogo è visibile (è quasi istantaneo:
+        # verifica la presenza dei pacchetti senza importarli davvero).
+        QTimer.singleShot(50, self._run_dependency_check)
+
         self.username_input.returnPressed.connect(self.attempt_login)
         self.password_input.returnPressed.connect(self.attempt_login)
 
@@ -131,6 +178,165 @@ class LoginDialog(QDialog):
 
         # Precompila con le credenziali salvate, se presenti
         self._load_remembered_credentials()
+
+    def _run_dependency_check(self):
+        """Controlla le librerie necessarie e aggiorna il riepilogo nel login.
+
+        Se mancano librerie critiche l'avvio viene bloccato (pulsante Login
+        disabilitato) e l'elenco dettagliato viene aperto automaticamente con
+        i comandi di installazione.
+        """
+        self._deps_block_login = False
+        try:
+            try:
+                from dependency_check import (
+                    check_dependencies, missing_critical, missing_optional,
+                )
+            except ImportError:
+                from .dependency_check import (
+                    check_dependencies, missing_critical, missing_optional,
+                )
+            results = check_dependencies()
+        except Exception as e:
+            self.deps_summary_button.setText(f"🧩 Controllo librerie non riuscito: {e}")
+            return
+
+        critiche = missing_critical(results)
+        opzionali = missing_optional(results)
+
+        # Elenco dettagliato: una riga per libreria, con comando se mancante
+        righe = []
+        for r in results:
+            if r["ok"]:
+                stato = "✅"
+                extra = ""
+            else:
+                stato = "❌" if r["critical"] else "⚠️"
+                extra = f"  →  {r['install']}"
+            righe.append(f"{stato} {r['name']} ({r['purpose']}){extra}")
+        self.deps_details_label.setText("\n".join(righe))
+
+        if critiche:
+            self._deps_block_login = True
+            self.login_button.setEnabled(False)
+            self.login_button.setToolTip(
+                "Avvio bloccato: installa le librerie critiche mancanti"
+            )
+            self.deps_summary_button.setText(
+                f"❌ Librerie critiche mancanti: {', '.join(critiche)}"
+            )
+            self.deps_summary_button.setStyleSheet(
+                "QPushButton { border: none; background: transparent;"
+                " color: #c62828; font-size: 12px; font-weight: bold;"
+                " margin: 2px; }"
+            )
+            self.status_label.setText(
+                "❌ Impossibile avviare: librerie critiche mancanti (vedi elenco)"
+            )
+            self.deps_details_label.setVisible(True)
+        elif opzionali:
+            self.deps_summary_button.setText(
+                f"⚠️ Librerie ok, {len(opzionali)} opzionali mancanti"
+                " (clicca per i dettagli)"
+            )
+        else:
+            self.deps_summary_button.setText(
+                "✅ Tutte le librerie sono disponibili (clicca per i dettagli)"
+            )
+
+    def _toggle_deps_details(self):
+        """Mostra/nasconde l'elenco dettagliato delle librerie."""
+        self.deps_details_label.setVisible(not self.deps_details_label.isVisible())
+        self.adjustSize()
+
+    def _face_auth_module(self):
+        """Importa il modulo di riconoscimento facciale (None se assente)."""
+        try:
+            import face_auth
+            return face_auth
+        except ImportError:
+            try:
+                from . import face_auth
+                return face_auth
+            except ImportError as e:
+                print(f"Riconoscimento facciale non disponibile: {e}")
+                return None
+
+    def attempt_face_login(self):
+        """Accesso con il viso: consenso esplicito, poi riconoscimento."""
+        if getattr(self, "_deps_block_login", False):
+            self.status_label.setText(
+                "❌ Impossibile avviare: librerie critiche mancanti (vedi elenco)"
+            )
+            return
+        fa = self._face_auth_module()
+        if fa is None or not fa.face_auth_manager.available():
+            self.status_label.setText(
+                "❌ Riconoscimento facciale non disponibile (serve opencv-contrib)"
+            )
+            return
+        if not fa.face_auth_manager.enrolled_users():
+            self.status_label.setText(
+                "ℹ️ Nessun viso registrato: entra con la password e attiva\n"
+                "l'accesso con il viso quando ti verrà proposto."
+            )
+            return
+        if not fa.ask_camera_consent(self, "accedere con il viso"):
+            return
+        dialog = fa.FaceCameraDialog(mode="recognize", parent=self)
+        if (
+            dialog.exec() != fa.FaceCameraDialog.DialogCode.Accepted.value
+            or not dialog.result_username
+        ):
+            self.status_label.setText("❌ Viso non riconosciuto: usa la password")
+            return
+        try:
+            try:
+                from assistente_dsa.Autenticazione_e_Accesso.auth_manager import (
+                    auth_manager,
+                )
+            except ImportError:
+                from Autenticazione_e_Accesso.auth_manager import auth_manager
+        except ImportError:
+            from auth_manager import auth_manager
+        user = auth_manager.users.get(dialog.result_username)
+        if user is None or not user.get("is_active", True):
+            self.status_label.setText("❌ Utente non attivo o inesistente")
+            return
+        import datetime
+        user["last_login"] = datetime.datetime.now().isoformat()
+        auth_manager._save_users()
+        self.status_label.setText(f"✅ Benvenuto, {user.get('full_name', user['username'])}!")
+        self.status_label.setStyleSheet("color: #4CAF50; font-size: 12px;")
+        self.authenticated_user = user
+        QTimer.singleShot(800, self.accept)
+
+    def _maybe_offer_face_enrollment(self, username):
+        """Dopo un login con password, propone (una volta sola) di registrare
+        il viso per gli accessi futuri. La telecamera si accende solo se
+        l'utente accetta esplicitamente."""
+        fa = self._face_auth_module()
+        if fa is None or not fa.face_auth_manager.available():
+            return
+        if fa.face_auth_manager.is_enrolled(username):
+            return
+        declined_marker = os.path.join(
+            fa.face_auth_manager.faces_dir, f"{username}.declined"
+        )
+        if os.path.exists(declined_marker):
+            return
+        if fa.ask_camera_consent(
+            self, "attivare l'accesso con il viso per i prossimi avvii"
+        ):
+            dialog = fa.FaceCameraDialog(mode="enroll", username=username, parent=self)
+            dialog.exec()
+        else:
+            # Non riproporre a ogni login: l'utente ha detto no
+            try:
+                with open(declined_marker, "w", encoding="utf-8") as f:
+                    f.write("consenso negato: non riproporre la registrazione\n")
+            except OSError:
+                pass
 
     def _remember_file(self):
         return os.path.join(os.path.dirname(__file__), "Save", "AUTH", ".remember")
@@ -181,6 +387,13 @@ class LoginDialog(QDialog):
             print(f"Impossibile salvare le credenziali: {e}")
 
     def attempt_login(self):
+        # Blocco da controllo librerie (copre anche l'Invio da tastiera)
+        if getattr(self, "_deps_block_login", False):
+            self.status_label.setText(
+                "❌ Impossibile avviare: librerie critiche mancanti (vedi elenco)"
+            )
+            return
+
         username = self.username_input.text().strip()
         password = self.password_input.text().strip()
 
@@ -207,6 +420,7 @@ class LoginDialog(QDialog):
                     self.status_label.setStyleSheet("color: #4CAF50; font-size: 12px;")
                     self.authenticated_user = user
                     self._update_remembered_credentials(username, password)
+                    self._maybe_offer_face_enrollment(username)
                     QTimer.singleShot(1000, self.accept)
                 else:
                     self.status_label.setText("❌ Credenziali non valide")
