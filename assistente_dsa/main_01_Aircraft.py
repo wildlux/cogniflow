@@ -3328,8 +3328,8 @@ class MainWindow(QMainWindow):
         <h3>🎯 Colonne</h3>
         <ul>
             <li><b>Colonna A:</b> Pensierini creativi</li>
-            <li><b>Colonna B:</b> Area di lavoro</li>
-            <li><b>Colonna C:</b> Lavagna risposte AI</li>
+            <li><b>Colonna B + C:</b> Area di lavoro (sopra) e Lavagna
+                risposte AI (sotto), nella stessa colonna</li>
         </ul>
 
         <h3>🛠️ Cassetta Attrezzi</h3>
@@ -4616,7 +4616,12 @@ class MainWindow(QMainWindow):
             "QGroupBox::title { background: rgba(255, 255, 255, 0.85);"
             " border-radius: 4px; }"
         )
-        for name in ("column_a_group", "column_b_group", "column_c_group"):
+        for name in (
+            "column_a_group",
+            "column_bc_group",
+            "column_b_group",
+            "column_c_group",
+        ):
             apply(getattr(self, name, None), group_style)
 
         # Cassetta degli attrezzi: velo più coprente (contiene molti controlli)
@@ -5200,18 +5205,29 @@ class MainWindow(QMainWindow):
         column_a_layout.addWidget(self.pensierini_scroll)
         self.main_splitter.addWidget(self.column_a_group)
 
-        # Column B: Work Area
+        # Colonne B e C UNITE in un'unica colonna a destra: l'Area di Lavoro
+        # (sopra) e la Lavagna risposta Interattiva & AI (sotto), separabili
+        # da uno splitter verticale interno. Il layout passa così da tre a
+        # due colonne (A | B+C), mantenendo distinte le due funzioni.
+        self.column_bc_group = QGroupBox("🎯 Area di Lavoro & Lavagna AI (B + C)")
+        self.column_bc_group.setObjectName("work_area")  # ID per CSS
+        self.column_bc_group.setMinimumWidth(320)
+        column_bc_layout = QVBoxLayout(self.column_bc_group)
+
+        self.bc_splitter = QSplitter(Qt.Orientation.Vertical)
+        self.bc_splitter.setHandleWidth(8)
+        self.bc_splitter.setStyleSheet(self.main_splitter.styleSheet())
+
+        # Parte B: Area di Lavoro (dentro un riquadro senza cornice pesante)
         self.column_b_group = QGroupBox("🎯 Area di Lavoro (B)")
         self.column_b_group.setObjectName("work_area")  # ID per CSS
-        self.column_b_group.setMinimumWidth(280)  # Improved minimum width for work area
         column_b_layout = QVBoxLayout(self.column_b_group)
         self.setup_work_area(column_b_layout)
-        self.main_splitter.addWidget(self.column_b_group)
+        self.bc_splitter.addWidget(self.column_b_group)
 
-        # Column C: Details
-        self.column_c_group = QGroupBox("Lavagna risposta Interattiva & AI")
+        # Parte C: Lavagna risposta Interattiva & AI
+        self.column_c_group = QGroupBox("🤖 Lavagna risposta Interattiva & AI (C)")
         self.column_c_group.setObjectName("details")  # ID per CSS
-        self.column_c_group.setMinimumWidth(300)  # Minimum width for details
         column_c_layout = QVBoxLayout(self.column_c_group)
         self.details_scroll = QScrollArea()
         self.details_scroll.setWidgetResizable(True)
@@ -5224,10 +5240,14 @@ class MainWindow(QMainWindow):
         self.details_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.details_scroll.setWidget(self.details_widget)
         column_c_layout.addWidget(self.details_scroll)
-        self.main_splitter.addWidget(self.column_c_group)
+        self.bc_splitter.addWidget(self.column_c_group)
 
-        # Set initial proportions (balanced 3-equal parts)
-        self.main_splitter.setSizes([333, 333, 334])  # Roughly equal thirds
+        self.bc_splitter.setSizes([400, 400])  # metà Area di Lavoro, metà Lavagna
+        column_bc_layout.addWidget(self.bc_splitter)
+        self.main_splitter.addWidget(self.column_bc_group)
+
+        # Due colonne: A più stretta, B+C più larga
+        self.main_splitter.setSizes([300, 560])
 
         # main_splitter will be added to vertical_splitter later
 

@@ -59,7 +59,11 @@ davanti alla webcam:
 - mano DESTRA: indice e pollice rivolti verso il basso = "/\"
   (il cursore a tenda, punto di fine).
 
-- [ ] Unificare le colonne B e C in un'unica area.
+- [x] Unificare le colonne B e C in un'unica area.
+      → Layout ora a 2 colonne (A | B+C): `column_bc_group` con uno splitter
+      verticale interno (`bc_splitter`) che tiene Area di Lavoro sopra e
+      Lavagna AI sotto. Tutte le funzioni restano intatte (drop pensierini
+      in `work_area_layout`, risposte AI in `details_layout`).
 - [ ] Riconoscere il gesto a due mani (il rilevamento supporta già più
       mani: num_hands=4 in visual_background) e tradurlo in selezione
       del testo tra i due punti indicati.
