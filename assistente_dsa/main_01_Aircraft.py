@@ -2744,6 +2744,34 @@ class RichTextInputWidget(QWidget):
         )
         color_btn.clicked.connect(self._pick_color)
         toolbar.addWidget(color_btn)
+        toolbar.addSpacing(8)
+
+        # Scrittura con l'alfabeto manuale (dattilologia LIS): la webcam
+        # riconosce la forma della mano e digita la lettera nel testo.
+        self._sign_thread = None
+        self.sign_btn = QPushButton("🤟 Segni")
+        self.sign_btn.setCheckable(True)
+        self.sign_btn.setToolTip(
+            "Scrivi con l'alfabeto manuale (dattilologia): fai la lettera con "
+            "la mano davanti alla webcam e tienila ferma ~1 secondo per "
+            "scriverla. Mano aperta = spazio; per una lettera doppia nascondi "
+            "un attimo la mano e rifai il segno. Supporta le lettere statiche "
+            "(tutte tranne J e Z). Non usare insieme ad altre funzioni che "
+            "occupano la webcam."
+        )
+        self.sign_btn.setStyleSheet(
+            "QPushButton { padding:2px 8px; min-height:24px; color:#2c3e50;"
+            " background:#ffffff; border:1px solid #ccc; border-radius:4px; }"
+            "QPushButton:hover { background:#eef4ff; border-color:#4a90e2; }"
+            "QPushButton:checked { background:#d6e6ff; border-color:#2196f3;"
+            " color:#1565c0; }"
+        )
+        self.sign_btn.toggled.connect(self._toggle_sign_input)
+        toolbar.addWidget(self.sign_btn)
+
+        self.sign_hint = QLabel("")
+        self.sign_hint.setStyleSheet("color:#888; font-size:10px;")
+        toolbar.addWidget(self.sign_hint)
         toolbar.addStretch()
 
         layout.addLayout(toolbar)
@@ -2790,6 +2818,45 @@ class RichTextInputWidget(QWidget):
             fmt = QTextCharFormat()
             fmt.setForeground(QBrush(c))
             self._apply(fmt)
+
+    def _toggle_sign_input(self, checked):
+        """Avvia/ferma la scrittura con l'alfabeto manuale via webcam."""
+        if not checked:
+            if self._sign_thread is not None:
+                self._sign_thread.stop()
+                self._sign_thread = None
+            self.sign_hint.setText("")
+            return
+        try:
+            from Artificial_Intelligence.Video.sign_tracker import SignLanguageThread
+        except ImportError:
+            try:
+                from assistente_dsa.Artificial_Intelligence.Video.sign_tracker import (
+                    SignLanguageThread,
+                )
+            except ImportError as e:
+                self.sign_hint.setText(f"Segni non disponibili: {e}")
+                self.sign_btn.setChecked(False)
+                return
+        self._sign_thread = SignLanguageThread()
+        self._sign_thread.letter_ready.connect(self._on_sign_letter)
+        self._sign_thread.candidate.connect(self._on_sign_candidate)
+        self._sign_thread.status.connect(self.sign_hint.setText)
+        self._sign_thread.start()
+
+    def _on_sign_letter(self, ch):
+        """Scrive la lettera confermata dal segno nel punto del cursore."""
+        cursor = self.editor.textCursor()
+        cursor.insertText(ch)
+        self.editor.setTextCursor(cursor)
+
+    def _on_sign_candidate(self, letter, progress):
+        """Anteprima: lettera che la webcam sta vedendo e conferma in corso."""
+        if not letter:
+            self.sign_hint.setText("🤟 mostra una lettera alla webcam")
+            return
+        dots = round(progress * 5)
+        self.sign_hint.setText(f"🤟 {letter}  {'●' * dots}{'○' * (5 - dots)}")
 
 
 class HandwritingTabletDialog(QDialog):
