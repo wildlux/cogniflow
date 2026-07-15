@@ -3044,6 +3044,8 @@ class MainWindow(QMainWindow):
             return
         if hasattr(self, "toggle_tools_button"):
             self.toggle_tools_button.setChecked(False)
+        if hasattr(self, "keyboard_button"):
+            self.keyboard_button.setChecked(False)
         # Se non siamo su canvas -> vai a canvas; altrimenti torna al testo
         if self.footer_input_stack.currentIndex() == 1:
             self.footer_input_stack.setCurrentIndex(0)  # testo
@@ -4035,7 +4037,50 @@ class MainWindow(QMainWindow):
             stack.setCurrentIndex(self._tools_page_index)  # mostra Strumenti
             if hasattr(self, "toggle_tools_button"):
                 self.toggle_tools_button.setChecked(True)
+            if hasattr(self, "keyboard_button"):
+                self.keyboard_button.setChecked(False)
             self.set_status_message("🔧 Strumenti nell'area comune")
+
+    def toggle_virtual_keyboard(self):
+        """Mostra la tastiera virtuale nell'area comune del footer
+        (al posto di Testo/Canvas/Strumenti); premuta di nuovo torna al testo."""
+        if (
+            not hasattr(self, "footer_input_stack")
+            or getattr(self, "_keyboard_page_index", None) is None
+        ):
+            return
+        stack = self.footer_input_stack
+        if stack.currentIndex() == self._keyboard_page_index:
+            stack.setCurrentIndex(0)  # torna al testo
+            self.keyboard_button.setChecked(False)
+            if hasattr(self, "toggle_input_mode_button"):
+                self.toggle_input_mode_button.setText("🖊️ Canvas")
+            self.set_status_message("⌨️ Area testo")
+        else:
+            stack.setCurrentIndex(self._keyboard_page_index)
+            self.keyboard_button.setChecked(True)
+            if hasattr(self, "toggle_tools_button"):
+                self.toggle_tools_button.setChecked(False)
+            self.set_status_message(
+                "⌨️ Tastiera a schermo: scrivi col puntatore nel campo pensierini"
+            )
+
+    def _hand_pointer_global(self):
+        """Posizione globale del cursore del mano-mouse, o None se spento.
+
+        Serve al dwell click della tastiera virtuale: il mano-mouse muove
+        un cursore interno (niente puntatore di sistema su Wayland), quindi
+        la tastiera non può basarsi solo su QCursor.pos().
+        """
+        hm = getattr(self, "hand_mouse", None)
+        try:
+            if hm is not None and hm.cursor.isVisible():
+                parent = hm.cursor.parentWidget()
+                if parent is not None:
+                    return parent.mapToGlobal(hm.cursor.geometry().center())
+        except RuntimeError:
+            pass  # cursore distrutto durante lo spegnimento della webcam
+        return None
 
     def set_safe_font(self):
         """Imposta un font sicuro e standard per evitare artefatti di rendering, usando le preferenze utente."""
@@ -5534,6 +5579,34 @@ class MainWindow(QMainWindow):
             self._tools_page_index = 2
         else:
             self._tools_page_index = None
+
+        # Tastiera virtuale a schermo: per chi scrive solo col puntatore
+        # (mouse, mano-mouse, domani BCI). Condivide il documento del campo
+        # pensierini, quindi scrive davvero lì anche se lo copre.
+        self._keyboard_page_index = None
+        try:
+            from UI.virtual_keyboard import VirtualKeyboardWidget
+
+            self.virtual_keyboard = VirtualKeyboardWidget(
+                target_edit=self.footer_pensierini_input,
+                speak=self._speak,
+                pointer_provider=self._hand_pointer_global,
+                learned_words_path=os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    "Save",
+                    "SETUP_TOOLS_&_Data",
+                    "tastiera_parole_apprese.json",
+                ),
+            )
+            self.virtual_keyboard.send_requested.connect(
+                self.send_footer_pensierino
+            )
+            self._keyboard_page_index = self.footer_input_stack.addWidget(
+                self.virtual_keyboard
+            )
+        except Exception as e:
+            logging.warning(f"Tastiera virtuale non disponibile: {e}")
+            self.virtual_keyboard = None
         # Riempie tutto lo spazio libero del footer (orizzontale e verticale)
         self.footer_input_stack.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -5678,11 +5751,28 @@ class MainWindow(QMainWindow):
         send_top_row.addWidget(self.footer_send_pensierino_button)
         send_top_row.addWidget(self.attach_button)
 
+        # Pulsante per mostrare la tastiera virtuale nell'area comune
+        self.keyboard_button = QPushButton("⌨️ Tastiera")
+        self.keyboard_button.setCheckable(True)
+        self.keyboard_button.setMinimumHeight(28)
+        self.keyboard_button.setToolTip(
+            "Tastiera a schermo: scrivi con il solo puntatore (mouse o "
+            "mano-mouse), con predizione delle parole, dwell click (sosta "
+            "sul tasto = pressione) e scansione a singolo segnale."
+        )
+        self.keyboard_button.setStyleSheet(
+            self.toggle_input_mode_button.styleSheet()
+        )
+        self.keyboard_button.clicked.connect(self.toggle_virtual_keyboard)
+        if self._keyboard_page_index is None:
+            self.keyboard_button.setEnabled(False)
+
         send_column_layout = QVBoxLayout()
         send_column_layout.setSpacing(4)
         send_column_layout.addLayout(send_top_row)
         send_column_layout.addWidget(self.toggle_input_mode_button)
         send_column_layout.addWidget(self.toggle_tools_button)  # Strumenti sotto Canvas
+        send_column_layout.addWidget(self.keyboard_button)
         send_column_layout.addWidget(self.clear_all_button)
         pensierini_footer_layout.addLayout(send_column_layout)
 
