@@ -133,10 +133,16 @@ class VideoThread(QThread):
         list
     )  # list of human bounding boxes [(x,y,w,h), ...]
     human_position_signal = pyqtSignal(int, int)  # center position of primary human
+    # Indice di "difficoltà" del viso principale (0..1): smorfia di sforzo/
+    # frustrazione dedotta dai blendshape. Emesso solo se emit_difficulty è
+    # attivo (osservazione per genitori/clinici, spenta per impostazione).
+    difficulty_signal = pyqtSignal(float)
 
     def __init__(self, main_window=None):
         super().__init__()
         self._run_flag = True
+        self.emit_difficulty = False  # acceso solo dall'osservazione consensuata
+        self._difficulty_last_ts = 0.0
         self.face_detection_enabled = False
         self.hand_detection_enabled = False
         self.gesture_recognition_enabled = False
@@ -478,6 +484,30 @@ class VideoThread(QThread):
             return "Concentrato"
         return "Neutro"
 
+    @staticmethod
+    def _difficulty_from_blendshapes(blendshapes):
+        """Indice 0..1 di smorfia di difficoltà/frustrazione dai blendshape.
+
+        Combina sopracciglia aggrottate, bocca contratta all'ingiù o serrata,
+        occhi socchiusi e naso arricciato: la tipica smorfia di chi fatica.
+        Un sorriso ampio abbassa il punteggio (non è disagio).
+        """
+        s = {b.category_name: b.score for b in blendshapes}
+
+        def avg(*names):
+            return sum(s.get(n, 0.0) for n in names) / len(names)
+
+        brow = avg("browDownLeft", "browDownRight")
+        frown = avg("mouthFrownLeft", "mouthFrownRight")
+        press = avg("mouthPressLeft", "mouthPressRight")
+        squint = avg("eyeSquintLeft", "eyeSquintRight")
+        sneer = avg("noseSneerLeft", "noseSneerRight")
+        smile = avg("mouthSmileLeft", "mouthSmileRight")
+
+        score = 0.35 * brow + 0.30 * max(frown, press) + 0.20 * squint + 0.15 * sneer
+        score -= 0.5 * smile  # un sorriso non è difficoltà
+        return max(0.0, min(1.0, score))
+
     def _detect_faces_tasks(self, frame, landmarker):
         """Rilevamento viso con MediaPipe Tasks: riquadro + espressione."""
         import time as _time
@@ -537,6 +567,17 @@ class VideoThread(QThread):
                     f"P{person}: "
                     + self._expression_from_blendshapes(result.face_blendshapes[idx])
                 )
+                # Osservazione dei momenti di difficoltà: solo il viso più
+                # vicino (P1) e non più di ~4 volte al secondo
+                if self.emit_difficulty and person == 1:
+                    now = _time.monotonic()
+                    if now - self._difficulty_last_ts >= 0.25:
+                        self._difficulty_last_ts = now
+                        self.difficulty_signal.emit(
+                            self._difficulty_from_blendshapes(
+                                result.face_blendshapes[idx]
+                            )
+                        )
             cv2.putText(
                 frame,
                 label,

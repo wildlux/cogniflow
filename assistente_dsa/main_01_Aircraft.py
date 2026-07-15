@@ -33,6 +33,7 @@ from PyQt6.QtGui import (
     QFont,
     QFontMetrics,
     QColor,
+    QRadialGradient,
     QShortcut,
     QKeySequence,
     QPainter,
@@ -1775,23 +1776,40 @@ class PensieriniWidget(QWidget):
 
 
 class HandCursorWidget(QWidget):
-    """Cursore visivo della mano: verde = aperta, rosso = chiusa, blu = scorri."""
+    """Cursore-gioco della mano: una bolla colorata con alone morbido.
 
-    COLORS = {
-        "open": QColor(40, 167, 69),
-        "closed": QColor(220, 53, 69),
-        "scroll": QColor(0, 123, 255),
+    Verde = mano aperta, rosso = chiusa, blu = scorri. È volutamente grande
+    e "giocoso" perché va vissuto come un gioco. I colori sono scelti
+    dall'utente nelle Impostazioni (chiave `cursor.color_*`).
+    """
+
+    DEFAULT_COLORS = {
+        "open": "#28a745",
+        "closed": "#dc3545",
+        "scroll": "#007bff",
     }
+    SIZE = 52  # bolla grande: più facile da seguire, sembra un gioco
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        self.setFixedSize(36, 36)
+        self.setFixedSize(self.SIZE, self.SIZE)
         self.mode = "open"
+        self.colors = {}
+        self.reload_colors()
         self.hide()
 
+    def reload_colors(self):
+        """(Ri)legge i colori del cursore dalle Impostazioni."""
+        self.colors = {}
+        for mode, default in self.DEFAULT_COLORS.items():
+            value = get_setting(f"cursor.color_{mode}", default)
+            col = QColor(value)
+            self.colors[mode] = col if col.isValid() else QColor(default)
+        self.update()
+
     def set_mode(self, mode):
-        if mode != self.mode and mode in self.COLORS:
+        if mode != self.mode and mode in self.DEFAULT_COLORS:
             self.mode = mode
             self.update()
 
@@ -1801,21 +1819,44 @@ class HandCursorWidget(QWidget):
     def paintEvent(self, a0):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        color = self.COLORS[self.mode]
-        painter.setPen(QPen(color, 3))
-        alpha = {"open": 60, "closed": 150, "scroll": 110}[self.mode]
+        color = self.colors.get(self.mode, QColor(self.DEFAULT_COLORS[self.mode]))
+        c = self.SIZE / 2
+
+        # Alone morbido: sfumatura radiale che svanisce verso il bordo
+        glow = QRadialGradient(c, c, c)
+        g0 = QColor(color)
+        g0.setAlpha(150 if self.mode == "closed" else 90)
+        g1 = QColor(color)
+        g1.setAlpha(0)
+        glow.setColorAt(0.0, g0)
+        glow.setColorAt(1.0, g1)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(glow)
+        painter.drawEllipse(0, 0, self.SIZE, self.SIZE)
+
+        # Bolla centrale con bordo pieno
+        painter.setPen(QPen(color, 4))
         fill = QColor(color)
-        fill.setAlpha(alpha)
+        fill.setAlpha({"open": 70, "closed": 160, "scroll": 120}[self.mode])
         painter.setBrush(fill)
-        painter.drawEllipse(4, 4, 28, 28)
+        r = self.SIZE * 0.42
+        painter.drawEllipse(int(c - r), int(c - r), int(2 * r), int(2 * r))
+
+        # Lucciola/riflesso in alto a sinistra: dà l'aria di una bolla-gioco
+        highlight = QColor(255, 255, 255, 180)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(highlight)
+        painter.drawEllipse(int(c - r * 0.5), int(c - r * 0.6), int(r * 0.4), int(r * 0.4))
+
         if self.mode == "scroll":
             # Freccette su/giù per indicare la modalità scorrimento
-            painter.setPen(QPen(QColor(255, 255, 255), 2))
-            painter.drawLine(18, 10, 18, 26)
-            painter.drawLine(14, 14, 18, 10)
-            painter.drawLine(22, 14, 18, 10)
-            painter.drawLine(14, 22, 18, 26)
-            painter.drawLine(22, 22, 18, 26)
+            painter.setPen(QPen(QColor(255, 255, 255), 3))
+            cx = int(c)
+            painter.drawLine(cx, int(c - 12), cx, int(c + 12))
+            painter.drawLine(cx - 6, int(c - 6), cx, int(c - 12))
+            painter.drawLine(cx + 6, int(c - 6), cx, int(c - 12))
+            painter.drawLine(cx - 6, int(c + 6), cx, int(c + 12))
+            painter.drawLine(cx + 6, int(c + 6), cx, int(c + 12))
         painter.end()
 
 
@@ -3025,6 +3066,11 @@ class MainWindow(QMainWindow):
 
         # Aggiorna l'orario immediatamente all'avvio
         self._update_time_labels()
+
+        # Osservazione dei momenti di difficoltà (per genitori/clinici):
+        # spenta se non esplicitamente abilitata e acconsentita nelle
+        # Impostazioni. Vedi core/difficulty_observer.py.
+        self._setup_difficulty_observer()
 
         logging.info("Applicazione avviata")
 
@@ -4371,6 +4417,13 @@ class MainWindow(QMainWindow):
             vt.pen_tip_signal.connect(self._on_pen_tip)
         vt.status_signal.connect(lambda s: logging.info(f"Webcam: {s}"))
 
+        # Osservazione dei momenti di difficoltà: attiva solo se abilitata
+        # e acconsentita nelle Impostazioni (spenta di default)
+        obs = getattr(self, "difficulty_observer", None)
+        if obs is not None and obs.enabled:
+            vt.emit_difficulty = True
+            vt.difficulty_signal.connect(self._on_difficulty_score)
+
         self.video_thread_main = vt
         vt.start()
 
@@ -5070,6 +5123,34 @@ class MainWindow(QMainWindow):
         self.quick_help_button.setToolTip("Mostra guida rapida dell'applicazione")
         self.quick_help_button.clicked.connect(self.show_quick_help)
         top_layout.addWidget(self.quick_help_button)
+
+        # Pulsante di uscita/logout: chiude la sessione e torna al login.
+        self.logout_button = QPushButton("🚪 Esci")
+        self.logout_button.setObjectName("logout_button")
+        self.logout_button.setMinimumHeight(28)
+        self.logout_button.setToolTip("Esci dalla sessione e torna alla schermata di accesso")
+        self.logout_button.setStyleSheet(
+            """
+            QPushButton#logout_button {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #6c757d, stop:1 #5a6268);
+                border: 1px solid #545b62;
+                border-radius: 6px;
+                padding: 4px 12px;
+                font-size: 13px;
+                font-weight: bold;
+                color: white;
+            }
+            QPushButton#logout_button:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #c82333, stop:1 #bd2130);
+                border-color: #b21f2d;
+            }
+            QPushButton#logout_button:pressed { background: #bd2130; }
+        """
+        )
+        self.logout_button.clicked.connect(self.logout)
+        top_layout.addWidget(self.logout_button)
 
         main_layout.addLayout(top_layout)
 
@@ -9790,6 +9871,99 @@ ESEMPI:
         except Exception:
             logging.error("Errore pulizia colonne: {e}")
 
+    def logout(self):
+        """Chiude la sessione e torna alla schermata di accesso."""
+        reply = QMessageBox.question(
+            self,
+            "Esci dalla sessione",
+            "Vuoi uscire e tornare alla schermata di accesso?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        # Segnala l'intenzione di riavviare dal login: l'avvio successivo
+        # mostrerà l'accesso a prescindere dal bypass di comodo.
+        self._logout_requested = True
+        logging.info("Logout richiesto dall'utente")
+        self.close()
+
+    # === Osservazione dei momenti di difficoltà (genitori/clinici) ===
+
+    def _difficulty_output_dir(self):
+        return os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "Save",
+            "Osservazioni_Riservate",
+        )
+
+    def _grab_interface(self):
+        """Screenshot dell'interfaccia (non della webcam) come QPixmap."""
+        try:
+            return self.grab()
+        except Exception:
+            return None
+
+    def _difficulty_context(self):
+        """Breve descrizione di cosa sta facendo l'utente, per il registro."""
+        try:
+            stack = getattr(self, "footer_input_stack", None)
+            if stack is not None:
+                idx = stack.currentIndex()
+                nomi = {
+                    0: "scrittura testo",
+                    1: "canvas (scrittura/disegno a mano)",
+                    self._tools_page_index: "strumenti",
+                    getattr(self, "_keyboard_page_index", None): "tastiera a schermo",
+                }
+                return nomi.get(idx, "area di lavoro")
+        except Exception:
+            pass
+        return "area di lavoro"
+
+    def _setup_difficulty_observer(self):
+        """Crea l'osservatore leggendo le impostazioni (spento di default)."""
+        self.difficulty_observer = None
+        try:
+            from core.difficulty_observer import DifficultyObserver
+        except Exception as e:
+            logging.warning(f"Osservazione difficoltà non disponibile: {e}")
+            return
+        enabled = bool(get_setting("observation.difficulty_capture_enabled", False))
+        consent = bool(get_setting("observation.consent_given", False))
+        self.difficulty_observer = DifficultyObserver(
+            output_dir=self._difficulty_output_dir(),
+            screenshot_provider=self._grab_interface,
+            enabled=enabled and consent,
+            threshold=float(get_setting("observation.threshold", 0.5)),
+            cooldown_s=float(get_setting("observation.cooldown_s", 20.0)),
+            retention_days=int(get_setting("observation.retention_days", 30)),
+            context_provider=self._difficulty_context,
+        )
+        if enabled and consent:
+            logging.info("Osservazione dei momenti di difficoltà: attiva")
+
+    def refresh_difficulty_observer(self):
+        """Rilegge le impostazioni (chiamata dopo il salvataggio del dialog)."""
+        self._setup_difficulty_observer()
+        # Se la webcam è già attiva, aggiorna al volo l'emissione del segnale
+        vt = getattr(self, "video_thread_main", None)
+        if vt is not None:
+            obs = self.difficulty_observer
+            active = obs is not None and obs.enabled
+            vt.emit_difficulty = active
+            try:
+                vt.difficulty_signal.disconnect(self._on_difficulty_score)
+            except (TypeError, RuntimeError):
+                pass
+            if active:
+                vt.difficulty_signal.connect(self._on_difficulty_score)
+
+    def _on_difficulty_score(self, score):
+        obs = getattr(self, "difficulty_observer", None)
+        if obs is not None:
+            obs.on_difficulty(score)
+
     def open_settings(self):
         """Apre il dialog delle impostazioni."""
         if SettingsDialog is None:
@@ -10307,27 +10481,6 @@ def main():
         app.setOrganizationName("DSA Aircraft")
         print("QApplication created successfully")
 
-        # Login all'avvio (disattivabile con Impostazioni → Bypass login)
-        bypass_login = settings.get("startup", {}).get("bypass_login", False)
-        if not bypass_login:
-            try:
-                from Autenticazione_e_Accesso.login_dialog import LoginDialog
-            except ImportError:
-                from assistente_dsa.Autenticazione_e_Accesso.login_dialog import (
-                    LoginDialog,
-                )
-            login_dialog = LoginDialog()
-            result = login_dialog.exec()
-            if (
-                result != LoginDialog.DialogCode.Accepted.value
-                or login_dialog.authenticated_user is None
-            ):
-                print("🔐 Login annullato: chiusura applicazione")
-                sys.exit(0)
-            print(
-                f"🔐 Accesso effettuato: {login_dialog.authenticated_user['username']}"
-            )
-
         # Imposta icona se disponibile
         icon_path = "ICO-fonts-wallpaper/ICONA.ico"
         if os.path.exists(icon_path):
@@ -10336,17 +10489,49 @@ def main():
             app.setWindowIcon(QIcon(icon_path))
             logger.info("Icona caricata: {icon_path}")
 
-        print("About to create MainWindow...")
-        # Crea e mostra finestra principale (Aircraft) a schermo intero
-        window = MainWindow()
-        print("MainWindow created successfully")
-        window.showMaximized()
+        # Login all'avvio (disattivabile con Impostazioni → Bypass login).
+        # Ciclo: dopo un logout si torna qui e si mostra di nuovo l'accesso.
+        bypass_login = settings.get("startup", {}).get("bypass_login", False)
+        while True:
+            if not bypass_login:
+                try:
+                    from Autenticazione_e_Accesso.login_dialog import LoginDialog
+                except ImportError:
+                    from assistente_dsa.Autenticazione_e_Accesso.login_dialog import (
+                        LoginDialog,
+                    )
+                login_dialog = LoginDialog()
+                result = login_dialog.exec()
+                if (
+                    result != LoginDialog.DialogCode.Accepted.value
+                    or login_dialog.authenticated_user is None
+                ):
+                    print("🔐 Login annullato: chiusura applicazione")
+                    sys.exit(0)
+                print(
+                    f"🔐 Accesso effettuato: {login_dialog.authenticated_user['username']}"
+                )
 
-        logger.info("✓ Aircraft avviata con successo")
-        print("✅ Aircraft - Schermata principale avviata!")
+            print("About to create MainWindow...")
+            # Crea e mostra finestra principale (Aircraft) a schermo intero
+            window = MainWindow()
+            print("MainWindow created successfully")
+            window.showMaximized()
 
-        # Avvia event loop (con profiling opzionale: COGNIFLOW_PROFILE=1)
-        sys.exit(_run_event_loop(app))
+            logger.info("✓ Aircraft avviata con successo")
+            print("✅ Aircraft - Schermata principale avviata!")
+
+            # Avvia event loop (con profiling opzionale: COGNIFLOW_PROFILE=1)
+            rc = _run_event_loop(app)
+
+            if getattr(window, "_logout_requested", False):
+                # L'utente ha scelto "Esci": torna alla schermata di accesso
+                # (anche se il bypass era attivo, ora si chiede di nuovo).
+                bypass_login = False
+                window = None
+                print("🚪 Logout: ritorno alla schermata di accesso")
+                continue
+            sys.exit(rc)
 
     except Exception as e:
         logger.error(f"Errore avvio Aircraft: {e}")

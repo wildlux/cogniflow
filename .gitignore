@@ -11,6 +11,10 @@ assistente_dsa/Artificial_Intelligence/Riconoscimento_Vocale/models/vosk_models/
 **/Save/LOG/
 **/Save/LOGS/
 /Save/
+# Materiale riservato dell'osservazione difficoltà (screenshot di minori)
+**/Save/Osservazioni_Riservate/
+# Parole apprese dalla tastiera virtuale (dato personale locale)
+**/Save/SETUP_TOOLS_&_Data/tastiera_parole_apprese.json
 .env
 *.env
 !.env.example

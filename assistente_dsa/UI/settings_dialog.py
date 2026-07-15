@@ -7,6 +7,7 @@ Interfaccia grafica completa per modificare tutte le configurazioni
 import subprocess
 import sys
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -136,9 +137,8 @@ class SettingsDialog(QDialog):
 
         # Crea i vari tab
         self.setup_general_tab()
-        self.setup_ui_tab()
         self.setup_ai_tab()
-        self.setup_test_tab()
+        self.setup_observation_tab()
         self.setup_personalize_tab()
         self.setup_download_tab()
 
@@ -288,38 +288,6 @@ class SettingsDialog(QDialog):
 
         self.tab_widget.addTab(widget, "Avvio")
 
-    def setup_ui_tab(self):
-        """Configura il tab interfaccia utente."""
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-
-        # Gruppo dimensioni finestra
-        size_group = QGroupBox("Dimensioni Finestra")
-        size_layout = QVBoxLayout(size_group)
-
-        # Larghezza finestra
-        width_layout = QHBoxLayout()
-        width_layout.addWidget(QLabel("Larghezza finestra:"))
-        self.window_width_spin = QSpinBox()
-        self.window_width_spin.setRange(800, 3000)
-        width_layout.addWidget(self.window_width_spin)
-        width_layout.addWidget(QLabel("px"))
-        size_layout.addLayout(width_layout)
-
-        # Altezza finestra
-        height_layout = QHBoxLayout()
-        height_layout.addWidget(QLabel("Altezza finestra:"))
-        self.window_height_spin = QSpinBox()
-        self.window_height_spin.setRange(600, 2000)
-        height_layout.addWidget(self.window_height_spin)
-        height_layout.addWidget(QLabel("px"))
-        size_layout.addLayout(height_layout)
-
-        layout.addWidget(size_group)
-        layout.addStretch()
-
-        self.tab_widget.addTab(widget, "Interfaccia")
-
     def setup_ai_tab(self):
         """Configura il tab intelligenza artificiale."""
         widget = QWidget()
@@ -353,80 +321,91 @@ class SettingsDialog(QDialog):
 
 
 
-    def setup_test_tab(self):
-        """Configura il tab di test per scopi di sviluppo."""
+    def setup_observation_tab(self):
+        """Osservazione dei momenti di difficoltà (per genitori/clinici).
+
+        Funzione delicata: pensata per l'adulto che ha in cura l'utente.
+        Spenta di default, si attiva solo con consenso esplicito.
+        """
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
-        # Gruppo test input
-        test_input_group = QGroupBox("Input di Test")
-        test_input_layout = QVBoxLayout(test_input_group)
-
-        # Campo di testo
-        text_layout = QHBoxLayout()
-        text_layout.addWidget(QLabel("Testo di prova:"))
-        self.test_text_edit = QLineEdit()
-        self.test_text_edit.setPlaceholderText("Inserisci testo di test...")
-        text_layout.addWidget(self.test_text_edit)
-        test_input_layout.addLayout(text_layout)
-
-        # Campo numerico
-        number_layout = QHBoxLayout()
-        number_layout.addWidget(QLabel("Numero di test:"))
-        self.test_number_spin = QSpinBox()
-        self.test_number_spin.setRange(0, 1000)
-        self.test_number_spin.setValue(42)
-        number_layout.addWidget(self.test_number_spin)
-        test_input_layout.addLayout(number_layout)
-
-        layout.addWidget(test_input_group)
-
-        # Gruppo test opzioni
-        test_options_group = QGroupBox("Opzioni di Test")
-        test_options_layout = QVBoxLayout(test_options_group)
-
-        # Combo box
-        combo_layout = QHBoxLayout()
-        combo_layout.addWidget(QLabel("Opzione test:"))
-        self.test_combo = QComboBox()
-        self.test_combo.addItems(
-            ["Opzione 1", "Opzione 2", "Opzione 3", "Debug", "Release"]
+        info = QLabel(
+            "Quando l'utente fatica, spesso fa una smorfia. Se questa funzione "
+            "è attiva, la webcam coglie quei momenti e salva uno screenshot "
+            "dell'INTERFACCIA (non del volto) in una cartella riservata, con "
+            "un registro di data/ora. Il materiale è pensato per essere "
+            "riletto da un genitore o da uno psicologo.\n\n"
+            "Nel momento non viene mostrato nulla all'utente, per non "
+            "interromperlo o metterlo in imbarazzo. La funzione presuppone "
+            "che chi la attiva abbia la responsabilità della persona "
+            "osservata: è giusto informarla, in modo adatto alla sua età."
         )
-        combo_layout.addWidget(self.test_combo)
-        test_options_layout.addLayout(combo_layout)
+        info.setWordWrap(True)
+        info.setStyleSheet("color:#555;")
+        layout.addWidget(info)
 
-        # Checkbox
-        self.test_checkbox = QCheckBox("Abilita modalità test")
-        self.test_checkbox.setChecked(True)
-        test_options_layout.addWidget(self.test_checkbox)
+        group = QGroupBox("Osservazione dei momenti di difficoltà")
+        gl = QVBoxLayout(group)
 
-        layout.addWidget(test_options_group)
-
-        # Gruppo azioni test
-        test_actions_group = QGroupBox("Azioni di Test")
-        test_actions_layout = QVBoxLayout(test_actions_group)
-
-        # Pulsante di test
-        test_button = QPushButton("🚀 Esegui Test")
-        test_button.setStyleSheet(
-            "QPushButton { background-color: #17a2b8; color: white; font-weight: bold; padding: 10px 20px; min-width: 140px; } QPushButton:hover { background-color: #138496; }"
+        self.observation_enabled_checkbox = QCheckBox(
+            "Abilita l'osservazione dei momenti di difficoltà"
         )
-        test_button.clicked.connect(
-            lambda: QMessageBox.information(self, "Test", "Test eseguito con successo!")
+        self.observation_enabled_checkbox.setToolTip(
+            "Richiede webcam attiva. Cattura la schermata (non il volto) "
+            "quando viene rilevata una smorfia di difficoltà."
         )
-        test_actions_layout.addWidget(test_button)
+        gl.addWidget(self.observation_enabled_checkbox)
 
-        # Label informativo
-        info_label = QLabel(
-            "Questa è una scheda di test per scopi di sviluppo.\nPuoi aggiungere qui nuovi widget e funzionalità."
+        self.observation_consent_checkbox = QCheckBox(
+            "Confermo di avere la responsabilità della persona osservata e di "
+            "averla informata (consenso)"
         )
-        info_label.setStyleSheet("color: #666; font-style: italic;")
-        test_actions_layout.addWidget(info_label)
+        self.observation_consent_checkbox.setToolTip(
+            "L'osservazione si attiva solo con questo consenso."
+        )
+        gl.addWidget(self.observation_consent_checkbox)
 
-        layout.addWidget(test_actions_group)
+        ret_layout = QHBoxLayout()
+        ret_layout.addWidget(QLabel("Conserva gli screenshot per:"))
+        self.observation_retention_spin = QSpinBox()
+        self.observation_retention_spin.setRange(1, 365)
+        self.observation_retention_spin.setSuffix(" giorni")
+        ret_layout.addWidget(self.observation_retention_spin)
+        ret_layout.addStretch()
+        gl.addLayout(ret_layout)
+
+        open_btn = QPushButton("📂 Apri cartella riservata")
+        open_btn.clicked.connect(self._open_observation_folder)
+        gl.addWidget(open_btn)
+
+        layout.addWidget(group)
         layout.addStretch()
+        self.tab_widget.addTab(widget, "🔒 Osservazione")
 
-        self.tab_widget.addTab(widget, "Test")
+    def _observation_dir(self):
+        import os
+
+        return os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "Save",
+            "Osservazioni_Riservate",
+        )
+
+    def _open_observation_folder(self):
+        import os
+
+        path = self._observation_dir()
+        os.makedirs(path, exist_ok=True)
+        try:
+            if sys.platform.startswith("linux"):
+                subprocess.Popen(["xdg-open", path])
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", path])
+            else:
+                os.startfile(path)  # type: ignore[attr-defined]
+        except Exception as e:
+            QMessageBox.warning(self, "Cartella", f"Impossibile aprire la cartella: {e}")
 
     def setup_personalize_tab(self):
         """Configura il tab per personalizzare l'aspetto dell'interfaccia."""
@@ -758,6 +737,37 @@ class SettingsDialog(QDialog):
 
         scroll_layout.addWidget(preview_group)
 
+        # === COLORI DEL CURSORE-GIOCO ===
+        cursor_group = QGroupBox("🫧 Colori del cursore (mano-mouse)")
+        cursor_group.setStyleSheet("QGroupBox { font-weight: bold; }")
+        cursor_layout = QVBoxLayout(cursor_group)
+        cursor_layout.addWidget(
+            QLabel(
+                "Il cursore della mano è una bolla colorata, pensata come un "
+                "gioco. Scegli i colori dei tre stati:"
+            )
+        )
+        self._cursor_color_buttons = {}
+        for mode, etichetta, default in (
+            ("open", "Mano aperta (si muove)", "#28a745"),
+            ("closed", "Mano chiusa (clicca/afferra)", "#dc3545"),
+            ("scroll", "Scorrimento", "#007bff"),
+        ):
+            row = QHBoxLayout()
+            row.addWidget(QLabel(etichetta))
+            row.addStretch()
+            btn = QPushButton()
+            btn.setFixedSize(90, 28)
+            current = get_setting(f"cursor.color_{mode}", default)
+            self._set_color_button(btn, current)
+            btn.clicked.connect(
+                lambda _c, m=mode, b=btn: self._choose_cursor_color(m, b)
+            )
+            self._cursor_color_buttons[mode] = btn
+            row.addWidget(btn)
+            cursor_layout.addLayout(row)
+        scroll_layout.addWidget(cursor_group)
+
         # === PULSANTI AZIONI ===
         actions_layout = QHBoxLayout()
 
@@ -887,6 +897,26 @@ class SettingsDialog(QDialog):
 
     def _on_download_finished(self, item_id, ok):
         self._refresh_download_row(item_id)
+
+    def _set_color_button(self, button, color_hex):
+        """Mostra il colore scelto come sfondo del pulsante e lo memorizza."""
+        button.setText(color_hex)
+        # Testo scuro o chiaro a seconda della luminosità del colore
+        c = QColor(color_hex)
+        lum = 0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue()
+        fg = "#000" if lum > 140 else "#fff"
+        button.setStyleSheet(
+            f"background-color: {color_hex}; color: {fg};"
+            " border: 1px solid #999; border-radius: 4px; font-size: 11px;"
+        )
+        button.setProperty("colorHex", color_hex)
+
+    def _choose_cursor_color(self, mode, button):
+        """Sceglie il colore di uno stato del cursore-gioco."""
+        current = QColor(button.property("colorHex") or "#28a745")
+        color = QColorDialog.getColor(current, self, "Colore del cursore")
+        if color.isValid():
+            self._set_color_button(button, color.name())
 
     def choose_color(self, category, button):
         """Permette di scegliere un colore per una categoria (semplificato)."""
@@ -1182,25 +1212,22 @@ class SettingsDialog(QDialog):
             )
             self.wake_word_edit.setText(get_setting("wake_word", "scrivi"))
 
-            # UI
-            self.window_width_spin.setValue(get_setting("ui.window_width", 1200))
-            self.window_height_spin.setValue(get_setting("ui.window_height", 800))
-
             # AI
             self.ai_trigger_edit.setText(get_setting("ai.ai_trigger", "++++"))
             self.ai_model_combo.setCurrentText(
                 get_setting("ai.selected_ai_model", "gemma:2b")
             )
 
-            # Test
-            self.test_text_edit.setText(
-                get_setting("test.test_text", "Test di sviluppo")
+            # Osservazione dei momenti di difficoltà
+            self.observation_enabled_checkbox.setChecked(
+                get_setting("observation.difficulty_capture_enabled", False)
             )
-            self.test_number_spin.setValue(get_setting("test.test_number", 42))
-            self.test_combo.setCurrentText(get_setting("test.test_option", "Opzione 1"))
-            self.test_checkbox.setChecked(get_setting("test.test_enabled", True))
-
-
+            self.observation_consent_checkbox.setChecked(
+                get_setting("observation.consent_given", False)
+            )
+            self.observation_retention_spin.setValue(
+                get_setting("observation.retention_days", 30)
+            )
 
         except Exception as e:
             QMessageBox.warning(
@@ -1218,10 +1245,6 @@ class SettingsDialog(QDialog):
                 "wake_word", self.wake_word_edit.text().strip().lower() or "scrivi"
             )
 
-            # UI
-            set_setting("ui.window_width", self.window_width_spin.value())
-            set_setting("ui.window_height", self.window_height_spin.value())
-
             # Font settings (aggiunto per salvare tipo, dimensione e spessore font)
             if hasattr(self, "font_family_combo"):
                 set_setting("main_font_family", self.font_family_combo.currentText())
@@ -1234,13 +1257,51 @@ class SettingsDialog(QDialog):
             set_setting("ai.ai_trigger", self.ai_trigger_edit.text())
             set_setting("ai.selected_ai_model", self.ai_model_combo.currentText())
 
-            # Test
-            set_setting("test.test_text", self.test_text_edit.text())
-            set_setting("test.test_number", self.test_number_spin.value())
-            set_setting("test.test_option", self.test_combo.currentText())
-            set_setting("test.test_enabled", self.test_checkbox.isChecked())
+            # Osservazione dei momenti di difficoltà: l'attivazione richiede
+            # il consenso esplicito, altrimenti resta spenta.
+            obs_enabled = self.observation_enabled_checkbox.isChecked()
+            obs_consent = self.observation_consent_checkbox.isChecked()
+            if obs_enabled and not obs_consent:
+                QMessageBox.information(
+                    self,
+                    "Osservazione",
+                    "Per attivare l'osservazione dei momenti di difficoltà "
+                    "serve confermare il consenso. La funzione resta spenta.",
+                )
+                obs_enabled = False
+                self.observation_enabled_checkbox.setChecked(False)
+            set_setting("observation.difficulty_capture_enabled", obs_enabled)
+            set_setting("observation.consent_given", obs_consent)
+            set_setting(
+                "observation.retention_days",
+                self.observation_retention_spin.value(),
+            )
+            if obs_consent and not get_setting("observation.consent_timestamp", ""):
+                from datetime import datetime
 
+                set_setting(
+                    "observation.consent_timestamp",
+                    datetime.now().isoformat(timespec="seconds"),
+                )
+            # Colori del cursore-gioco (mano-mouse)
+            if hasattr(self, "_cursor_color_buttons"):
+                for mode, btn in self._cursor_color_buttons.items():
+                    hexv = btn.property("colorHex")
+                    if hexv:
+                        set_setting(f"cursor.color_{mode}", hexv)
 
+            # Applica subito alla finestra principale, se disponibile
+            win = self._main_window()
+            if win is not None and hasattr(win, "refresh_difficulty_observer"):
+                win.refresh_difficulty_observer()
+            # Ricolora subito il cursore della mano se esiste
+            if win is not None:
+                hm = getattr(win, "hand_mouse", None)
+                if hm is not None and hasattr(hm, "cursor"):
+                    try:
+                        hm.cursor.reload_colors()
+                    except Exception:
+                        pass
 
             print("✅ Tutte le impostazioni salvate nel file settings.json")
             QMessageBox.information(

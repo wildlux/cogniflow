@@ -524,11 +524,40 @@ class VirtualKeyboardWidget(QWidget):
             btn.setVisible(bool(word))
 
     def _echo(self, text):
+        # Niente eco se la tastiera non è la pagina visibile: sennò, mentre
+        # si disegna sul canvas, il dwell "toccherebbe" i tasti nascosti e
+        # si sentirebbero lettere fantasma ("emme", "elle"...).
+        if not self.isVisible():
+            return
         if self._speak is not None and self.echo_btn.isChecked():
             try:
                 self._speak(text)
             except Exception:
                 pass  # l'eco non deve mai bloccare la scrittura
+
+    def hideEvent(self, event):
+        """Sospende dwell e scansione quando la tastiera viene nascosta.
+
+        Nel QStackedWidget del footer, passando a Canvas/Strumenti la
+        tastiera resta in memoria: senza questa sospensione i timer
+        continuerebbero a premere i tasti (ora invisibili) sotto il
+        puntatore. Vedi anche la guardia in _echo.
+        """
+        self._dwell_timer.stop()
+        self._scan_timer.stop()
+        self._set_dwell_mark(None)
+        self._clear_scan_marks()
+        super().hideEvent(event)
+
+    def showEvent(self, event):
+        """Riprende le modalità attive quando la tastiera torna visibile."""
+        super().showEvent(event)
+        if self.dwell_btn.isChecked():
+            self._dwell_timer.start()
+        if self.scan_btn.isChecked():
+            self._scan_reset()
+            self._scan_timer.start()
+            self._scan_mark()
 
     # ------------------------------------------------------------------
     # Dwell click (sosta sul tasto = pressione)
@@ -574,6 +603,8 @@ class VirtualKeyboardWidget(QWidget):
     def _dwell_tick(self):
         import time
 
+        if not self.isVisible():
+            return
         btn = self._key_under_pointer()
         now = time.monotonic()
         if btn is not self._dwell_key:
@@ -652,6 +683,8 @@ class VirtualKeyboardWidget(QWidget):
             b.style().polish(b)
 
     def _scan_tick(self):
+        if not self.isVisible():
+            return
         rows = self._scan_rows()
         if not rows:
             return

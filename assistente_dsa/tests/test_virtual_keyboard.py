@@ -114,6 +114,44 @@ def test_tasto_invia():
     assert inviato
 
 
+def test_nascosta_sospende_dwell_e_scansione():
+    # Bug: nascosta sotto il canvas, la tastiera non deve tenere attivi i
+    # timer di dwell/scansione né emettere eco.
+    from PyQt6.QtWidgets import QStackedWidget
+
+    kb, editor = make_kb()
+    stack = QStackedWidget()
+    altro = QTextEdit()
+    stack.addWidget(kb)      # pagina 0 = tastiera
+    stack.addWidget(altro)   # pagina 1 = "canvas" finto
+    stack.show()
+    app.processEvents()
+
+    kb.dwell_btn.setChecked(True)
+    kb.scan_btn.setChecked(True)
+    assert kb._dwell_timer.isActive()
+    assert kb._scan_timer.isActive()
+
+    stack.setCurrentIndex(1)  # passa al canvas: la tastiera si nasconde
+    app.processEvents()
+    assert not kb.isVisible()
+    assert not kb._dwell_timer.isActive()
+    assert not kb._scan_timer.isActive()
+
+    # Eco soppressa mentre è nascosta
+    parlato = []
+    kb._speak = parlato.append
+    kb.echo_btn.setChecked(True)
+    kb._echo("m")
+    assert parlato == []
+
+    stack.setCurrentIndex(0)  # torna alla tastiera: riprende
+    app.processEvents()
+    assert kb.isVisible()
+    assert kb._dwell_timer.isActive()
+    assert kb._scan_timer.isActive()
+
+
 if __name__ == "__main__":
     failed = 0
     for name, fn in sorted(globals().items()):
