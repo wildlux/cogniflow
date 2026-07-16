@@ -3209,7 +3209,7 @@ class MainWindow(QMainWindow):
 
                 # Se l'utente chiede un riassunto ad albero/grafo con i punti
                 # chiave, istruisce l'AI a restituire un elenco gerarchico che
-                # verrà disegnato come mappa nella Lavagna AI (colonna C).
+                # verrà disegnato come mappa nell'Area di Lavoro (ex Lavagna).
                 prompt_da_inviare = ai_prompt
                 if self._is_graph_request(ai_prompt):
                     prompt_da_inviare = self._graph_prompt(ai_prompt)
@@ -3328,8 +3328,8 @@ class MainWindow(QMainWindow):
         <h3>🎯 Colonne</h3>
         <ul>
             <li><b>Colonna A:</b> Pensierini creativi</li>
-            <li><b>Colonna B + C:</b> Area di lavoro (sopra) e Lavagna
-                risposte AI (sotto), nella stessa colonna</li>
+            <li><b>Colonna B:</b> Area di lavoro (contiene anche le risposte
+                dell'AI e le mappe)</li>
         </ul>
 
         <h3>🛠️ Cassetta Attrezzi</h3>
@@ -3601,26 +3601,18 @@ class MainWindow(QMainWindow):
                         if widget:
                             self.work_area_layout.removeItem(item)
                             widget.setVisible(False)  # Nasconde invece di eliminare
+                self._detail_items = []  # anche le risposte AI inglobate qui
                 print("✅ Colonna B (area di lavoro) pulita")
         except Exception as e:
             print(f"⚠️ Errore pulizia colonna B: {e}")
 
     def clear_column_c(self):
-        """Pulisce la colonna C (dettagli)"""
-        try:
-            if hasattr(self, "details_layout") and self.details_layout:
-                # Rimuove tutti i widget dalla colonna C in modo sicuro
-                count = self.details_layout.count()
-                for i in range(count - 1, -1, -1):  # Scorri al contrario per sicurezza
-                    item = self.details_layout.itemAt(i)
-                    if item:
-                        widget = item.widget()
-                        if widget:
-                            self.details_layout.removeItem(item)
-                            widget.setVisible(False)  # Nasconde invece di eliminare
-                print("✅ Colonna C (dettagli) pulita")
-        except Exception as e:
-            print(f"⚠️ Errore pulizia colonna C: {e}")
+        """La colonna C è stata inglobata nell'Area di Lavoro (B).
+
+        I contenuti della vecchia Lavagna AI stanno ora nell'Area di Lavoro,
+        già svuotata da clear_column_b: qui non c'è più nulla da pulire.
+        """
+        return
 
     def clear_input_text(self):
         """Pulisce i campi di input testo"""
@@ -4415,6 +4407,10 @@ class MainWindow(QMainWindow):
         # segue la punta; alzare l'indice apre/chiude l'inchiostro digitale
         if hasattr(vt, "pen_tip_signal"):
             vt.pen_tip_signal.connect(self._on_pen_tip)
+        # Selezione a due mani nell'Area di Lavoro: SX "I" = inizio,
+        # DX indice+pollice in basso = fine
+        if hasattr(vt, "two_hand_select_signal"):
+            vt.two_hand_select_signal.connect(self._on_two_hand_selection)
         vt.status_signal.connect(lambda s: logging.info(f"Webcam: {s}"))
 
         # Osservazione dei momenti di difficoltà: attiva solo se abilitata
@@ -4616,12 +4612,7 @@ class MainWindow(QMainWindow):
             "QGroupBox::title { background: rgba(255, 255, 255, 0.85);"
             " border-radius: 4px; }"
         )
-        for name in (
-            "column_a_group",
-            "column_bc_group",
-            "column_b_group",
-            "column_c_group",
-        ):
+        for name in ("column_a_group", "column_b_group"):
             apply(getattr(self, name, None), group_style)
 
         # Cassetta degli attrezzi: velo più coprente (contiene molti controlli)
@@ -4923,19 +4914,19 @@ class MainWindow(QMainWindow):
         return root
 
     def show_tree_in_details(self, root):
-        """Mostra la mappa ad albero nella Lavagna AI (colonna C)."""
+        """Mostra la mappa ad albero nell'Area di Lavoro (ex Lavagna AI)."""
         from PyQt6.QtWidgets import QLabel, QScrollArea
 
         self._clear_details()
         titolo = QLabel("🗺️ Mappa ad albero dei punti chiave")
         titolo.setStyleSheet("font-weight: bold; color: #37474f; padding: 4px;")
-        self.details_layout.addWidget(titolo)
+        self._add_detail_widget(titolo)
 
         tree = TreeGraphWidget(root)
         scroll = QScrollArea()
         scroll.setWidgetResizable(False)
         scroll.setWidget(tree)
-        self.details_layout.addWidget(scroll, 1)
+        self._add_detail_widget(scroll, 1)
 
     def _on_ai_response_received(self, prompt, response):
         """Gestisce la risposta ricevuta da Ollama."""
@@ -5205,48 +5196,29 @@ class MainWindow(QMainWindow):
         column_a_layout.addWidget(self.pensierini_scroll)
         self.main_splitter.addWidget(self.column_a_group)
 
-        # Colonne B e C UNITE in un'unica colonna a destra: l'Area di Lavoro
-        # (sopra) e la Lavagna risposta Interattiva & AI (sotto), separabili
-        # da uno splitter verticale interno. Il layout passa così da tre a
-        # due colonne (A | B+C), mantenendo distinte le due funzioni.
-        self.column_bc_group = QGroupBox("🎯 Area di Lavoro & Lavagna AI (B + C)")
-        self.column_bc_group.setObjectName("work_area")  # ID per CSS
-        self.column_bc_group.setMinimumWidth(320)
-        column_bc_layout = QVBoxLayout(self.column_bc_group)
-
-        self.bc_splitter = QSplitter(Qt.Orientation.Vertical)
-        self.bc_splitter.setHandleWidth(8)
-        self.bc_splitter.setStyleSheet(self.main_splitter.styleSheet())
-
-        # Parte B: Area di Lavoro (dentro un riquadro senza cornice pesante)
+        # Colonna B (Area di Lavoro) unica a destra. La vecchia "Lavagna
+        # risposta Interattiva & AI (C)" è stata INGLOBATA qui: le risposte
+        # dell'AI e le mappe ora compaiono nell'Area di Lavoro. Il layout è
+        # quindi a due colonne (A | B).
         self.column_b_group = QGroupBox("🎯 Area di Lavoro (B)")
         self.column_b_group.setObjectName("work_area")  # ID per CSS
+        self.column_b_group.setMinimumWidth(320)
         column_b_layout = QVBoxLayout(self.column_b_group)
         self.setup_work_area(column_b_layout)
-        self.bc_splitter.addWidget(self.column_b_group)
+        self.main_splitter.addWidget(self.column_b_group)
 
-        # Parte C: Lavagna risposta Interattiva & AI
-        self.column_c_group = QGroupBox("🤖 Lavagna risposta Interattiva & AI (C)")
-        self.column_c_group.setObjectName("details")  # ID per CSS
-        column_c_layout = QVBoxLayout(self.column_c_group)
-        self.details_scroll = QScrollArea()
-        self.details_scroll.setWidgetResizable(True)
-        self.details_scroll.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )
-        self.details_widget = QWidget()
-        self.details_widget.setObjectName("details_widget")
-        self.details_layout = QVBoxLayout(self.details_widget)
-        self.details_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.details_scroll.setWidget(self.details_widget)
-        column_c_layout.addWidget(self.details_scroll)
-        self.bc_splitter.addWidget(self.column_c_group)
+        # La Lavagna AI non è più una colonna separata: i riferimenti
+        # self.details_* puntano ora ai contenitori dell'Area di Lavoro, così
+        # risposte AI e mappe ad albero compaiono DENTRO l'Area di Lavoro.
+        # I widget dei "dettagli" vengono tracciati (self._detail_items) in
+        # modo che _clear_details rimuova solo quelli, senza toccare i
+        # pensierini trascinati nell'area.
+        self.details_scroll = self.work_area_scroll
+        self.details_widget = self.work_area_widget
+        self.details_layout = self.work_area_layout
+        self._detail_items = []
 
-        self.bc_splitter.setSizes([400, 400])  # metà Area di Lavoro, metà Lavagna
-        column_bc_layout.addWidget(self.bc_splitter)
-        self.main_splitter.addWidget(self.column_bc_group)
-
-        # Due colonne: A più stretta, B+C più larga
+        # Due colonne: A più stretta, B più larga
         self.main_splitter.setSizes([300, 560])
 
         # main_splitter will be added to vertical_splitter later
@@ -6583,6 +6555,7 @@ class MainWindow(QMainWindow):
                         widget = item.widget()
                         if widget and hasattr(widget, "deleteLater"):
                             widget.deleteLater()
+                self._detail_items = []  # anche le risposte AI inglobate qui
         except Exception as e:
             logging.error(f"Errore nella pulizia dell'area di lavoro: {e}")
 
@@ -7092,11 +7065,176 @@ class MainWindow(QMainWindow):
                     testi.append(t)
         return "\n".join(testi)
 
+    def _on_two_hand_selection(self, x1, y1, x2, y2):
+        """Selezione a due mani nell'Area di Lavoro (B).
+
+        Riceve i due punti (0..1) indicati davanti alla webcam: la mano
+        SINISTRA con l'indice alzato ("I") segna l'inizio, la DESTRA con
+        indice e pollice verso il basso segna la fine. Evidenzia i
+        pensierini compresi tra i due punti e mostra le azioni possibili:
+        lettura ad alta voce, copia nei pensierini, domanda all'AI.
+        """
+        central = self.centralWidget()
+        widget = getattr(self, "work_area_widget", None)
+        layout = getattr(self, "work_area_layout", None)
+        if central is None or widget is None or layout is None:
+            return
+
+        # I punti webcam (0..1) coprono l'intera finestra, come il cursore
+        # del mano-mouse: portali nelle coordinate dell'Area di Lavoro
+        points = []
+        for nx, ny in ((x1, y1), (x2, y2)):
+            local = QPoint(int(nx * central.width()), int(ny * central.height()))
+            points.append(widget.mapFromGlobal(central.mapToGlobal(local)))
+        y_min = min(p.y() for p in points)
+        y_max = max(p.y() for p in points)
+
+        self._clear_two_hand_selection()
+
+        selected = []
+        texts = []
+        for i in range(layout.count()):
+            item = layout.itemAt(i)
+            w = item.widget() if item is not None else None
+            if w is None:
+                continue
+            geo = w.geometry()
+            if geo.top() > y_max or geo.bottom() < y_min:
+                continue
+            selected.append(w)
+            label = getattr(w, "text_label", None)
+            if label is not None and hasattr(label, "text"):
+                t = label.text().strip()
+            elif hasattr(w, "toPlainText"):
+                t = w.toPlainText().strip()
+            else:
+                t = ""
+            if t:
+                texts.append(t)
+
+        if not selected:
+            self.set_status_message(
+                "🤟 Selezione a due mani: nessun pensierino tra i due punti"
+            )
+            return
+
+        # Evidenzia i widget selezionati (lo stile originale viene salvato
+        # per il ripristino quando la selezione si chiude)
+        self._two_hand_selected = []
+        for w in selected:
+            self._two_hand_selected.append((w, w.styleSheet()))
+            w.setStyleSheet(
+                w.styleSheet() + "\nborder: 3px solid #00c8ff; border-radius: 8px;"
+            )
+
+        self._two_hand_text = "\n".join(texts)
+        self.set_status_message(
+            f"🤟 Selezionati {len(selected)} pensierini con il gesto a due mani"
+        )
+        self._show_two_hand_action_bar()
+
+    def _clear_two_hand_selection(self):
+        """Toglie l'evidenziazione della selezione a due mani e la barra."""
+        for w, style in getattr(self, "_two_hand_selected", []):
+            try:
+                w.setStyleSheet(style)
+            except RuntimeError:
+                pass  # widget già distrutto
+        self._two_hand_selected = []
+        self._two_hand_text = ""
+        bar = getattr(self, "_two_hand_bar", None)
+        if bar is not None:
+            bar.hide()
+
+    def _show_two_hand_action_bar(self):
+        """Mostra la barra delle azioni sopra l'Area di Lavoro."""
+        bar = getattr(self, "_two_hand_bar", None)
+        if bar is None:
+            bar = QFrame(self)
+            bar.setStyleSheet(
+                "QFrame { background: rgba(255, 255, 255, 0.97);"
+                " border: 2px solid #00c8ff; border-radius: 10px; }"
+                "QPushButton { font-size: 14px; padding: 10px 14px;"
+                " min-height: 44px; border-radius: 8px;"
+                " background: #e3f2fd; border: 1px solid #90caf9; }"
+                "QPushButton:hover { background: #bbdefb; }"
+            )
+            row = QHBoxLayout(bar)
+            row.setContentsMargins(10, 8, 10, 8)
+
+            read_btn = QPushButton("🔊 Leggi")
+            read_btn.setToolTip("Legge ad alta voce il testo selezionato")
+            read_btn.clicked.connect(
+                lambda: self._speak(getattr(self, "_two_hand_text", ""))
+            )
+            row.addWidget(read_btn)
+
+            copy_btn = QPushButton("📋 Nei pensierini")
+            copy_btn.setToolTip("Copia la selezione come nuovo pensierino (A)")
+            copy_btn.clicked.connect(self._two_hand_copy_to_pensierini)
+            row.addWidget(copy_btn)
+
+            ai_btn = QPushButton("🤖 Chiedi all'AI")
+            ai_btn.setToolTip("Chiede all'AI una spiegazione della selezione")
+            ai_btn.clicked.connect(self._two_hand_ask_ai)
+            row.addWidget(ai_btn)
+
+            close_btn = QPushButton("✖")
+            close_btn.setToolTip("Chiude la selezione")
+            close_btn.clicked.connect(self._clear_two_hand_selection)
+            row.addWidget(close_btn)
+
+            self._two_hand_bar = bar
+
+        # Posiziona la barra in alto, centrata sull'Area di Lavoro
+        bar.adjustSize()
+        scroll = getattr(self, "work_area_scroll", None)
+        if scroll is not None:
+            top_left = scroll.mapTo(self, QPoint(0, 0))
+            x = top_left.x() + (scroll.width() - bar.width()) // 2
+            bar.move(max(0, x), max(0, top_left.y() + 8))
+        bar.show()
+        bar.raise_()
+
+    def _two_hand_copy_to_pensierini(self):
+        """Copia il testo selezionato come nuovo pensierino nella colonna A."""
+        text = getattr(self, "_two_hand_text", "").strip()
+        if not text or DraggableTextWidget is None:
+            return
+        if hasattr(self, "pensierini_layout") and self.pensierini_layout:
+            widget = DraggableTextWidget(text, self.settings)
+            self.pensierini_layout.addWidget(widget)
+            self.set_status_message("📋 Selezione copiata nei pensierini")
+
+    def _two_hand_ask_ai(self):
+        """Chiede all'AI una spiegazione del testo selezionato."""
+        text = getattr(self, "_two_hand_text", "").strip()
+        if not text:
+            return
+        prompt = (
+            "Spiega in modo semplice e adatto a uno studente il seguente "
+            "testo selezionato:\n" + text
+        )
+        if getattr(self, "ollama_bridge", None) and self.ollama_bridge.checkConnection():
+            try:
+                model = get_setting("ai.selected_ai_model", "gemma:2b")
+                self.ollama_bridge.sendPrompt(prompt, model)
+                self.set_status_message("🤖 Domanda sulla selezione inviata all'AI")
+            except Exception as e:
+                logging.warning(f"Errore invio domanda sulla selezione: {e}")
+        else:
+            QMessageBox.information(
+                self,
+                "Chiedi all'AI",
+                "Testo selezionato:\n\n" + text
+                + "\n\n(AI non disponibile: avvia Ollama per ricevere una risposta.)",
+            )
+
     def request_information_gesture(self):
         """Richiesta di informazione attivata dal gesto 'O' sull'Area di Lavoro.
 
         Raccoglie il contenuto dell'Area di Lavoro (B) e chiede all'AI di
-        fornire informazioni; la risposta compare nella Lavagna AI (C).
+        fornire informazioni; la risposta compare nell'Area di Lavoro stessa.
         """
         contenuto = self._collect_work_area_text()
         if hasattr(self, "status_label") and self.status_label is not None:
@@ -7469,8 +7607,8 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(details_splitter)
 
-        # Aggiungi al layout dei dettagli
-        self.details_layout.addWidget(container)
+        # Aggiungi al layout dei dettagli (dentro l'Area di Lavoro)
+        self._add_detail_widget(container)
 
         # Mostra prima pagina
         self.update_page_display()
@@ -7524,17 +7662,27 @@ class MainWindow(QMainWindow):
             True
         )  # Sempre abilitato (per tornare all'inizio)
 
+    def _add_detail_widget(self, widget, stretch=0):
+        """Aggiunge una risposta AI / mappa nell'Area di Lavoro, tracciandola.
+
+        Così _clear_details rimuove solo i widget dei dettagli e non i
+        pensierini trascinati, che condividono lo stesso contenitore da
+        quando la Lavagna (C) è stata inglobata nell'Area di Lavoro.
+        """
+        self.details_layout.addWidget(widget, stretch)
+        if not hasattr(self, "_detail_items"):
+            self._detail_items = []
+        self._detail_items.append(widget)
+
     def _clear_details(self):
-        """Pulisce la colonna dettagli."""
-        try:
-            while self.details_layout.count():
-                item = self.details_layout.takeAt(0)
-                if item:
-                    widget = item.widget()
-                    if widget and hasattr(widget, "deleteLater"):
-                        widget.deleteLater()
-        except Exception:
-            logging.error("Errore pulizia dettagli: {e}")
+        """Rimuove risposte AI/mappe dall'Area di Lavoro (non i pensierini)."""
+        for widget in getattr(self, "_detail_items", []):
+            try:
+                widget.setParent(None)
+                widget.deleteLater()
+            except (RuntimeError, AttributeError):
+                pass  # già distrutto (es. area di lavoro svuotata)
+        self._detail_items = []
 
     def handle_voice_button(self):
         """Avvia il riconoscimento vocale utilizzando il modulo Riconoscimento_Vocale."""

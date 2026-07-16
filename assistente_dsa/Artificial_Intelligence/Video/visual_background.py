@@ -114,6 +114,53 @@ MP_HAND_CONNECTIONS = (
 )
 
 
+def _lm_dist2(pts, i, j):
+    """Distanza al quadrato tra i landmark i e j."""
+    return (pts[i][0] - pts[j][0]) ** 2 + (pts[i][1] - pts[j][1]) ** 2
+
+
+def finger_states(pts):
+    """Stato delle dita dai 21 landmark: (dita_distese, numero_distese).
+
+    Un dito è disteso se la punta è più lontana dal polso della falange
+    media. Il pollice è trattato a parte da selection_pose.
+    """
+    fingers = {
+        name: _lm_dist2(pts, tip, 0) > _lm_dist2(pts, pip, 0) * 1.15
+        for name, tip, pip in (
+            ("indice", 8, 6),
+            ("medio", 12, 10),
+            ("anulare", 16, 14),
+            ("mignolo", 20, 18),
+        )
+    }
+    return fingers, sum(fingers.values())
+
+
+def selection_pose(pts, fingers, extended):
+    """Pose del gesto di selezione a due mani: (inizio, fine).
+
+    "inizio" è la posa "I" (solo indice disteso, rivolto in alto);
+    "fine" è la posa con indice e pollice distesi e rivolti in basso.
+    """
+    thumb_extended = _lm_dist2(pts, 4, 0) > _lm_dist2(pts, 2, 0) * 1.15
+    index_points_up = pts[8][1] < pts[5][1]
+    index_points_down = pts[8][1] > pts[5][1]
+    thumb_points_down = pts[4][1] > pts[2][1]
+
+    start = extended == 1 and fingers["indice"] and index_points_up
+    end = (
+        fingers["indice"]
+        and thumb_extended
+        and index_points_down
+        and thumb_points_down
+        and not fingers["medio"]
+        and not fingers["anulare"]
+        and not fingers["mignolo"]
+    )
+    return start, end
+
+
 class VideoThread(QThread):
     """
     Thread per la cattura e l'elaborazione del flusso video dalla webcam.
@@ -129,6 +176,10 @@ class VideoThread(QThread):
     # True se l'indice è alzato. Usato per scrivere sul canvas impugnando
     # una penna vera: l'indice alzato apre/chiude l'inchiostro.
     pen_tip_signal = pyqtSignal(float, float, bool)
+    # Selezione a due mani: SINISTRA con indice alzato ("I", punto di inizio)
+    # e DESTRA con indice+pollice verso il basso ("/\", punto di fine).
+    # Emette (x1, y1, x2, y2) normalizzati 0..1 quando il gesto è confermato.
+    two_hand_select_signal = pyqtSignal(float, float, float, float)
     human_detected_signal = pyqtSignal(
         list
     )  # list of human bounding boxes [(x,y,w,h), ...]
@@ -162,6 +213,10 @@ class VideoThread(QThread):
         self._face_landmarker_failed = False
         self._mp_face_last_ts = -1
         self._last_faces = []  # [(cx, cy, area), ...] ordinati per area
+        # Selezione a due mani: frame consecutivi col gesto valido e istante
+        # dell'ultima emissione (per non ripetere finché la posa è tenuta)
+        self._select_streak = 0
+        self._select_last_emit = 0.0
 
         # Initialize Vision Language Detector
         self.vlm_detector = None
@@ -874,9 +929,6 @@ class VideoThread(QThread):
         if not result.hand_landmarks:
             return frame
 
-        def dist2(pts, i, j):
-            return (pts[i][0] - pts[j][0]) ** 2 + (pts[i][1] - pts[j][1]) ** 2
-
         # Analizza tutte le mani rilevate (fino a 2), con lato utente
         hands = []
         for lms, handed in zip(result.hand_landmarks, result.handedness):
@@ -896,17 +948,7 @@ class VideoThread(QThread):
             cx = sum(pts[i][0] for i in palm) // len(palm)
             cy = sum(pts[i][1] for i in palm) // len(palm)
 
-            # Dito disteso = punta più lontana dal polso della falange media
-            fingers = {
-                name: dist2(pts, tip, 0) > dist2(pts, pip, 0) * 1.15
-                for name, tip, pip in (
-                    ("indice", 8, 6),
-                    ("medio", 12, 10),
-                    ("anulare", 16, 14),
-                    ("mignolo", 20, 18),
-                )
-            }
-            extended = sum(fingers.values())
+            fingers, extended = finger_states(pts)
             if extended == 2 and fingers["indice"] and fingers["medio"]:
                 gesture = "Two Fingers"  # segno "2": modalità scorrimento
             elif extended >= 3:
@@ -916,6 +958,10 @@ class VideoThread(QThread):
             else:
                 gesture = None  # zona ambigua: nessun cambio di stato
 
+            # Pose del gesto di selezione a due mani: "I" (inizio) e
+            # indice+pollice verso il basso (fine)
+            sel_start_pose, sel_end_pose = selection_pose(pts, fingers, extended)
+
             hands.append(
                 {
                     "side": user_side,
@@ -923,6 +969,8 @@ class VideoThread(QThread):
                     "center": (cx, cy),
                     "gesture": gesture,
                     "index_up": fingers["indice"],
+                    "select_start": sel_start_pose,
+                    "select_end": sel_end_pose,
                 }
             )
 
@@ -937,6 +985,56 @@ class VideoThread(QThread):
                 hd["person"] = 1 if d1 <= d2 else 2
             else:
                 hd["person"] = 1
+
+        # Selezione a due mani (persona 1): SINISTRA "I" = punto di inizio,
+        # DESTRA "/\" = punto di fine. Confermata dopo alcuni frame
+        # consecutivi, poi emessa con i due indici in coordinate 0..1.
+        sel_start = next(
+            (
+                hd
+                for hd in hands
+                if hd["person"] == 1 and hd["side"] == "left" and hd["select_start"]
+            ),
+            None,
+        )
+        sel_end = next(
+            (
+                hd
+                for hd in hands
+                if hd["person"] == 1 and hd["side"] == "right" and hd["select_end"]
+            ),
+            None,
+        )
+        if sel_start is not None and sel_end is not None:
+            # La posa di selezione non deve produrre click del mano-mouse
+            sel_start["gesture"] = None
+            sel_end["gesture"] = None
+            self._select_streak += 1
+            p1 = sel_start["pts"][8]
+            p2 = sel_end["pts"][8]
+            cv2.line(frame, p1, p2, (0, 220, 255), 2)
+            cv2.circle(frame, p1, 10, (0, 220, 255), 2)
+            cv2.circle(frame, p2, 10, (0, 220, 255), 2)
+            now_s = _time.monotonic()
+            if self._select_streak >= 6 and now_s - self._select_last_emit > 2.0:
+                self._select_last_emit = now_s
+                self.two_hand_select_signal.emit(
+                    min(1.0, max(0.0, p1[0] / w)),
+                    min(1.0, max(0.0, p1[1] / h)),
+                    min(1.0, max(0.0, p2[0] / w)),
+                    min(1.0, max(0.0, p2[1] / h)),
+                )
+                cv2.putText(
+                    frame,
+                    "SELEZIONE",
+                    (10, 90),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.8,
+                    (0, 220, 255),
+                    2,
+                )
+        else:
+            self._select_streak = 0
 
         # La mano primaria guida il cursore:
         # P1 destra → P1 sinistra → P2 destra → P2 sinistra

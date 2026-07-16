@@ -64,11 +64,20 @@ davanti alla webcam:
       verticale interno (`bc_splitter`) che tiene Area di Lavoro sopra e
       Lavagna AI sotto. Tutte le funzioni restano intatte (drop pensierini
       in `work_area_layout`, risposte AI in `details_layout`).
-- [ ] Riconoscere il gesto a due mani (il rilevamento supporta già più
+- [x] Riconoscere il gesto a due mani (il rilevamento supporta già più
       mani: num_hands=4 in visual_background) e tradurlo in selezione
       del testo tra i due punti indicati.
-- [ ] Definire cosa fare della selezione: lettura TTS, copia nei
+      → `selection_pose`/`finger_states` in visual_background: SX "I"
+      (solo indice, in alto) = inizio, DX indice+pollice in basso = fine.
+      Confermato dopo 6 frame consecutivi (two_hand_select_signal), con
+      feedback disegnato sul frame; la posa non genera click del
+      mano-mouse. Test: `tests/test_two_hand_selection.py`.
+- [x] Definire cosa fare della selezione: lettura TTS, copia nei
       pensierini, domanda all'AI sulla parte selezionata.
+      → `_on_two_hand_selection` evidenzia i pensierini dell'Area di
+      Lavoro compresi tra i due punti e apre una barra con azioni
+      grandi: 🔊 Leggi (TTS), 📋 Nei pensierini (copia in colonna A),
+      🤖 Chiedi all'AI (Ollama), ✖ Chiudi.
 
 ## ⌨️ Tastiera virtuale a schermo
 
