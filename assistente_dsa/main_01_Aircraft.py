@@ -2795,10 +2795,11 @@ class RichTextInputWidget(QWidget):
         self.sign_btn.setToolTip(
             "Scrivi con l'alfabeto manuale (dattilologia): fai la lettera con "
             "la mano davanti alla webcam e tienila ferma ~1 secondo per "
-            "scriverla. Mano aperta = spazio; per una lettera doppia nascondi "
-            "un attimo la mano e rifai il segno. Supporta le lettere statiche "
-            "(tutte tranne J e Z). Non usare insieme ad altre funzioni che "
-            "occupano la webcam."
+            "scriverla. Mano aperta = spazio; mano aperta con le dita in giù "
+            "= cancella; per una lettera doppia nascondi un attimo la mano e "
+            "rifai il segno. J e Z si scrivono disegnando in aria la "
+            "traiettoria partendo dal segno I (per J) o D (per Z). Non usare "
+            "insieme ad altre funzioni che occupano la webcam."
         )
         self.sign_btn.setStyleSheet(
             "QPushButton { padding:2px 8px; min-height:24px; color:#2c3e50;"
@@ -2809,6 +2810,21 @@ class RichTextInputWidget(QWidget):
         )
         self.sign_btn.toggled.connect(self._toggle_sign_input)
         toolbar.addWidget(self.sign_btn)
+
+        # Calibrazione: l'utente registra i PROPRI segni, più precisi
+        # della geometria generica (soprattutto per A E S T N M).
+        calib_btn = QPushButton("🎯")
+        calib_btn.setToolTip(
+            "Calibra i tuoi segni: registra come fai TU ogni lettera, per un "
+            "riconoscimento più preciso e adattato alla tua mano."
+        )
+        calib_btn.setStyleSheet(
+            "QPushButton { padding:2px 8px; min-height:24px; color:#2c3e50;"
+            " background:#ffffff; border:1px solid #ccc; border-radius:4px; }"
+            "QPushButton:hover { background:#eef4ff; border-color:#4a90e2; }"
+        )
+        calib_btn.clicked.connect(self._open_sign_calibration)
+        toolbar.addWidget(calib_btn)
 
         self.sign_hint = QLabel("")
         self.sign_hint.setStyleSheet("color:#888; font-size:10px;")
@@ -2888,8 +2904,34 @@ class RichTextInputWidget(QWidget):
     def _on_sign_letter(self, ch):
         """Scrive la lettera confermata dal segno nel punto del cursore."""
         cursor = self.editor.textCursor()
-        cursor.insertText(ch)
+        if ch == "\b":  # gesto di cancellazione: mano aperta verso il basso
+            if cursor.hasSelection():
+                cursor.removeSelectedText()
+            else:
+                cursor.deletePreviousChar()
+        else:
+            cursor.insertText(ch)
         self.editor.setTextCursor(cursor)
+
+    def _open_sign_calibration(self):
+        """Apre la calibrazione dei segni (ferma prima la webcam dei Segni)."""
+        was_active = self.sign_btn.isChecked()
+        if was_active:
+            self.sign_btn.setChecked(False)  # la webcam serve alla calibrazione
+        try:
+            from UI.sign_calibration_dialog import SignCalibrationDialog
+        except ImportError:
+            try:
+                from assistente_dsa.UI.sign_calibration_dialog import (
+                    SignCalibrationDialog,
+                )
+            except ImportError as e:
+                self.sign_hint.setText(f"Calibrazione non disponibile: {e}")
+                return
+        dialog = SignCalibrationDialog(self)
+        dialog.exec()
+        if was_active:
+            self.sign_btn.setChecked(True)  # riparte con i campioni aggiornati
 
     def _on_sign_candidate(self, letter, progress):
         """Anteprima: lettera che la webcam sta vedendo e conferma in corso."""

@@ -118,13 +118,25 @@ Rimasto per dopo:
 - [ ] Raffinamento opzionale dei suggerimenti con Ollama (contesto di frase).
 - [ ] Dwell click anche fuori dalla tastiera (su tutta l'interfaccia).
 
-## 🤟 Scrittura con l'alfabeto manuale (dattilologia) — seguiti
+## 🤟 Scrittura con l'alfabeto manuale (dattilologia) — seguiti — FATTO
 
 La base c'è (pulsante "🤟 Segni" nel mini WordPad, luglio 2026): lettere
 statiche A–Y riconosciute in geometria pura, mano aperta = spazio.
 
-- [ ] Modalità calibrazione: l'utente registra i PROPRI segni (landmark di
+- [x] Modalità calibrazione: l'utente registra i PROPRI segni (landmark di
       esempio per lettera) e il riconoscimento confronta con quelli — più
       preciso e adattabile, utile per le lettere "a pugno" (A E S T N M).
-- [ ] Gesto di cancellazione (backspace) senza toccare la tastiera.
-- [ ] Lettere con movimento: J e Z (traiettoria della punta del dito).
+      → pulsante "🎯" accanto a "🤟 Segni": finestra di calibrazione
+      (`UI/sign_calibration_dialog.py`) con conto alla rovescia, media di
+      10 fotogrammi per campione, max 5 campioni per lettera, salvati in
+      `Save/SETUP_TOOLS_&_Data/segni_calibrati.json` (`SignTemplateStore`).
+      Al riconoscimento i campioni personali vincono sulla geometria.
+- [x] Gesto di cancellazione (backspace) senza toccare la tastiera.
+      → mano aperta con le dita verso il BASSO = "CANCELLA" (il thread
+      emette "\b" e l'editor cancella il carattere precedente).
+- [x] Lettere con movimento: J e Z (traiettoria della punta del dito).
+      → dal segno statico I (mignolo) o D (indice) si disegna in aria la
+      traiettoria; `SignMotionClassifier` riconosce la J (discesa + uncino,
+      più alta che larga) e la Z (tre tratti con due inversioni). Durante
+      il movimento il conteggio statico è sospeso, quindi niente doppie
+      scritture. Test: `tests/test_sign_tracker.py`.

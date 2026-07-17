@@ -7,11 +7,16 @@ MediaPipe: origine in alto a sinistra, y che cresce verso il basso.
 
 import os
 import sys
+import tempfile
 from collections import namedtuple
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from Artificial_Intelligence.Video.sign_tracker import SignAlphabetClassifier
+from Artificial_Intelligence.Video.sign_tracker import (
+    SignAlphabetClassifier,
+    SignMotionClassifier,
+    SignTemplateStore,
+)
 
 LM = namedtuple("LM", "x y z")
 
@@ -142,6 +147,88 @@ def test_mano_non_riconosciuta():
     # forma senza senso: medio+mignolo distesi, il resto chiuso
     states = dict(FIST, middle="ext", pinky="ext")
     assert classify(states, THUMB_ACROSS) is None
+
+
+def test_gesto_cancella():
+    # mano aperta rovesciata: polso in alto, dita distese verso il basso
+    pts = [None] * 21
+    pts[0] = (0.50, 0.30)
+    thumb = [(0.45, 0.35), (0.40, 0.40), (0.32, 0.48), (0.25, 0.55)]
+    for i, t in enumerate(thumb):
+        pts[1 + i] = t
+    mcp_down = {"index": (0.42, 0.50), "middle": (0.48, 0.51),
+                "ring": (0.54, 0.50), "pinky": (0.60, 0.48)}
+    for name, slots in FINGER_SLOTS.items():
+        pieces = finger(mcp_down[name], "ext", direction=(0.0, 1.0))
+        for slot, pt in zip(slots, pieces):
+            pts[slot] = pt
+    lms = [LM(x, y, 0.0) for x, y in pts]
+    assert SignAlphabetClassifier.classify(lms) == "CANCELLA"
+
+
+# --- Lettere con movimento: J e Z -----------------------------------------
+
+def _percorso_j():
+    """Discesa verticale chiusa da un uncino verso sinistra."""
+    path = [(0.50, 0.30 + i * 0.03) for i in range(11)]  # giù fino a 0.60
+    path += [(0.47, 0.62), (0.44, 0.63), (0.41, 0.63), (0.38, 0.62),
+             (0.35, 0.60)]
+    return path
+
+
+def _percorso_z():
+    """Tre tratti: destra, diagonale in basso a sinistra, ancora destra."""
+    path = [(0.30 + i * 0.05, 0.30) for i in range(7)]  # → fino a 0.60
+    path += [(0.60 - i * 0.05, 0.30 + i * 0.042) for i in range(1, 7)]  # ↙
+    path += [(0.30 + i * 0.05, 0.55) for i in range(1, 7)]  # → fino a 0.60
+    return path
+
+
+def test_movimento_j():
+    assert SignMotionClassifier.classify("I", _percorso_j()) == "J"
+
+
+def test_movimento_z():
+    assert SignMotionClassifier.classify("D", _percorso_z()) == "Z"
+
+
+def test_movimento_forma_sbagliata():
+    # la traiettoria vale solo con la forma statica di partenza giusta
+    assert SignMotionClassifier.classify("D", _percorso_j()) is None
+    assert SignMotionClassifier.classify("I", _percorso_z()) is None
+
+
+def test_discesa_dritta_non_e_j():
+    # senza l'uncino finale una discesa verticale non deve scrivere J
+    path = [(0.50, 0.30 + i * 0.03) for i in range(14)]
+    assert SignMotionClassifier.classify("I", path) is None
+
+
+def test_tremolio_non_e_movimento():
+    # piccoli spostamenti (mano quasi ferma) non producono lettere
+    path = [(0.50 + 0.005 * (i % 2), 0.40 + 0.004 * (i % 3)) for i in range(20)]
+    assert SignMotionClassifier.classify("I", path) is None
+    assert SignMotionClassifier.classify("D", path) is None
+
+
+# --- Calibrazione: campioni personali --------------------------------------
+
+def test_calibrazione_match_e_persistenza():
+    hand_a = hand(FIST, THUMB_SIDE)
+    hand_aperta = hand(ALL, THUMB_OPEN)
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "segni.json")
+        store = SignTemplateStore(path)
+        assert store.match(hand_a) is None  # vuoto: nessun campione
+        store.add_sample("A", hand_a)
+        assert store.match(hand_a) == "A"
+        assert store.match(hand_aperta) is None  # troppo diversa
+        store.save()
+        ricaricato = SignTemplateStore(path)
+        assert ricaricato.match(hand_a) == "A"
+        assert ricaricato.counts() == {"A": 1}
+        ricaricato.forget("A")
+        assert ricaricato.match(hand_a) is None
 
 
 if __name__ == "__main__":
