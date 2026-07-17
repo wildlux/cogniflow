@@ -1,5 +1,22 @@
 # TODO — CogniFlow
 
+## 💧 Attiva/disattiva semplice dell'inchiostro della penna in aria — FATTO
+
+La penna col mano-mouse apriva/chiudeva l'inchiostro con un toggle
+invisibile (alzata dell'indice, 6 frame): stato poco leggibile e scatti
+accidentali.
+
+- [x] Interruttore grande "💧" nella barra del canvas (`ink_button` in
+      `DrawingWidget`): compare solo in modalità webcam, mostra sempre lo
+      stato ("🖋️ Scrive" blu / "✋ Fermo" bianco), cliccabile anche col
+      mano-mouse ed equivalente al gesto. Stato centralizzato in
+      `MainWindow._set_canvas_ink`, sincronizzato nei due sensi.
+- [x] Gesto reso coerente col resto dell'app: l'indice alzato deve
+      restare su ~mezzo secondo (dwell, `PEN_DWELL_S`) con avanzamento a
+      pallini ●●○○○ nella barra; abbassandolo prima il comando si
+      annulla. Tolleranza di qualche frame perso prima di azzerare la
+      sosta. Test: `tests/test_pen_ink_toggle.py`.
+
 ## ⚙️ Ripulire le Impostazioni e rendere il cursore un "gioco" — FATTO
 
 Schede (in `UI/settings_dialog.py`):

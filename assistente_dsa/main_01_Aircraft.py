@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import sys
+import time
 import importlib.util
 from datetime import datetime
 
@@ -2678,6 +2679,33 @@ class DrawingWidget(QWidget):
         )
         toolbar.addWidget(self.air_color_combo)
 
+        toolbar.addSpacing(8)
+
+        # Interruttore grande dell'inchiostro per la penna col mano-mouse:
+        # stato sempre visibile e cliccabile anche col mano-mouse. Compare
+        # solo in modalità webcam ed è sincronizzato col gesto dell'indice
+        # (la finestra principale lo collega a _set_canvas_ink).
+        self.ink_button = QPushButton()
+        self.ink_button.setCheckable(True)
+        self.ink_button.setMinimumHeight(28)
+        self.ink_button.setToolTip(
+            "Apre/chiude l'inchiostro della penna in aria: aperto = la punta "
+            "scrive, chiuso = il cursore si muove senza scrivere. Equivale "
+            "ad alzare l'indice tenendolo su mezzo secondo."
+        )
+        self.ink_button.setStyleSheet(
+            "QPushButton { padding:2px 10px; min-height:28px; font-size:13px;"
+            " font-weight:bold; background:#ffffff; color:#2c3e50;"
+            " border:2px solid #ccc; border-radius:6px; }"
+            "QPushButton:hover { border-color:#4a90e2; }"
+            "QPushButton:checked { background:#1565c0; color:#ffffff;"
+            " border-color:#0d47a1; }"
+        )
+        self.ink_button.toggled.connect(self._update_ink_button_text)
+        self._update_ink_button_text(False)
+        self.ink_button.hide()  # visibile solo in modalità webcam
+        toolbar.addWidget(self.ink_button)
+
         toolbar.addStretch()
         self.hint_label = QLabel("Tieni premuto  D  per disegnare")
         self.hint_label.setStyleSheet("color:#888; font-size:10px;")
@@ -2685,6 +2713,10 @@ class DrawingWidget(QWidget):
 
         layout.addLayout(toolbar)
         layout.addWidget(self.canvas, 1)
+
+    def _update_ink_button_text(self, on):
+        """Aggiorna la scritta dell'interruttore dell'inchiostro."""
+        self.ink_button.setText("🖋️ Scrive" if on else "✋ Fermo")
 
     def _toggle_air_pen(self, checked):
         """Avvia/ferma il tracciamento della penna via webcam."""
@@ -4471,10 +4503,15 @@ class MainWindow(QMainWindow):
         self.webcam_active = True
         # Suggerimento sul canvas: con la webcam attiva si scrive con la penna
         self._canvas_ink_on = False
+        self._pen_up_since = None
         drawing = getattr(self, "footer_drawing", None)
+        if drawing is not None and hasattr(drawing, "ink_button"):
+            drawing.ink_button.setChecked(False)
+            drawing.ink_button.show()
         if drawing is not None and hasattr(drawing, "hint_label"):
             drawing.hint_label.setText(
-                "✋ Impugna la penna e alza l'indice per aprire/chiudere l'inchiostro"
+                "✋ Impugna la penna: indice su per ½ secondo (o il pulsante "
+                "✋/🖋️) apre e chiude l'inchiostro"
             )
         # Foglio quasi trasparente in automatico: per scrivere "in aria"
         # bisogna vedere la propria mano attraverso il canvas. Alla chiusura
@@ -4505,12 +4542,16 @@ class MainWindow(QMainWindow):
         self.webcam_button.setText("📹")
         self.webcam_button.setChecked(False)
         self.webcam_active = False
-        # Penna in aria: cursore via e rubinetto chiuso
+        # Penna in aria: cursore via, rubinetto chiuso e interruttore nascosto
         self._canvas_ink_on = False
+        self._pen_up_since = None
         canvas = getattr(self, "footer_canvas", None)
         if canvas is not None:
             canvas.air_pen_point(0.0, 0.0, False)
         drawing = getattr(self, "footer_drawing", None)
+        if drawing is not None and hasattr(drawing, "ink_button"):
+            drawing.ink_button.setChecked(False)
+            drawing.ink_button.hide()
         if drawing is not None and hasattr(drawing, "hint_label"):
             drawing.hint_label.setText("Tieni premuto  D  per disegnare")
         # Ripristina la trasparenza del foglio scelta prima della webcam
@@ -4527,17 +4568,40 @@ class MainWindow(QMainWindow):
         if self.hand_mouse is not None:
             self.hand_mouse.set_frame_size(pixmap.width(), pixmap.height())
 
-    # Frame consecutivi con lo stato dell'indice cambiato prima di accettarlo:
-    # filtra i tremolii del rilevamento ed evita aperture/chiusure accidentali
-    PEN_TOGGLE_FRAMES = 6
+    # L'alzata dell'indice deve durare questo tempo (con avanzamento a
+    # pallini) prima di aprire/chiudere il rubinetto: stesso schema di
+    # tastiera (⏱️ Sosta) e Segni, niente scatti accidentali
+    PEN_DWELL_S = 0.5
+
+    def _set_canvas_ink(self, on):
+        """Apre/chiude l'inchiostro della penna in aria (gesto o pulsante).
+
+        Unico punto che cambia lo stato: aggiorna il flag, l'interruttore
+        💧 nella barra del canvas e la scritta di aiuto, da qualunque parte
+        arrivi il comando (dwell dell'indice o click sul pulsante).
+        """
+        self._canvas_ink_on = bool(on)
+        drawing = getattr(self, "footer_drawing", None)
+        if drawing is None:
+            return
+        btn = getattr(drawing, "ink_button", None)
+        if btn is not None and btn.isChecked() != self._canvas_ink_on:
+            btn.setChecked(self._canvas_ink_on)
+        if hasattr(drawing, "hint_label"):
+            drawing.hint_label.setText(
+                "🖋️ Inchiostro APERTO: la punta scrive"
+                if self._canvas_ink_on
+                else "✋ Inchiostro chiuso: alza l'indice per scrivere"
+            )
 
     def _on_pen_tip(self, nx, ny, index_up):
         """Scrittura "in aria" sul canvas del footer impugnando una penna.
 
         La punta dell'indice della mano primaria fa da punta della penna.
-        ALZARE l'indice (mentre si impugna la penna) apre/chiude il
-        "rubinetto" dell'inchiostro: aperto = la punta traccia, chiuso = il
-        cursore si muove senza scrivere. Vale solo sul canvas del footer.
+        ALZARE l'indice (mentre si impugna la penna) e tenerlo su circa
+        mezzo secondo apre/chiude il "rubinetto" dell'inchiostro: aperto =
+        la punta traccia, chiuso = il cursore si muove senza scrivere.
+        Vale solo sul canvas del footer.
         """
         canvas = getattr(self, "footer_canvas", None)
         stack = getattr(self, "footer_input_stack", None)
@@ -4548,34 +4612,45 @@ class MainWindow(QMainWindow):
             canvas.air_pen_point(0.0, 0.0, False)
             return
         if nx < 0 or ny < 0:  # mano non inquadrata: penna sollevata
-            self._pen_index_streak = 0
+            self._pen_up_since = None
             canvas.air_pen_point(0.0, 0.0, False)
             return
 
-        # Anti-rimbalzo: l'indice deve restare alzato/abbassato per qualche
-        # frame prima che il cambio di stato apra/chiuda il rubinetto
-        if not hasattr(self, "_pen_index_state"):
-            # Stato di partenza: indice abbassato (impugnatura), così anche
-            # un'alzata già in corso al primo frame conta come comando
-            self._pen_index_state = False
-            self._pen_index_streak = 0
-            self._canvas_ink_on = False
-        if bool(index_up) != self._pen_index_state:
-            self._pen_index_streak += 1
-            if self._pen_index_streak >= self.PEN_TOGGLE_FRAMES:
-                self._pen_index_state = bool(index_up)
-                self._pen_index_streak = 0
-                if self._pen_index_state:  # è l'ALZATA che aziona il rubinetto
-                    self._canvas_ink_on = not self._canvas_ink_on
-                    drawing = getattr(self, "footer_drawing", None)
-                    if drawing is not None and hasattr(drawing, "hint_label"):
-                        drawing.hint_label.setText(
-                            "🖋️ Inchiostro APERTO: la punta scrive"
-                            if self._canvas_ink_on
-                            else "✋ Inchiostro chiuso: alza l'indice per scrivere"
-                        )
-        else:
-            self._pen_index_streak = 0
+        # Dwell: l'alzata dell'indice "carica" per PEN_DWELL_S (pallini
+        # nella barra) e poi aziona il rubinetto una volta sola; abbassando
+        # l'indice prima del tempo il comando si annulla.
+        now = time.monotonic()
+        drawing = getattr(self, "footer_drawing", None)
+        if not hasattr(self, "_pen_up_since"):
+            self._pen_up_since = None
+            self._pen_down_streak = 0
+            self._pen_dwell_fired = False
+            self._canvas_ink_on = getattr(self, "_canvas_ink_on", False)
+        if index_up:
+            self._pen_down_streak = 0
+            if self._pen_up_since is None:
+                self._pen_up_since = now
+                self._pen_dwell_fired = False
+            if not self._pen_dwell_fired:
+                held = now - self._pen_up_since
+                if held >= self.PEN_DWELL_S:
+                    self._pen_dwell_fired = True
+                    self._set_canvas_ink(not self._canvas_ink_on)
+                elif drawing is not None and hasattr(drawing, "hint_label"):
+                    dots = round(min(1.0, held / self.PEN_DWELL_S) * 5)
+                    drawing.hint_label.setText(
+                        f"💧 {'●' * dots}{'○' * (5 - dots)}"
+                    )
+        elif self._pen_up_since is not None:
+            # qualche frame perso non azzera subito la sosta (tremolio)
+            self._pen_down_streak += 1
+            if self._pen_down_streak >= 3:
+                interrupted = not self._pen_dwell_fired
+                self._pen_up_since = None
+                self._pen_down_streak = 0
+                if interrupted:
+                    # sosta annullata: la barra torna a mostrare lo stato
+                    self._set_canvas_ink(self._canvas_ink_on)
 
         # Mapping spaziale: l'inchiostro appare DOVE si vede la mano.
         # Il video di sfondo copre tutto il centralWidget, quindi la punta
@@ -5674,6 +5749,9 @@ class MainWindow(QMainWindow):
         # Con il pulsante "Testo/Canvas" si passa dall'uno all'altro; inviando
         # il canvas, l'AI (OCR locale) converte la scrittura in testo pulito.
         self.footer_drawing = DrawingWidget(width=200, height=100)
+        # Interruttore 💧 dell'inchiostro: cliccarlo equivale al gesto
+        # dell'indice (stato condiviso via _set_canvas_ink)
+        self.footer_drawing.ink_button.toggled.connect(self._set_canvas_ink)
         self.footer_drawing.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
