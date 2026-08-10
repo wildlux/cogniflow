@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🧠✨ CogniFlow
+<a href="https://github.com/wildlux/cogniflow/blob/main/ICO-fonts-wallpaper/ICONA.png">
+  <img src="https://raw.githubusercontent.com/wildlux/cogniflow/main/ICO-fonts-wallpaper/ICONA.png" alt="CogniFlow" width="220">
+</a>
 
 ### The DSA assistant you control with your hands, your voice, and your mind
 
