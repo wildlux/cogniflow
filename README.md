@@ -1,188 +1,169 @@
-# CogniFlow - Assistente DSA
+<div align="center">
 
-**Versione Sicura e Accessibile - Ultimo Aggiornamento: 2025**
+# 🧠✨ CogniFlow
 
-Questo software si chiama CogniFlow perché usa "cogni" (cognizione) e "flow" (come una freccia che indica direzione).
+### L'assistente DSA che si controlla con le mani, la voce e la mente
 
-Sono dislessico e ho creato questo software per aiutare altre persone con disabilità, offrendo un'interfaccia completamente accessibile e sicura.
+**[Italiano]** &nbsp;•&nbsp; [**English**](README_EN.md) &nbsp;•&nbsp; Accessibilità &nbsp;•&nbsp; AI Locale &nbsp;•&nbsp; 100% Privacy
 
-## 🔒 Sicurezza e Privacy
+</div>
 
-**🛡️ Caratteristiche di Sicurezza:**
-- ✅ **Crittografia AES-256** per dati sensibili
-- ✅ **Password sicure** con PBKDF2 e salt
-- ✅ **Scansione vulnerabilità** automatica delle dipendenze
-- ✅ **Validazione input** avanzata contro injection
-- ✅ **Rate limiting** per prevenzione brute force
-- ✅ **Audit logging** completo delle attività
-- ✅ **AI Locale** - Nessun dato inviato al cloud
+---
 
-## 🎯 Funzionalità Principali
+> *"Sono dislessico e ho creato questo software per aiutare altre persone con disabilità, offrendo un'interfaccia completamente accessibile e sicura."*
 
-1. ✅ **Lettura Testo Accessibile** - Sintesi vocale con supporto dislessia
-2. ✅ **Input Vocale Intelligente** - Riconoscimento vocale multilingua
-3. ✅ **AI Locale Sicura** - Chat con Ollama (100% privacy)
-4. 🔄 **Visione Artificiale** - OpenCV + webcam per riconoscimento
-5. ✅ **Setup Sicuro** - Configurazione guidata con validazione
-6. ✅ **Gestione Documenti** - Salvataggio/caricamento sicuro
-7. 🔄 **Menu Aiuto Avanzato** - Snippet codice e workflow automatizzati
-8. 🔄 **OCR Intelligente** - Riconoscimento ottico caratteri
+CogniFlow nasce da una storia personale: **cogni** (cognizione) e **flow** (come una freccia che indica direzione). È un assistente progettato per chi vive con DSA o disabilità motorie, capace di trasformare una semplice webcam in un **mano-mouse**, una mano in **parola scritta** e la voce in **comando** — il tutto **offline e senza inviare un solo dato al cloud**.
 
-## 🏗️ Architettura Sicura
+---
 
-- **Modulare**: Componenti isolati per massima sicurezza
-- **Zero-Trust**: Ogni operazione validata e autorizzata
-- **Fail-Safe**: Graceful degradation se componenti falliscono
-- **Audit-Ready**: Logging completo per compliance
+<div align="center">
 
-## 🚀 Installazione Sicura
+![Tracciamento dei gesti con la mano davanti alla webcam](Tracking-gesture.png)
 
-### Prerequisiti di Sistema
+</div>
+
+---
+
+## 🚀 Cosa sa fare
+
+| | Funzionalità | Come funziona |
+|---|---|---|
+| 🖐️ | **Mano-Mouse** | Il cursore segue la tua mano davanti alla webcam: chiudi il pugno per cliccare, alza l'indice per scrivere in aria |
+| 🤟 | **Dattilologia** | Scrivi con l'alfabeto manuale A–Y, con calibrazione dei tuoi segni, gesto di cancellazione e lettere a movimento (J, Z) |
+| ✍️ | **Inchiostro in aria** | Disegna senza toccare nulla, con un comodo interruttore "💧" e dwell per evitare comandi accidentali |
+| 🤲 | **Selezione a due mani** | Indica l'inizio con una mano e la fine con l'altra per selezionare il testo, poi leggi, copia o chiedi all'AI |
+| ⏱️ | **Dwell click globale** | Sosta ~1 secondo su un elemento e viene cliccato: funziona con mouse e mano-mouse, ovunque nell'interfaccia |
+| ⌨️ | **Tastiera virtuale** | Tasti grandi, predizione parole (italiano + inglese, offline), **scansione** a singolo segnale — il ponte verso le BCI |
+| 🗣️ | **Voce** | Riconoscimento vocale multilingua e sintesi vocale leggibile (Vosk + espeak-ng, offline) |
+| 🤖 | **AI Locale** | Chat con Ollama per ricevere aiuto sui compiti, riassunti e suggerimenti — senza Internet |
+| 👁️ | **Visione & OCR** | OpenCV + webcam e riconoscimento ottico dei caratteri per leggere il mondo intorno a te |
+
+> 🔭 **Sguardo al futuro:** la tastiera virtuale è già predisposta per la *scansione a singolo segnale* — il passo naturale verso il collegamento **brain-computer (BCI)**.
+
+---
+
+## 👨‍🎓 Pensata per l'accessibilità
+
+- **Supporto dislessia**: font OpenDyslexic, layout adattivo, lettura e navigazione vocale
+- **Temi multipli**: scuro, chiaro e ad alto contrasto; scala font da 12pt a 24pt
+- **Una sola mano basta**: ogni funzione è raggiungibile con il solo puntatore
+- **Feedback sempre visibile**: lo stato di ogni gesto è mostrato sull'interfaccia
+- 🔒 **Osservazione difficoltà**: (opzionale, con consenso) rileva i momenti di difficoltà e salva uno screenshot dell'interfaccia — mai del volto — per genitori e clinici
+
+---
+
+## 🛡️ Sicurezza e Privacy
+
+CogniFlow è **privato per design**: l'intelligenza artificiale gira interamente sul tuo computer.
+
+- 🔐 **Crittografia AES-256** per i dati sensibili
+- 🧂 **PBKDF2 con salt** per password sicure
+- 🛡️ **AI 100% locale** — zero dati inviati al cloud
+- 🔍 **Scansione vulnerabilità** automatica delle dipendenze
+- 🧪 **Validazione input** anti-injection e rate limiting anti brute-force
+- 📜 **Audit logging** completo delle attività
+- 🚪 **Sessione protetta** con accesso e logout
+
+---
+
+## 🏗️ Architettura
+
+- **Modulare**: componenti isolati e facilmente manutenibili
+- **Zero-Trust**: ogni operazione validata e autorizzata
+- **Fail-Safe**: degradazione controllata se un componente fallisce
+- **Audit-Ready**: logging completo per la conformità
+
+---
+
+## 🚀 Installazione
+
+### Prerequisiti
+
+- **Python 3.8+**
+- **Tesseract OCR** (per il riconoscimento testi)
+- **Ollama** (opzionale, per l'AI locale)
+
 ```bash
 # Ubuntu/Debian
-sudo apt update
-sudo apt install python3.8 python3-pip tesseract-ocr
+sudo apt install python3 python3-pip tesseract-ocr
 
 # macOS
 brew install python@3.8 tesseract
 
 # Windows
-# Installa Python 3.8+ da python.org
-# Installa Tesseract da https://github.com/UB-Mannheim/tesseract/wiki
+# → Python 3.8+ da python.org
+# → Tesseract da https://github.com/UB-Mannheim/tesseract/wiki
 ```
 
-### Installazione Guidata
+### Avvio rapido
+
 ```bash
 # 1. Clona il repository
 git clone <repository-url>
 cd CogniFlow
 
-# 2. Crea ambiente virtuale (raccomandato)
+# 2. Crea un ambiente virtuale
 python3 -m venv venv
-source venv/bin/activate  # Linux/Mac
-# venv\Scripts\activate    # Windows
+source venv/bin/activate      # Linux/Mac
+# venv\Scripts\activate       # Windows
 
-# 3. Installa dipendenze sicure
+# 3. Installa le dipendenze
 pip install -r requirements.txt
 
-# 4. Verifica sicurezza
-python3 -c "from assistente_dsa.core.security_monitor import security_monitor; print('✅ Sicurezza OK')"
-
-# 5. Setup iniziale sicuro
-python3 assistente_dsa/main_00_launcher.py
+# 4. Avvia l'assistente
+make run
+# oppure
+./avvia_cogniflow.sh
+# oppure
+python3 -m assistente_dsa
 ```
-
-### Configurazione Post-Installazione
-1. **Primo Avvio**: Il sistema richiede configurazione amministratore sicura
-2. **Password Sicura**: Minimo 12 caratteri con maiuscole, minuscole, numeri, speciali
-3. **Verifica Dipendenze**: Scansione automatica vulnerabilità
-4. **Test Sicurezza**: Esecuzione test di sicurezza integrati
-
-## 📋 Requisiti Dettagliati
-
-### Dipendenze Core (Sicure)
-- **Python 3.8+** - Versione LTS con supporto sicurezza
-- **PyQt6 6.5.0+** - GUI moderna e sicura
-- **cryptography** - Crittografia avanzata
-- **Ollama** - AI locale (esterno, sicuro)
-
-### Dipendenze Opzionali
-- **OpenCV 4.8.0+** - Visione artificiale
-- **Tesseract OCR** - Riconoscimento testo
-- **Vosk** - Riconoscimento vocale offline
-
-## 🔐 Sicurezza Avanzata
-
-### Autenticazione
-- **Multi-fattore**: Supporto futuro per 2FA
-- **Session Management**: Timeout automatico sessioni
-- **Brute Force Protection**: Rate limiting intelligente
-- **Password Policy**: Complessità configurabile
-
-### Crittografia
-- **AES-256**: Per dati a riposo
-- **TLS 1.3**: Per comunicazioni (quando applicabile)
-- **Hash Sicuri**: PBKDF2 con salt per password
-- **Key Management**: Rotazione chiavi automatica
-
-### Monitoraggio
-- **Security Dashboard**: Monitoraggio real-time
-- **Alert System**: Notifiche sicurezza automatiche
-- **Audit Logs**: Tracciamento completo attività
-- **Performance Monitoring**: Rilevamento anomalie
-
-## 🎨 Accessibilità
-
-### Supporto Dislessia
-- **Font Specializzati**: OpenDyslexic integrato
-- **Layout Adattivo**: Spaziatura e colori ottimizzati
-- **Lettura Vocale**: Sintesi naturale e chiara
-- **Navigazione Vocale**: Comandi vocali completi
-
-### Inclusione
-- **Temi Multipli**: Scuro, chiaro, ad alto contrasto
-- **Scala Font**: Da 12pt a 24pt
-- **Keyboard Navigation**: Accessibilità completa tastiera
-- **Screen Reader**: Supporto completo
-
-## 🛠️ Sviluppo e Contributi
-
-### Setup Sviluppo Sicuro
-```bash
-# Installa dipendenze sviluppo
-pip install -r requirements-dev.txt
-
-# Esegui test sicurezza
-python3 -m pytest tests/test_security.py -v
-
-# Verifica vulnerabilità
-python3 -c "from assistente_dsa.main_00_launcher import check_dependency_vulnerabilities; check_dependency_vulnerabilities()"
-```
-
-### Linee Guida Sicurezza
-1. **Mai hardcoded credentials** nel codice
-2. **Sempre validare input** utente
-3. **Usare parameterized queries** per database
-4. **Log attività sensibili** senza esporre dati
-5. **Test sicurezza** prima del commit
-
-### Contributi
-- 🍴 **Fork** il progetto
-- 🐛 **Segnala** vulnerabilità in privato
-- 📝 **Documenta** nuove funzionalità
-- ✅ **Test** thoroughly prima del PR
-
-## 📞 Supporto e Sicurezza
-
-### Segnalazione Vulnerabilità
-- 📧 **Email**: security@cogniflow.local
-- 🔒 **PGP Key**: Disponibile su richiesta
-- ⏰ **Response Time**: < 24 ore per vulnerabilità critiche
-
-### Documentazione Tecnica
-- 📚 **API Docs**: `/docs/api/`
-- 🔧 **Setup Guide**: `/docs/setup/`
-- 🛡️ **Security Guide**: `/docs/security/`
-
-## 📈 Roadmap Sicurezza
-
-### Q1 2025
-- [ ] Implementazione 2FA
-- [ ] Encryption at-rest completa
-- [ ] Security dashboard avanzato
-
-### Q2 2025
-- [ ] Audit logging centralizzato
-- [ ] Container security hardening
-- [ ] Automated security testing
-
-### Q3 2025
-- [ ] Zero-trust architecture
-- [ ] Advanced threat detection
-- [ ] Compliance automation
 
 ---
 
-**🔒 La tua sicurezza è la nostra priorità. CogniFlow è progettato per essere sicuro per default.**
+## 🧪 Test e sviluppo
 
-Grazie per aver scelto CogniFlow! 🚀
+```bash
+# Esegui la suite di test
+make test            # pytest tests/ -v
+
+# Lint e type-check
+make lint
+make type-check
+
+# Ciclo completo di sviluppo
+make dev             # format → lint → test
+```
+
+Vuoi contribuire? Leggi [CONTRIBUTING.md](CONTRIBUTING.md) — serve un `Fork`, test approfonditi e nessuna credenziale hardcoded. 🍴
+
+---
+
+## 📦 Requisiti principali
+
+| Categoria | Dipendenza |
+|---|---|
+| Core | Python 3.8+, PyQt6 |
+| AI | Ollama (locale) |
+| Voce | Vosk (STT offline), espeak-ng (TTS) |
+| Vista | OpenCV 4.8+, Tesseract OCR |
+| Sicurezza | cryptography |
+
+---
+
+## 📌 Roadmap
+
+- [ ] Autenticazione a due fattori (2FA)
+- [ ] Crittografia a riposo della cartella riservata
+- [ ] Report riassuntivo delle difficoltà per il clinico
+- [ ] Predisposizione al collegamento brain-computer (BCI)
+- [ ] Raffinamento dei suggerimenti AI con il contesto di frase
+
+---
+
+<div align="center">
+
+**🔒 La tua sicurezza è la nostra priorità: CogniFlow è sicuro per default.**
+
+Se hai domande o idee, apri un'issue! Grazie per aver scelto CogniFlow. 🚀
+
+</div>
