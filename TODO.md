@@ -132,8 +132,25 @@ Requisiti:
 
 Rimasto per dopo:
 
-- [ ] Raffinamento opzionale dei suggerimenti con Ollama (contesto di frase).
-- [ ] Dwell click anche fuori dalla tastiera (su tutta l'interfaccia).
+- [x] Raffinamento opzionale dei suggerimenti con Ollama (contesto di frase).
+      → pulsante "🤖 AI" nella barra delle modalità della tastiera: dopo
+      una pausa di scrittura (600 ms) le ultime parole della frase e il
+      prefisso vanno al server Ollama locale (stesso modello delle
+      Impostazioni, `ai.selected_ai_model`); la risposta riordina i
+      suggerimenti, con il dizionario offline che resta la base e riempie
+      i posti. Le parole AI che non iniziano col prefisso vengono
+      scartate; le risposte in ritardo pure. Se Ollama non risponde, la
+      spunta si toglie da sola senza disturbare. Una richiesta alla
+      volta. Test in `tests/test_virtual_keyboard.py`.
+- [x] Dwell click anche fuori dalla tastiera (su tutta l'interfaccia).
+      → pulsante "⏱️" nella barra in alto: sostare col puntatore (mouse o
+      mano-mouse) ~1 secondo su un elemento interattivo lo clicca, con un
+      anello di avanzamento accanto al puntatore
+      (`UI/global_dwell.py`: `GlobalDwellClicker` + `DwellProgressRing`).
+      Un click per sosta (per ricliccare basta spostarsi e tornare);
+      scatta solo su widget interattivi; nella tastiera virtuale con la
+      sua "⏱️ Sosta" accesa vale quella; tace mentre il mano-mouse
+      trascina. Test: `tests/test_global_dwell.py`.
 
 ## 🤟 Scrittura con l'alfabeto manuale (dattilologia) — seguiti — FATTO
 

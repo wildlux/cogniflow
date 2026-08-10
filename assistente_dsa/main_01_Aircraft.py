@@ -4194,6 +4194,26 @@ class MainWindow(QMainWindow):
             pass  # cursore distrutto durante lo spegnimento della webcam
         return None
 
+    def _toggle_global_dwell(self, checked):
+        """Accende/spegne il dwell click su tutta l'interfaccia."""
+        clicker = getattr(self, "global_dwell", None)
+        if clicker is None:
+            if not checked:
+                return
+            try:
+                from UI.global_dwell import GlobalDwellClicker
+            except ImportError:
+                try:
+                    from assistente_dsa.UI.global_dwell import GlobalDwellClicker
+                except ImportError as e:
+                    logging.warning(f"Dwell click non disponibile: {e}")
+                    self.dwell_button.setChecked(False)
+                    return
+            clicker = self.global_dwell = GlobalDwellClicker(
+                self, pointer_provider=self._hand_pointer_global
+            )
+        clicker.set_enabled(checked)
+
     def set_safe_font(self):
         """Imposta un font sicuro e standard per evitare artefatti di rendering, usando le preferenze utente."""
         try:
@@ -5208,6 +5228,48 @@ class MainWindow(QMainWindow):
         )
         top_layout.addWidget(self.webcam_button)
 
+        # Dwell click su tutta l'interfaccia: sostare col puntatore su un
+        # elemento per ~1 secondo equivale a cliccarlo (mouse o mano-mouse).
+        self.dwell_button = QPushButton("⏱️")
+        self.dwell_button.setObjectName("dwell_button")
+        self.dwell_button.setCheckable(True)
+        self.dwell_button.setMinimumHeight(50)
+        self.dwell_button.setFixedWidth(48)
+        self.dwell_button.setToolTip(
+            "Sosta = click su tutta l'interfaccia: ferma il puntatore su un "
+            "pulsante o un campo per circa un secondo e il click parte da "
+            "solo. Un anello accanto al puntatore mostra l'avanzamento. "
+            "Funziona col mouse e col mano-mouse."
+        )
+        self.dwell_button.setStyleSheet(
+            f"""
+            QPushButton#dwell_button {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(255, 255, 255, 0.95), stop:1 rgba(248, 249, 250, 0.95));
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                padding: 6px 8px;
+                font-size: {webcam_font_size}px;
+                font-weight: bold;
+                color: #495057;
+                min-height: 20px;
+            }}
+            QPushButton#dwell_button:hover {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(248, 249, 250, 0.95), stop:1 rgba(241, 243, 244, 0.95));
+                border-color: #adb5bd;
+            }}
+            QPushButton#dwell_button:checked {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(21, 101, 192, 0.12), stop:1 rgba(21, 101, 192, 0.12));
+                border-color: #1565c0;
+                color: #0d47a1;
+            }}
+        """
+        )
+        self.dwell_button.toggled.connect(self._toggle_global_dwell)
+        top_layout.addWidget(self.dwell_button)
+
         self.quick_help_button = QPushButton("?")
         self.quick_help_button.setObjectName("quick_help_button")
         self.quick_help_button.setMinimumHeight(28)
@@ -5789,6 +5851,10 @@ class MainWindow(QMainWindow):
                     "Save",
                     "SETUP_TOOLS_&_Data",
                     "tastiera_parole_apprese.json",
+                ),
+                # Raffinamento 🤖 AI: stesso modello Ollama delle Impostazioni
+                ai_model_provider=lambda: get_setting(
+                    "ai.selected_ai_model", "gemma:2b"
                 ),
             )
             self.virtual_keyboard.send_requested.connect(

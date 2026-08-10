@@ -13,7 +13,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from PyQt6.QtWidgets import QApplication, QTextEdit
 
-from UI.virtual_keyboard import VirtualKeyboardWidget, WordPredictor
+from UI.virtual_keyboard import (
+    VirtualKeyboardWidget,
+    WordPredictor,
+    merge_ai_suggestions,
+)
 
 app = QApplication.instance() or QApplication(sys.argv)
 
@@ -150,6 +154,61 @@ def test_nascosta_sospende_dwell_e_scansione():
     assert kb.isVisible()
     assert kb._dwell_timer.isActive()
     assert kb._scan_timer.isActive()
+
+
+def test_fusione_suggerimenti_ai():
+    # L'AI va per prima, il dizionario riempie, i doppioni spariscono
+    out = merge_ai_suggestions(
+        "ca", "casa, cane! CASA xyz altro", ["carta", "cane", "caro"]
+    )
+    assert out == ["casa", "cane", "carta", "caro"]
+    # Parole che non iniziano col prefisso non sostituiscono mai la scrittura
+    assert merge_ai_suggestions("ca", "torta vino", ["carta"]) == ["carta"]
+    # Maiuscola del prefisso rispettata
+    assert merge_ai_suggestions("Ca", "casa", ["carta"]) == ["Casa", "Carta"]
+    # Prefisso vuoto: restano i suggerimenti di base
+    assert merge_ai_suggestions("", "casa", ["carta"]) == ["carta"]
+
+
+def test_risposta_ai_migliora_i_suggerimenti():
+    kb, editor = make_kb()
+    kb.show()
+    app.processEvents()
+    for k in ("c", "a"):
+        kb._on_key(k)
+    assert kb._base_words  # il dizionario ha già proposto qualcosa
+    kb._on_ai_reply("ca", "cavallo cammello")
+    visibili = [b.text() for b in kb.suggest_buttons if b.text()]
+    assert visibili[:2] == ["cavallo", "cammello"]
+
+
+def test_risposta_ai_in_ritardo_scartata():
+    kb, editor = make_kb()
+    kb.show()
+    app.processEvents()
+    for k in ("c", "a", "s"):
+        kb._on_key(k)
+    prima = [b.text() for b in kb.suggest_buttons]
+    kb._on_ai_reply("ca", "cavallo cammello")  # era per il prefisso vecchio
+    assert [b.text() for b in kb.suggest_buttons] == prima
+
+
+def test_errore_ai_toglie_la_spunta():
+    kb, editor = make_kb()
+    kb.ai_btn.setChecked(True)
+    kb._on_ai_failed("connessione rifiutata")
+    assert not kb.ai_btn.isChecked()
+    assert kb._ai_thread is None
+
+
+def test_ai_spenta_niente_richieste():
+    kb, editor = make_kb()
+    kb.show()
+    app.processEvents()
+    assert not kb.ai_btn.isChecked()  # spenta di default
+    for k in ("c", "a"):
+        kb._on_key(k)
+    assert not kb._ai_timer.isActive()
 
 
 if __name__ == "__main__":

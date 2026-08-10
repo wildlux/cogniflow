@@ -37,3 +37,9 @@ backup_unused_files/
 # Report di profiling
 profilo_*.prof
 *.prof
+
+# Desktop locale
+.directory
+
+# Log di metriche di debug
+assistente_dsa/debug_logs/ui_metrics.jsonl

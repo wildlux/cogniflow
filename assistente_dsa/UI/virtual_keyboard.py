@@ -13,6 +13,10 @@ Caratteristiche:
  - predizione delle parole: fino a 5 suggerimenti sopra i tasti, da un
    dizionario di frequenza offline italiano + inglese, più le parole
    che l'utente usa davvero (apprese e salvate localmente);
+ - raffinamento opzionale con Ollama (🤖 AI): il contesto della frase
+   viene mandato al server Ollama locale, che riordina/arricchisce i
+   suggerimenti; il dizionario offline resta la base, i suggerimenti
+   compaiono subito e vengono solo migliorati quando l'AI risponde;
  - dwell click (⏱️ Sosta): sostare col puntatore su un tasto equivale a
    premerlo — funziona sia col mouse sia col cursore interno del
    mano-mouse (fornito da pointer_provider);
@@ -26,10 +30,11 @@ Caratteristiche:
 
 import bisect
 import json
+import logging
 import os
 import re
 
-from PyQt6.QtCore import QEvent, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QEvent, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import (
     QHBoxLayout,
@@ -208,6 +213,87 @@ class WordPredictor:
                 pass
 
 
+OLLAMA_URL = "http://localhost:11434"
+_AI_WORD_RE = re.compile(r"[a-zA-Zàèéìòù']+")
+
+
+def merge_ai_suggestions(prefix, ai_text, base_words, n=5):
+    """Fonde la risposta dell'AI con i suggerimenti del dizionario.
+
+    Dalla risposta tiene solo parole vere che iniziano con il prefisso
+    (l'AI non deve mai sostituire quello che l'utente sta scrivendo con
+    altro); i suggerimenti AI vanno per primi, il dizionario riempie i
+    posti rimasti. Rispetta la maiuscola iniziale del prefisso.
+    """
+    low = (prefix or "").lower()
+    if not low:
+        return base_words[:n]
+    out = []
+    for word in _AI_WORD_RE.findall(ai_text or ""):
+        w = word.lower()
+        if w.startswith(low) and w != low and w not in out:
+            out.append(w)
+        if len(out) >= n:
+            break
+    for word in base_words:
+        w = word.lower()
+        if w not in out and w != low:
+            out.append(w)
+        if len(out) >= n:
+            break
+    if prefix[0].isupper():
+        out = [w.capitalize() for w in out]
+    return out[:n]
+
+
+class _AiSuggestThread(QThread):
+    """Chiede a Ollama i completamenti per il prefisso, con la frase.
+
+    Una richiesta sola alla volta (gestito dal chiamante); porta con sé
+    il prefisso per cui è partita, così una risposta arrivata "in
+    ritardo" (l'utente ha continuato a scrivere) viene scartata.
+    """
+
+    reply = pyqtSignal(str, str)  # prefisso richiesto, testo della risposta
+    failed = pyqtSignal(str)
+
+    def __init__(self, context, prefix, model, parent=None):
+        super().__init__(parent)
+        self.context = context
+        self.prefix = prefix
+        self.model = model
+
+    def run(self):
+        try:
+            import requests
+        except ImportError as e:
+            self.failed.emit(f"requests non disponibile: {e}")
+            return
+        prompt = (
+            "Tastiera predittiva. Frase scritta finora: "
+            f'"{self.context}". La parola in corso inizia con '
+            f'"{self.prefix}". Suggerisci fino a 5 parole italiane o '
+            f'inglesi complete che iniziano esattamente con "{self.prefix}" '
+            "e stanno bene nella frase. Rispondi SOLO con le parole "
+            "separate da spazi, senza punteggiatura né spiegazioni."
+        )
+        try:
+            response = requests.post(
+                f"{OLLAMA_URL}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {"temperature": 0, "num_predict": 30},
+                },
+                timeout=10,
+            )
+            response.raise_for_status()
+            self.reply.emit(self.prefix, response.json().get("response", ""))
+        except Exception as e:  # rete, JSON, server spento: mai bloccare
+            self.failed.emit(str(e))
+
+
 class VirtualKeyboardWidget(QWidget):
     """Tastiera a schermo integrata nell'area comune del footer.
 
@@ -238,18 +324,22 @@ class VirtualKeyboardWidget(QWidget):
         ["ABC", ",", "spazio", ".", "📤"],
     ]
 
+    AI_DEBOUNCE_MS = 600  # pausa di scrittura prima di interpellare l'AI
+
     def __init__(
         self,
         target_edit=None,
         speak=None,
         pointer_provider=None,
         learned_words_path=None,
+        ai_model_provider=None,
         parent=None,
     ):
         super().__init__(parent)
         self.target = target_edit  # QTextEdit in cui scrivere davvero
         self._speak = speak
         self._pointer_provider = pointer_provider
+        self._ai_model_provider = ai_model_provider  # callable -> nome modello
         self.predictor = WordPredictor(learned_words_path)
         self._shift = False
 
@@ -332,8 +422,25 @@ class VirtualKeyboardWidget(QWidget):
             "Eco vocale: ogni lettera premuta e ogni parola completata "
             "viene letta ad alta voce.",
         )
+        self.ai_btn = _mode_btn(
+            "🤖 AI",
+            "Raffina i suggerimenti con l'AI locale (Ollama): la frase "
+            "scritta finora aiuta a scegliere le parole più adatte. "
+            "I suggerimenti del dizionario compaiono comunque subito; "
+            "se Ollama non è in esecuzione la spunta si toglie da sola.",
+        )
         modes.addStretch()
         root.addLayout(modes)
+
+        # Raffinamento AI: una richiesta alla volta, dopo una pausa di
+        # scrittura; la risposta migliora i suggerimenti già mostrati
+        self._ai_thread = None
+        self._ai_rerun = False  # richiesta arrivata mentre un'altra girava
+        self._base_words = []  # ultimi suggerimenti del dizionario
+        self._ai_timer = QTimer(self)
+        self._ai_timer.setSingleShot(True)
+        self._ai_timer.setInterval(self.AI_DEBOUNCE_MS)
+        self._ai_timer.timeout.connect(self._ai_request)
 
         # Dwell: sonda periodica della posizione del puntatore
         self._dwell_timer = QTimer(self)
@@ -518,10 +625,80 @@ class VirtualKeyboardWidget(QWidget):
         self._echo(word)
 
     def _refresh_suggestions(self):
-        words = self.predictor.suggest(self._current_prefix(), n=5)
+        prefix = self._current_prefix()
+        words = self.predictor.suggest(prefix, n=5)
+        self._base_words = words
         for btn, word in zip(self.suggest_buttons, words + [""] * 5):
             btn.setText(word)
             btn.setVisible(bool(word))
+        # Il raffinamento AI parte solo dopo una pausa di scrittura
+        if self.ai_btn.isChecked() and len(prefix) >= 2:
+            self._ai_timer.start()
+        else:
+            self._ai_timer.stop()
+
+    def _show_suggestions(self, words):
+        for btn, word in zip(self.suggest_buttons, words + [""] * 5):
+            btn.setText(word)
+            btn.setVisible(bool(word))
+
+    # ------------------------------------------------------------------
+    # Raffinamento dei suggerimenti con Ollama (opzionale)
+    # ------------------------------------------------------------------
+
+    def _sentence_context(self):
+        """Le ultime parole della frase prima del cursore (senza il prefisso)."""
+        cur = self._cursor()
+        if cur is None:
+            return ""
+        text = cur.block().text()[: cur.positionInBlock()]
+        prefix = self._current_prefix()
+        if prefix:
+            text = text[: len(text) - len(prefix)]
+        return " ".join(text.split()[-15:])
+
+    def _ai_model(self):
+        if self._ai_model_provider is not None:
+            try:
+                return self._ai_model_provider() or "gemma:2b"
+            except Exception:
+                return "gemma:2b"
+        return "gemma:2b"
+
+    def _ai_request(self):
+        if not self.ai_btn.isChecked() or not self.isVisible():
+            return
+        if self._ai_thread is not None:
+            self._ai_rerun = True  # ripartirà quando questa risponde
+            return
+        prefix = self._current_prefix()
+        if len(prefix) < 2:
+            return
+        self._ai_thread = _AiSuggestThread(
+            self._sentence_context(), prefix, self._ai_model(), parent=self
+        )
+        self._ai_thread.reply.connect(self._on_ai_reply)
+        self._ai_thread.failed.connect(self._on_ai_failed)
+        self._ai_thread.start()
+
+    def _on_ai_reply(self, prefix, text):
+        self._ai_thread = None
+        if self._ai_rerun:
+            self._ai_rerun = False
+            self._ai_timer.start()
+        # Risposta in ritardo? L'utente ha continuato a scrivere: si scarta
+        if prefix != self._current_prefix() or not self.isVisible():
+            return
+        merged = merge_ai_suggestions(prefix, text, self._base_words)
+        if merged:
+            self._show_suggestions(merged)
+
+    def _on_ai_failed(self, message):
+        """Ollama non raggiungibile o in errore: si spegne senza disturbare."""
+        self._ai_thread = None
+        self._ai_rerun = False
+        logging.info(f"Suggerimenti AI non disponibili: {message}")
+        self.ai_btn.setChecked(False)
 
     def _echo(self, text):
         # Niente eco se la tastiera non è la pagina visibile: sennò, mentre
@@ -545,6 +722,7 @@ class VirtualKeyboardWidget(QWidget):
         """
         self._dwell_timer.stop()
         self._scan_timer.stop()
+        self._ai_timer.stop()
         self._set_dwell_mark(None)
         self._clear_scan_marks()
         super().hideEvent(event)
